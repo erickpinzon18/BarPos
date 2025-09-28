@@ -36,7 +36,8 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="home" element={<AdminHome />} />
           <Route path="kanban" element={<AdminKanban />} />
-          <Route path="checkout" element={<AdminCheckout />} />
+          {/* <Route path="checkout" element={<AdminCheckout />} /> */}
+          <Route path="checkout/:orderId" element={<AdminCheckout />} />
           <Route path="order/:tableId" element={<AdminOrderDetails />} />
           <Route path="kitchen" element={<AdminKitchenControl />} />
         </Route>

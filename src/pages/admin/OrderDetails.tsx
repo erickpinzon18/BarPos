@@ -1,7 +1,7 @@
 // src/pages/admin/OrderDetails.tsx
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useActiveOrders } from '../../hooks/useOrders';
+import { useOrderByTableId } from '../../hooks/useOrders';
 import { deleteOrderItem, verifyUserPin, addItemToOrder } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
 import QuantityModal from '../../components/common/QuantityModal';
@@ -9,11 +9,12 @@ import { ArrowLeft, Clock, User, Package, Trash2, Plus } from 'lucide-react';
 import type { OrderItem, Product } from '../../utils/types';
 import { useProducts } from '../../hooks/useProducts';
 import AddItemModal from '../../components/common/AddItemModal';
+import { updateOrderPeopleCount } from '../../services/firestoreService';
 
 const OrderDetails: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
     const navigate = useNavigate();
-    const { orders, loading, error } = useActiveOrders();
+    const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
     const { products } = useProducts();
 
     // Estados para el modal de PIN
@@ -29,8 +30,22 @@ const OrderDetails: React.FC = () => {
     const [showQuantityModal, setShowQuantityModal] = useState(false);
     const [selectedItemForMore, setSelectedItemForMore] = useState<OrderItem | null>(null);
 
-    // Buscar la orden para esta mesa
-    const order = orders.find(o => o.tableId === tableId);
+    // 'order' now comes directly from the optimized hook
+
+    // Local state to edit people count (saved via +/- clicks)
+    const [peopleCount, setPeopleCount] = useState<number>(order?.peopleCount ?? 1);
+
+    // Ensure we initialize peopleCount from the DB when the order first loads
+    const lastOrderIdRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+        if (!order) return;
+
+        // When a different order loads (or first load), initialize peopleCount from DB
+        if (lastOrderIdRef.current !== order.id) {
+            lastOrderIdRef.current = order.id;
+            setPeopleCount(order.peopleCount ?? 1);
+        }
+    }, [order]);
 
     // Función para iniciar eliminación de item
     const handleDeleteItem = (itemId: string) => {
@@ -141,16 +156,36 @@ const OrderDetails: React.FC = () => {
         setSelectedItemForMore(null);
     };
 
-    // Proceder al pago (Checkout)
+    // Proceder al pago (Checkout) - navegar a /admin/checkout/:orderId
     const handleProceedToCheckout = () => {
         if (!order) return;
-        navigate('/admin/checkout', {
-            state: {
-                tableId,
-                orderId: order.id,
-                tableNumber: order.tableNumber,
+        navigate(`/admin/checkout/${order.id}`);
+    };
+
+    // Persist peopleCount only when user explicitly clicks + or -
+    const savePeopleCountToDB = async (newCount: number) => {
+        if (!order) return;
+
+        try {
+            const res = await updateOrderPeopleCount(order.id, newCount);
+            if (!res.success) {
+                console.error('Error saving people count:', res.error);
             }
-        });
+        } catch (err) {
+            console.error('Error saving people count:', err);
+        }
+    };
+
+    const handleDecrementPeople = () => {
+        const next = Math.max(1, peopleCount - 1);
+        setPeopleCount(next);
+        void savePeopleCountToDB(next);
+    };
+
+    const handleIncrementPeople = () => {
+        const next = Math.max(1, peopleCount + 1);
+        setPeopleCount(next);
+        void savePeopleCountToDB(next);
     };
 
     if (loading) {
@@ -254,42 +289,76 @@ const OrderDetails: React.FC = () => {
                 </div>
             </div>
 
-            {/* Info Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                    <div className="flex items-center">
-                        <User className="w-10 h-10 text-amber-400 mr-4" />
-                        <div>
-                            <p className="text-sm text-gray-400 mb-1">Mesero</p>
-                            <p className="text-xl font-semibold text-white">{order.waiterName}</p>
+            {/* Info Cards - make four equal cards on md+ screens */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 flex items-stretch">
+                    <div className="w-full flex items-center justify-between">
+                        <div className="flex items-center">
+                            <User className="w-10 h-10 text-amber-400 mr-4" />
+                            <div>
+                                <p className="text-sm text-gray-400 mb-1">Mesero</p>
+                                <p className="text-xl font-semibold text-white">{order.waiterName}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                    <div className="flex items-center">
-                        <Clock className="w-10 h-10 text-amber-400 mr-4" />
-                        <div>
-                            <p className="text-sm text-gray-400 mb-1">Tiempo Transcurrido</p>
-                            <p className="text-xl font-semibold text-white">{timeElapsed} min</p>
+                <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 flex items-stretch">
+                    <div className="w-full flex items-center justify-between">
+                        <div className="flex items-center">
+                            <Clock className="w-10 h-10 text-amber-400 mr-4" />
+                            <div>
+                                <p className="text-sm text-gray-400 mb-1">Tiempo Transcurrido</p>
+                                <p className="text-xl font-semibold text-white">{timeElapsed} min</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                    <div className="flex items-center">
-                        <Package className="w-10 h-10 text-amber-400 mr-4" />
+                <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 flex items-stretch">
+                    <div className="w-full flex items-center justify-between">
+                        <div className="flex items-center">
+                            <Package className="w-10 h-10 text-amber-400 mr-4" />
+                            <div>
+                                <p className="text-sm text-gray-400 mb-1">Items Totales</p>
+                                <p className="text-xl font-semibold text-white">
+                                    {order.items
+                                        .filter(item => !item.isDeleted)
+                                        .reduce((total, item) => total + item.quantity, 0)
+                                    }
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                    {order.items.filter(item => !item.isDeleted).length} tipos diferentes
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 flex items-stretch">
+                    <div className="w-full flex items-center justify-between">
+                        <div className="flex items-center">
+                            <User className="w-10 h-10 text-amber-400 mr-4" />
+                            <div>
+                                <p className="text-sm text-gray-400 mb-1">Personas</p>
+                                <p className="text-xl font-semibold text-white">{order.peopleCount ?? 1}</p>
+                            </div>
+                        </div>
+
                         <div>
-                            <p className="text-sm text-gray-400 mb-1">Items Totales</p>
-                            <p className="text-xl font-semibold text-white">
-                                {order.items
-                                    .filter(item => !item.isDeleted)
-                                    .reduce((total, item) => total + item.quantity, 0)
-                                }
-                            </p>
-                            <p className="text-sm text-gray-500">
-                                {order.items.filter(item => !item.isDeleted).length} tipos diferentes
-                            </p>
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={handleDecrementPeople}
+                                    className="px-3 py-2 bg-gray-700 rounded text-gray-300 hover:bg-gray-600"
+                                    aria-label="Disminuir personas"
+                                >-</button>
+                                <button
+                                    onClick={handleIncrementPeople}
+                                    className="px-3 py-2 bg-gray-700 rounded text-gray-300 hover:bg-gray-600"
+                                    aria-label="Aumentar personas"
+                                >+</button>
+                            </div>
+                            <div className="mt-2 text-right"></div>
                         </div>
                     </div>
                 </div>

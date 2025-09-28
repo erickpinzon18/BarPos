@@ -29,7 +29,7 @@ export type TableStatus = 'libre' | 'ocupada' | 'reservada' | 'limpieza';
 export interface Table {
   id: string;
   number: number;
-  capacity: number;
+  // capacity: number;
   status: TableStatus;
   waiterId?: string;
   waiterName?: string;
@@ -67,9 +67,23 @@ export interface Order {
   items: OrderItem[];
   status: OrderStatus;
   paymentMethod?: 'efectivo' | 'tarjeta' | 'transferencia';
+  peopleCount?: number; // number of people at the table when the order was closed
+  payments?: Payment[];
+  subtotal?: number;
+  tax?: number;
+  total?: number;
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
+}
+
+export interface Payment {
+  id?: string;
+  method: 'efectivo' | 'tarjeta' | 'transferencia';
+  receivedAmount?: number;
+  change?: number;
+  cashierId?: string;
+  createdAt: Date;
 }
 
 // Form interfaces for components

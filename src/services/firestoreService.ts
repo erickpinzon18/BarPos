@@ -210,7 +210,13 @@ export const openTable = async (tableId: string, waiterId: string, waiterName: s
   }
 };
 
-export const closeTable = async (tableId: string, orderId: string, paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia'): Promise<FirestoreResponse<void>> => {
+export const closeTable = async (
+  tableId: string,
+  orderId: string,
+  paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia',
+  peopleCount?: number,
+  paymentDetails?: { receivedAmount?: number; change?: number; cashierId?: string }
+): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);
     
@@ -226,12 +232,31 @@ export const closeTable = async (tableId: string, orderId: string, paymentMethod
     
     // Update order status
     const orderRef = doc(db, 'orders', orderId);
-    batch.update(orderRef, {
+    const orderUpdate: any = {
       status: 'pagado',
       paymentMethod,
       completedAt: Timestamp.now(),
       updatedAt: Timestamp.now()
-    });
+    };
+
+    if (typeof peopleCount === 'number') {
+      orderUpdate.peopleCount = peopleCount;
+    }
+    batch.update(orderRef, orderUpdate);
+
+    // If payment details were provided, create a payment document in a payments subcollection
+    if (paymentDetails) {
+      const paymentsCol = collection(db, 'orders', orderId, 'payments');
+      const paymentRef = doc(paymentsCol); // new doc ref
+      const paymentDoc: any = {
+        method: paymentMethod,
+        receivedAmount: typeof paymentDetails.receivedAmount === 'number' ? paymentDetails.receivedAmount : null,
+        change: typeof paymentDetails.change === 'number' ? paymentDetails.change : null,
+        cashierId: paymentDetails.cashierId ?? null,
+        createdAt: Timestamp.now()
+      };
+      batch.set(paymentRef, paymentDoc);
+    }
     
     await batch.commit();
     return { success: true };
@@ -382,6 +407,21 @@ export const updateOrderStatusInKanban = async (orderId: string, itemId: string,
   }
 };
 
+// Update people count for an order (number of persons at the table)
+export const updateOrderPeopleCount = async (orderId: string, peopleCount: number): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      peopleCount,
+      updatedAt: Timestamp.now()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating people count:', error);
+    return { success: false, error: 'Error al actualizar cantidad de personas' };
+  }
+};
+
 // STATISTICS AND REPORTS
 export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>> => {
   try {
@@ -402,7 +442,14 @@ export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>>
       convertTimestamps({ id: doc.id, ...doc.data() }) as Order
     );
     
-    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+    const totalSales = orders.reduce((sum, order) => {
+      // Use explicit total if present, otherwise compute from items and tax
+      if (typeof order.total === 'number') return sum + order.total;
+      const itemsSubtotal = (order.items || []).reduce((s, it) => s + ((it.productPrice || 0) * (it.quantity || 0)), 0);
+      const tax = typeof order.tax === 'number' ? order.tax : itemsSubtotal * 0.16;
+      const computedTotal = itemsSubtotal + tax;
+      return sum + computedTotal;
+    }, 0);
     const totalOrders = orders.length;
     const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
     

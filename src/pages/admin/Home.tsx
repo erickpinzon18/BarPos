@@ -19,30 +19,30 @@ const AdminHome: React.FC = () => {
   const error = tablesError || ordersError;
 
   // Log para ver todas las mesas y órdenes que llegan
-  console.log('🏠 AdminHome - Estado actual:', {
-    currentUser: currentUser ? {
-      id: currentUser.id,
-      email: currentUser.email,
-      displayName: currentUser.displayName,
-      role: currentUser.role
-    } : null,
-    tablesCount: tables.length,
-    ordersCount: orders.length,
-    loading,
-    error,
-    tables: tables.map(t => ({
-      id: t.id,
-      status: t.status,
-      waiterName: t.waiterName,
-      currentOrderId: t.currentOrderId
-    })),
-    orders: orders.map(o => ({
-      id: o.id,
-      tableNumber: o.tableNumber,
-      itemsCount: o.items.length,
-      status: o.status
-    }))
-  });
+  // console.log('🏠 AdminHome - Estado actual:', {
+  //   currentUser: currentUser ? {
+  //     id: currentUser.id,
+  //     email: currentUser.email,
+  //     displayName: currentUser.displayName,
+  //     role: currentUser.role
+  //   } : null,
+  //   tablesCount: tables.length,
+  //   ordersCount: orders.length,
+  //   loading,
+  //   error,
+  //   tables: tables.map(t => ({
+  //     id: t.id,
+  //     status: t.status,
+  //     waiterName: t.waiterName,
+  //     currentOrderId: t.currentOrderId
+  //   })),
+  //   orders: orders.map(o => ({
+  //     id: o.id,
+  //     tableNumber: o.tableNumber,
+  //     itemsCount: o.items.length,
+  //     status: o.status
+  //   }))
+  // });
 
   if (loading) {
     return (
@@ -166,7 +166,7 @@ const AdminHome: React.FC = () => {
     
     const handleViewOrder = (e: React.MouseEvent) => {
       e.stopPropagation();
-      console.log('Ver pedido de mesa:', table.id);
+      // console.log('Ver pedido de mesa:', table.id);
       if (currentOrder) {
         navigate(`/admin/order/${table.id}`);
       }
@@ -174,9 +174,9 @@ const AdminHome: React.FC = () => {
 
     const handleCheckout = (e: React.MouseEvent) => {
       e.stopPropagation();
-      console.log('Cobrar mesa:', table.id);
+      // console.log('Cobrar mesa:', table.id);
       if (currentOrder) {
-        navigate(`/admin/checkout?orderId=${currentOrder.id}`);
+        navigate(`/admin/checkout/${currentOrder.id}`);
       }
     };
     
@@ -254,12 +254,12 @@ const AdminHome: React.FC = () => {
                 Libre
               </span>
             </div>
-            <div className="flex flex-col items-center justify-center flex-1 text-gray-500 py-8">
+            <div className="flex flex-col items-center justify-center flex-1 text-gray-500 py-10">
               <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
               <p className="text-lg font-medium">Abrir Mesa</p>
-              <p className="text-sm text-gray-600 mt-1">Capacidad: {table.capacity} personas</p>
+              {/* <p className="text-sm text-gray-600 mt-1">Capacidad: {table.capacity} personas</p> */}
             </div>
           </>
         )}

@@ -3,14 +3,15 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-// Tu configuración de Firebase que copiaste de la consola
+// Configuración tomada de variables de entorno (Vite)
+// Define estas variables en tu archivo .env (prefijo VITE_)
 const firebaseConfig = {
-  apiKey: "AIzaSyCXCsPO1P-fWcHe9g8SLcWJCXQOIu1cN4U",
-  authDomain: "bar-pos-app.firebaseapp.com",
-  projectId: "bar-pos-app",
-  storageBucket: "bar-pos-app.firebasestorage.app",
-  messagingSenderId: "669593640045",
-  appId: "1:669593640045:web:f1928e177c014e1ee97364"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
 };
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);

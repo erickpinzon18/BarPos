@@ -164,7 +164,12 @@ const AdminCheckout: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <div className="flex items-center space-x-3">
-            <h1 className="text-3xl font-bold text-white">Checkout - Mesa {order.tableNumber}</h1>
+            <div>
+              <h1 className="text-3xl font-bold text-white">Checkout - Mesa {order.tableNumber}</h1>
+              {order.payments && order.payments.length > 0 && (
+                <div className="text-xs text-gray-400">Pago: {order.payments[0].id} — {order.payments[0].method} ${order.payments[0].receivedAmount ?? order.payments[0].change ?? ''}</div>
+              )}
+            </div>
             {/* Status badge */}
             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${order.status === 'pagado' ? 'bg-green-600 text-white' : order.status === 'cancelado' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-gray-900'}`}>
               {order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE'}
@@ -181,6 +186,7 @@ const AdminCheckout: React.FC = () => {
               <h2 className="text-2xl font-extrabold text-amber-400">PASE DE SALIDA</h2>
               <p className="text-sm text-gray-400">ChepeChupes — Ticket de salida</p>
               <p className="text-xs text-gray-500 mt-2">Fecha: {new Date().toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">Id: {order.id}</p>
             </div>
 
             <div className="border-t border-dashed border-gray-600 pt-3 mb-3 flex items-center justify-between">

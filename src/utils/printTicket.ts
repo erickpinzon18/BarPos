@@ -38,8 +38,10 @@ export const printTicket80mm = (opts: PrintOptions) => {
         <div class="center">
           <h1>PASE DE SALIDA</h1>
           <div class="muted small">ChepeChupes</div>
-          <div class="muted small">Fecha: ${new Date().toLocaleString()}</div>
-          <div class="muted small">Estado: ${order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE'}</div>
+            <div class="muted small">Fecha: ${new Date().toLocaleString()}</div>
+            <div class="muted small">Estado: ${order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE'}</div>
+            <div class="muted small">Ticket ID: ${order.id}</div>
+            ${Array.isArray(order.payments) && order.payments.length > 0 ? `<div class="muted small">Pago: ${order.payments[0].id} — ${order.payments[0].method} ${order.payments[0].receivedAmount ? '$' + Number(order.payments[0].receivedAmount).toFixed(2) : ''}</div>` : ''}
         </div>
 
         <div class="divider"></div>
@@ -63,7 +65,7 @@ export const printTicket80mm = (opts: PrintOptions) => {
         ${typeof perPerson === 'number' ? `<div class="divider"></div><div class="row"><div>Total por persona</div><div>$${perPerson.toFixed(2)}</div></div>` : ''}
 
         <div class="divider"></div>
-        <div class="center muted small">Prof. Mercedes Camacho 82, Praderas del Sol</div>
+    <div class="center muted small">Prof. Mercedes Camacho 82, Praderas del Sol</div>
         <div class="center muted small">Tel: 427-123-4567</div>
       </div>
       <script>
@@ -76,29 +78,29 @@ export const printTicket80mm = (opts: PrintOptions) => {
   </html>
   `;
 
-  // Try to open a new tab/window. If blocked by popup blocker, fall back to printing from an invisible iframe.
-  const newWindow = window.open('', '_blank', 'noopener');
-  if (newWindow) {
-    try {
-      newWindow.document.open();
-      newWindow.document.write(html);
-      newWindow.document.close();
-      // Try to focus and print (may still be subject to browser policies)
-      newWindow.focus();
-      // Some browsers require a short delay before calling print
-      setTimeout(() => {
-        try {
-          newWindow.print();
-        } catch (e) {
-          // ignore
-        }
-      }, 300);
-      return;
-    } catch (err) {
-      // fall through to iframe approach
-      console.warn('Fallo imprimiendo desde nueva ventana, intentando iframe fallback', err);
-    }
-  }
+//   // Try to open a new tab/window. If blocked by popup blocker, fall back to printing from an invisible iframe.
+//   const newWindow = window.open('', '_blank', 'noopener');
+//   if (newWindow) {
+//     try {
+//       newWindow.document.open();
+//       newWindow.document.write(html);
+//       newWindow.document.close();
+//       // Try to focus and print (may still be subject to browser policies)
+//       newWindow.focus();
+//       // Some browsers require a short delay before calling print
+//       setTimeout(() => {
+//         try {
+//           newWindow.print();
+//         } catch (e) {
+//           // ignore
+//         }
+//       }, 300);
+//       return;
+//     } catch (err) {
+//       // fall through to iframe approach
+//       console.warn('Fallo imprimiendo desde nueva ventana, intentando iframe fallback', err);
+//     }
+//   }
 
   // Fallback: inject a hidden iframe into the current document and print from it.
   try {

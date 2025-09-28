@@ -576,16 +576,24 @@ const OrderDetails: React.FC = () => {
                             const activeItemUnits = order.items
                                 .filter(i => !i.isDeleted)
                                 .reduce((sum, i) => sum + i.quantity, 0);
-                            const canCheckout = activeItemUnits > 0;
+                            const hasUndelivered = order.items
+                                .filter(i => !i.isDeleted)
+                                .some(i => i.status !== 'entregado');
+                            const canCheckout = activeItemUnits > 0 && !hasUndelivered;
                             return (
-                                <button
-                                    onClick={handleProceedToCheckout}
-                                    disabled={!canCheckout}
-                                    className={`flex-1 font-medium py-3 px-6 rounded-lg transition-colors ${canCheckout ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-600 text-gray-300 cursor-not-allowed'}`}
-                                    title={canCheckout ? 'Proceder al pago' : 'Agrega al menos un producto para proceder'}
-                                >
-                                    Proceder al Pago
-                                </button>
+                                <div className="flex-1">
+                                    <button
+                                        onClick={handleProceedToCheckout}
+                                        disabled={!canCheckout}
+                                        className={`w-full font-medium py-3 px-6 rounded-lg transition-colors ${canCheckout ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-600 text-gray-300 cursor-not-allowed'}`}
+                                        title={canCheckout ? 'Proceder al pago' : hasUndelivered ? 'No puedes cobrar: hay ítems pendientes, en preparación o listos (no entregados)' : 'Agrega al menos un producto para proceder'}
+                                    >
+                                        Proceder al Pago
+                                    </button>
+                                    {hasUndelivered && (
+                                        <p className="text-xs text-yellow-300 mt-2">No puedes proceder al pago: la orden tiene ítems pendientes, en preparación o listos (no entregados).</p>
+                                    )}
+                                </div>
                             );
                         })()}
 

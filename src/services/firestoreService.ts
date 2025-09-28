@@ -13,6 +13,7 @@ import {
   orderBy,
   onSnapshot,
   Timestamp,
+  arrayUnion,
   writeBatch
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -46,6 +47,14 @@ const convertTimestamps = (data: any) => {
       if (newItem.createdAt?.toDate) newItem.createdAt = newItem.createdAt.toDate();
       if (newItem.updatedAt?.toDate) newItem.updatedAt = newItem.updatedAt.toDate();
       return newItem;
+    });
+  }
+  // Convert timestamps inside payments array if present
+  if (Array.isArray(converted.payments)) {
+    converted.payments = converted.payments.map((p: any) => {
+      const newP = { ...p };
+      if (newP.createdAt?.toDate) newP.createdAt = newP.createdAt.toDate();
+      return newP;
     });
   }
   return converted;
@@ -253,18 +262,20 @@ export const closeTable = async (
     }
     batch.update(orderRef, orderUpdate);
 
-    // If payment details were provided, create a payment document in a payments subcollection
+    // If payment details were provided, append a payment object to the order document's payments array
     if (paymentDetails) {
-      const paymentsCol = collection(db, 'orders', orderId, 'payments');
-      const paymentRef = doc(paymentsCol); // new doc ref
-      const paymentDoc: any = {
+      const paymentObj: any = {
+        id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         method: paymentMethod,
         receivedAmount: typeof paymentDetails.receivedAmount === 'number' ? paymentDetails.receivedAmount : null,
         change: typeof paymentDetails.change === 'number' ? paymentDetails.change : null,
         cashierId: paymentDetails.cashierId ?? null,
         createdAt: Timestamp.now()
       };
-      batch.set(paymentRef, paymentDoc);
+      // Use arrayUnion to add the payment object into the payments array on the order
+      batch.update(orderRef, {
+        payments: arrayUnion(paymentObj)
+      });
     }
     
     await batch.commit();

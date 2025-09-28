@@ -225,12 +225,26 @@ const AdminHome: React.FC = () => {
                   >
                     Ver Pedido
                   </button>
-                  <button 
-                    onClick={handleCheckout}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg text-base transition-colors"
-                  >
-                    Cobrar
-                  </button>
+                  {currentOrder && (
+                    (() => {
+                      const activeItems = currentOrder.items.filter(i => !i.isDeleted);
+                      const hasUndelivered = activeItems.some(i => i.status !== 'entregado');
+                      return (
+                        <>
+                          <button
+                            onClick={handleCheckout}
+                            disabled={hasUndelivered}
+                            className={`w-full font-medium py-3 px-4 rounded-lg text-base transition-colors ${hasUndelivered ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                          >
+                            Cobrar
+                          </button>
+                          {/* {hasUndelivered && (
+                            <p className="text-xs text-yellow-300 mt-1">No puedes cobrar: la mesa tiene ítems pendientes, en preparación o listos (no entregados).</p>
+                          )} */}
+                        </>
+                      );
+                    })()
+                  )}
                 </div>
                 <p className="text-3xl font-bold text-amber-400 text-center">
                   ${totalAmount} MXN

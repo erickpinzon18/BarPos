@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar POS - Checkout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .ticket {
+            font-family: 'monospace';
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="sidebar bg-gray-800 text-gray-100 w-64 space-y-6 py-7 px-2 hidden md:block">
+            <div class="flex items-center justify-center px-4">
+                 <svg class="w-10 h-10 mr-2 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 22h8"></path><path d="M12 12v10"></path><path d="m19 2-7 10-7-10"></path>
+                </svg>
+                <span class="text-2xl font-bold tracking-tighter text-white">Bar POS</span>
+            </div>
+            <nav>
+                <a href="dashboard.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>Mesas
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 p-4 md:p-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-white">Checkout - Mesa 4</h1>
+                    <p class="text-gray-400">Finaliza el pago y genera el ticket.</p>
+                </div>
+                <a href="order-details.html" class="flex items-center bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Volver al Pedido
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Columna Izquierda: Ticket -->
+                <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                    <div class="ticket bg-gray-900 p-6 rounded-lg text-sm text-white">
+                        <div class="text-center mb-4">
+                            <h2 class="text-xl font-bold">The Golden Glass Bar</h2>
+                            <p>Av. Siempre Viva 123, San Juan del Río</p>
+                            <p>Tel: 427-123-4567</p>
+                            <p>Fecha: 18/09/2025 20:42</p>
+                        </div>
+                        <div class="border-t border-dashed border-gray-600 pt-2 mb-2">
+                            <p>Mesa: 4</p>
+                            <p>Mesero: Ana</p>
+                        </div>
+                        <div class="border-t border-dashed border-gray-600 pt-2">
+                            <div class="flex justify-between"><span>CANT. PRODUCTO</span><span>SUBTOTAL</span></div>
+                            <div class="flex justify-between mt-2"><span>2x Margarita Clásica</span><span>$240.00</span></div>
+                            <div class="flex justify-between"><span>1x Guacamole Especial</span><span>$150.50</span></div>
+                            <div class="flex justify-between"><span>3x Cerveza Artesanal</span><span>$270.00</span></div>
+                            <div class="flex justify-between"><span>2x Tacos de Arrachera</span><span>$570.00</span></div>
+                        </div>
+                        <div class="border-t border-dashed border-gray-600 mt-4 pt-2">
+                            <div class="flex justify-between"><span class="font-bold">Subtotal:</span><span>$1,230.50</span></div>
+                            <div class="flex justify-between"><span class="font-bold">IVA (16%):</span><span>$196.88</span></div>
+                            <div class="flex justify-between"><span class="font-bold">Propina:</span><span id="tip-amount">$0.00</span></div>
+                            <div class="flex justify-between text-xl mt-2 text-amber-400"><span class="font-bold">TOTAL:</span><span id="total-amount">$1,427.38</span></div>
+                        </div>
+                        <!-- Gemini API: Mensaje Personalizado -->
+                        <div id="ai-message-container" class="border-t border-dashed border-gray-600 mt-4 pt-4 text-center">
+                            <div id="ai-loader" class="flex items-center justify-center">
+                                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-400"></div>
+                                <p class="ml-2">Generando mensaje...</p>
+                            </div>
+                            <p id="ai-message" class="hidden"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Acciones y Datos -->
+                <div class="space-y-6">
+                    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                        <h3 class="font-semibold text-white mb-4">Propina</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="calculateTip(0.10)" class="flex-1 bg-gray-700 hover:bg-gray-600 font-bold py-3 px-2 rounded-lg transition duration-300">10%</button>
+                            <button onclick="calculateTip(0.15)" class="flex-1 bg-gray-700 hover:bg-gray-600 font-bold py-3 px-2 rounded-lg transition duration-300">15%</button>
+                            <button onclick="calculateTip(0.20)" class="flex-1 bg-gray-700 hover:bg-gray-600 font-bold py-3 px-2 rounded-lg transition duration-300">20%</button>
+                            <input type="number" id="custom-tip" placeholder="Otro $" class="w-24 bg-gray-900 border border-gray-700 text-center rounded-lg focus:ring-amber-500 focus:border-amber-500">
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                        <h3 class="font-semibold text-white mb-4">Método de Pago</h3>
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                             <button class="bg-green-600/80 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg">Efectivo</button>
+                             <button class="bg-blue-600/80 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Tarjeta</button>
+                             <button class="bg-purple-600/80 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg">Transferencia</button>
+                         </div>
+                    </div>
+                    
+                    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                         <h3 class="font-semibold text-white mb-4">Guardar Cliente (Opcional)</h3>
+                         <div class="space-y-3">
+                             <input type="text" placeholder="Nombre del Cliente" class="w-full bg-gray-900 border border-gray-700 text-sm rounded-lg p-3">
+                             <input type="email" placeholder="Correo Electrónico" class="w-full bg-gray-900 border border-gray-700 text-sm rounded-lg p-3">
+                         </div>
+                    </div>
+
+                    <div class="flex flex-col space-y-3">
+                        <button class="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 transition">Imprimir Ticket</button>
+                        <button class="w-full bg-amber-500 text-gray-900 font-bold py-3 px-4 rounded-lg hover:bg-amber-600 transition">Finalizar y Cerrar Mesa</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const subtotal = 1230.50;
+        const tax = 196.88;
+        let tip = 0;
+
+        const tipAmountEl = document.getElementById('tip-amount');
+        const totalAmountEl = document.getElementById('total-amount');
+        const customTipEl = document.getElementById('custom-tip');
+
+        function updateTotal() {
+            const total = subtotal + tax + tip;
+            tipAmountEl.textContent = `$${tip.toFixed(2)}`;
+            totalAmountEl.textContent = `$${total.toFixed(2)}`;
+        }
+
+        function calculateTip(percentage) {
+            tip = subtotal * percentage;
+            customTipEl.value = '';
+            updateTotal();
+        }
+        
+        customTipEl.addEventListener('input', (e) => {
+            const customValue = parseFloat(e.target.value);
+            if (!isNaN(customValue) && customValue >= 0) {
+                tip = customValue;
+                updateTotal();
+            } else if (e.target.value === '') {
+                tip = 0;
+                updateTotal();
+            }
+        });
+        
+        // --- Lógica para Gemini API: Mensaje de Agradecimiento ---
+        const aiMessageContainer = document.getElementById('ai-message-container');
+        const aiLoader = document.getElementById('ai-loader');
+        const aiMessage = document.getElementById('ai-message');
+        
+        async function getPersonalizedMessage() {
+            aiLoader.style.display = 'flex';
+            aiMessage.classList.add('hidden');
+
+            const apiKey = ""; // Canvas se encargará de la clave de API
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const orderItems = "Margaritas, Guacamole, Cerveza Artesanal, Tacos de Arrachera";
+            const userPrompt = `Basado en este pedido: "${orderItems}", genera un mensaje corto y amigable para el ticket de un bar. Debe incluir un agradecimiento y una promoción específica para su próxima visita, relacionada con lo que consumió. Sé creativo. Formato: [Agradecimiento] [Promoción].`;
+
+            const payload = { contents: [{ parts: [{ text: userPrompt }] }] };
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                const text = candidate?.content?.parts?.[0]?.text;
+
+                if (text) {
+                    aiMessage.innerHTML = text.replace(/\n/g, '<br>');
+                } else {
+                    aiMessage.textContent = '¡Gracias por tu visita! Esperamos verte pronto.';
+                }
+
+            } catch (error) {
+                console.error("Error con Gemini API (Mensaje):", error);
+                aiMessage.textContent = '¡Gracias por tu visita! Esperamos verte pronto.';
+            } finally {
+                aiLoader.style.display = 'none';
+                aiMessage.classList.remove('hidden');
+            }
+        }
+
+        window.addEventListener('load', getPersonalizedMessage);
+    </script>
+</body>
+</html>

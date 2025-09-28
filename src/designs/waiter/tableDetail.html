@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar POS - Detalle del Pedido</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .action-btn:active, .quantity-btn:active {
+            transform: scale(0.96);
+        }
+        .modal-backdrop { background-color: rgba(0, 0, 0, 0.7); }
+        .category-btn-active {
+            background-color: #f59e0b;
+            color: #111827;
+        }
+        .tip-btn-active {
+            background-color: #f59e0b;
+            color: #111827;
+            font-weight: bold;
+        }
+        /* Hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-10 border-b border-gray-700">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-20">
+                    <a href="waiter-dashboard.html" class="flex items-center gap-2 text-gray-300 hover:text-amber-400 transition">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        <span class="font-semibold">Volver a Mesas</span>
+                    </a>
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-2xl font-bold text-white">Mesa 3</h1>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 container mx-auto p-4 sm:p-6 lg:p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <!-- Columna Izquierda: Ticket -->
+                <div class="lg:col-span-3 bg-gray-800 rounded-2xl border border-gray-700 p-6 self-start">
+                    <h2 class="text-2xl font-bold text-white mb-6">Resumen de Cuenta</h2>
+                    <div class="space-y-4">
+                        <!-- Item Pendiente -->
+                        <div class="flex justify-between items-center text-lg">
+                            <div>
+                                <p class="font-semibold text-white flex items-center gap-2.5">
+                                    <span class="w-3 h-3 bg-yellow-400 rounded-full flex-shrink-0"></span>
+                                    Mojito Clásico
+                                </p>
+                                <p class="text-sm text-gray-400 ml-5">$130.00 x 2</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-white">$260.00</p>
+                                <p class="text-xs font-medium text-yellow-400">Pendiente</p>
+                            </div>
+                        </div>
+                        <!-- Item Entregado -->
+                        <div class="flex justify-between items-center text-lg">
+                            <div>
+                                <p class="font-semibold text-white flex items-center gap-2.5">
+                                    <span class="w-3 h-3 bg-green-400 rounded-full flex-shrink-0"></span>
+                                    Tacos de Arrachera
+                                </p>
+                                <p class="text-sm text-gray-400 ml-5">$180.00 x 1</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-white">$180.00</p>
+                                <p class="text-xs font-medium text-green-400">Entregado</p>
+                            </div>
+                        </div>
+                         <!-- Item Pendiente -->
+                        <div class="flex justify-between items-center text-lg">
+                             <div>
+                                <p class="font-semibold text-white flex items-center gap-2.5">
+                                    <span class="w-3 h-3 bg-yellow-400 rounded-full flex-shrink-0"></span>
+                                    Agua Mineral
+                                </p>
+                                <p class="text-sm text-gray-400 ml-5">$35.00 x 1</p>
+                            </div>
+                             <div class="text-right">
+                                <p class="font-bold text-white">$35.00</p>
+                                <p class="text-xs font-medium text-yellow-400">Pendiente</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-700 my-6"></div>
+                    <div class="space-y-3 text-lg">
+                         <div class="flex justify-between font-medium text-gray-300">
+                            <span>Subtotal</span>
+                            <span id="subtotal-amount">$475.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Tip Selection -->
+                    <div class="my-6">
+                        <div class="flex justify-between items-center mb-3">
+                            <label id="tip-label" class="font-medium text-gray-300 text-lg">Propina (10%)</label>
+                            <span id="tip-amount" class="font-medium text-gray-300 text-lg">$47.50</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="tip-btn flex-1 bg-gray-700 py-2 rounded-lg transition tip-btn-active" data-percent="10">10%</button>
+                            <button class="tip-btn flex-1 bg-gray-700 py-2 rounded-lg transition" data-percent="15">15%</button>
+                            <button class="tip-btn flex-1 bg-gray-700 py-2 rounded-lg transition" data-percent="20">20%</button>
+                            <div class="relative">
+                                <input id="custom-tip-input" type="number" placeholder="Otro" class="w-24 text-center bg-gray-700 rounded-lg py-2 border border-transparent focus:border-amber-500 focus:ring-amber-500">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-700 mt-6 mb-3"></div>
+                    <div class="space-y-3 text-lg">
+                         <div class="flex justify-between font-bold text-2xl text-amber-400">
+                            <span>Total</span>
+                            <span id="total-amount">$522.50</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Acciones -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+                        <button id="add-product-btn" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-xl text-lg transition">Agregar Producto</button>
+                        <button class="action-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl text-lg transition">Imprimir Cuenta</button>
+                    </div>
+                    <div class="bg-gray-800 rounded-2xl border border-amber-400/50 p-6">
+                        <h3 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+                           <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1zM6.2 2.2a1 1 0 011.6 1.2L7.24 6H4.36a1 1 0 01-.8-1.6l2.64-2.2zM13.8 2.2a1 1 0 01.8 1.6l-2.64 2.2H12.76l2.64-2.2a1 1 0 011.6-1.2zM6.2 17.8a1 1 0 01-1.6-1.2l2.64-2.2h2.88l-2.64 2.2a1 1 0 01-1.28 1.2zM13.8 17.8a1 1 0 01-1.28-1.2l2.64-2.2h2.88l-2.64 2.2a1 1 0 01-1.6 1.2z"></path></svg>
+                            Asistente de Ventas IA
+                        </h3>
+                        <p class="text-gray-300 mt-3">Basado en el pedido, puedes sugerir:</p>
+                        <ul class="list-disc list-inside mt-2 text-amber-300 space-y-1">
+                            <li>Un Carajillo como digestivo.</li>
+                            <li>Postre: Pastel de chocolate.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-gray-800 rounded-2xl p-6">
+                        <h3 class="text-xl font-bold text-white mb-3">Notas del Mesero</h3>
+                        <textarea class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 h-24 focus:ring-amber-500 focus:border-amber-500" placeholder="Ej: Cliente alérgico a la nuez..."></textarea>
+                    </div>
+                    <button class="action-btn w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-5 px-6 rounded-xl text-xl transition">Proceder a Cobrar</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Agregar Producto -->
+    <div id="add-product-modal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-xl w-full max-w-4xl m-4 border border-gray-700 flex flex-col" style="height: 90vh;">
+            <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="text-2xl font-bold text-white">Agregar Productos al Pedido</h3>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+            </div>
+            <div class="p-6 flex-grow overflow-y-auto">
+                <div class="mb-6 sticky top-0 bg-gray-800 py-4">
+                    <input type="search" id="product-search" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 mb-4" placeholder="Buscar producto...">
+                    <div class="flex flex-wrap gap-2">
+                        <button class="category-btn category-btn-active px-4 py-2 text-sm font-medium rounded-lg" data-category="all">Todos</button>
+                        <button class="category-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600" data-category="Cocktails">Cocktails</button>
+                        <button class="category-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600" data-category="Comida">Comida</button>
+                        <button class="category-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600" data-category="Cervezas">Cervezas</button>
+                    </div>
+                </div>
+                <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- JS will populate products here -->
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-700 bg-gray-800">
+                <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-xl text-lg transition action-btn">Confirmar y Agregar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Modal Logic ---
+        const addProductModal = document.getElementById('add-product-modal');
+        const addProductBtn = document.getElementById('add-product-btn');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        addProductBtn.addEventListener('click', () => addProductModal.style.display = 'flex');
+        closeModalBtn.addEventListener('click', () => addProductModal.style.display = 'none');
+        
+        // --- Mock Product Data ---
+        const products = [
+            { name: 'Mojito Clásico', price: '130.00', category: 'Cocktails' },
+            { name: 'Margarita Fresa', price: '140.00', category: 'Cocktails' },
+            { name: 'Gin Tonic', price: '150.00', category: 'Cocktails' },
+            { name: 'Tacos de Arrachera', price: '180.00', category: 'Comida' },
+            { name: 'Guacamole', price: '120.00', category: 'Comida' },
+            { name: 'Cerveza Artesanal', price: '95.00', category: 'Cervezas' },
+            { name: 'Cerveza Nacional', price: '50.00', category: 'Cervezas' },
+        ];
+
+        // --- Populate Product Grid ---
+        const productsGrid = document.getElementById('products-grid');
+        products.forEach(product => {
+            const productEl = document.createElement('div');
+            productEl.className = 'product-item bg-gray-900/50 rounded-xl p-4 text-center border border-gray-700 transition';
+            productEl.dataset.category = product.category;
+            productEl.dataset.name = product.name;
+            productEl.innerHTML = `
+                <h4 class="font-bold text-white h-10">${product.name}</h4>
+                <p class="text-amber-400 font-semibold mb-3">$${product.price}</p>
+                <div class="flex items-center justify-center gap-2">
+                    <button class="quantity-btn minus-btn bg-gray-700 rounded-full w-8 h-8 font-bold text-lg flex items-center justify-center transition">-</button>
+                    <input type="number" value="0" min="0" class="w-12 text-center bg-gray-800 border-none rounded-md font-semibold">
+                    <button class="quantity-btn plus-btn bg-gray-700 rounded-full w-8 h-8 font-bold text-lg flex items-center justify-center transition">+</button>
+                </div>
+            `;
+            productsGrid.appendChild(productEl);
+        });
+        
+        // --- Filter & Search Logic ---
+        const productSearch = document.getElementById('product-search');
+        const categoryBtns = document.querySelectorAll('#add-product-modal .category-btn');
+        const productItems = document.querySelectorAll('#add-product-modal .product-item');
+        let activeCategory = 'all';
+
+        function filterAndSearchProducts() {
+            const searchTerm = productSearch.value.toLowerCase();
+            productItems.forEach(item => {
+                const itemName = item.dataset.name.toLowerCase();
+                const itemCategory = item.dataset.category;
+                const nameMatch = itemName.includes(searchTerm);
+                const categoryMatch = (activeCategory === 'all' || activeCategory === itemCategory);
+                item.style.display = (nameMatch && categoryMatch) ? 'block' : 'none';
+            });
+        }
+        categoryBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                categoryBtns.forEach(b => b.classList.remove('category-btn-active', 'bg-amber-500', 'text-gray-900'));
+                btn.classList.add('category-btn-active', 'bg-amber-500', 'text-gray-900');
+                activeCategory = btn.dataset.category;
+                filterAndSearchProducts();
+            });
+        });
+        productSearch.addEventListener('input', filterAndSearchProducts);
+        
+        // --- Quantity Stepper Logic ---
+        productsGrid.addEventListener('click', (e) => {
+            if (e.target.classList.contains('quantity-btn')) {
+                const input = e.target.parentElement.querySelector('input[type="number"]');
+                let currentValue = parseInt(input.value);
+                if (e.target.classList.contains('plus-btn')) {
+                    currentValue++;
+                } else if (e.target.classList.contains('minus-btn') && currentValue > 0) {
+                    currentValue--;
+                }
+                input.value = currentValue;
+            }
+        });
+
+        // --- Tip Calculation Logic ---
+        const subtotalEl = document.getElementById('subtotal-amount');
+        const tipLabelEl = document.getElementById('tip-label');
+        const tipAmountEl = document.getElementById('tip-amount');
+        const totalAmountEl = document.getElementById('total-amount');
+        const tipBtns = document.querySelectorAll('.tip-btn');
+        const customTipInput = document.getElementById('custom-tip-input');
+
+        function updateTotals(tipPercent) {
+            const subtotal = parseFloat(subtotalEl.textContent.replace('$', ''));
+            if (isNaN(subtotal) || isNaN(tipPercent)) return;
+            
+            const tipAmount = subtotal * (tipPercent / 100);
+            const total = subtotal + tipAmount;
+
+            tipLabelEl.textContent = `Propina (${tipPercent}%)`;
+            tipAmountEl.textContent = `$${tipAmount.toFixed(2)}`;
+            totalAmountEl.textContent = `$${total.toFixed(2)}`;
+        }
+
+        tipBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tipBtns.forEach(b => b.classList.remove('tip-btn-active'));
+                btn.classList.add('tip-btn-active');
+                customTipInput.value = '';
+                const percent = parseInt(btn.dataset.percent);
+                updateTotals(percent);
+            });
+        });
+
+        customTipInput.addEventListener('input', (e) => {
+            const customPercent = parseInt(e.target.value);
+            if (e.target.value === '') {
+                // If input is cleared, default back to 10% or last selected
+                if (!document.querySelector('.tip-btn-active')) {
+                     document.querySelector('.tip-btn[data-percent="10"]').classList.add('tip-btn-active');
+                }
+                const activeBtn = document.querySelector('.tip-btn-active');
+                updateTotals(parseInt(activeBtn.dataset.percent));
+            } else if (!isNaN(customPercent)) {
+                tipBtns.forEach(b => b.classList.remove('tip-btn-active'));
+                updateTotals(customPercent);
+            }
+        });
+    </script>
+</body>
+</html>
+

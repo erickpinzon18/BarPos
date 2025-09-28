@@ -1,0 +1,26 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos base personalizados */
+@layer base {
+  html {
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-900 text-gray-200 min-h-screen;
+  }
+}
+
+/* Componentes personalizados */
+@layer components {
+  .table-card {
+    @apply transition-transform duration-200 ease-in-out;
+  }
+  
+  .table-card:active {
+    @apply scale-95;
+  }
+}

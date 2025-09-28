@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar POS - Inicio de Sesión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="min-h-screen flex flex-col items-center justify-center p-4">
+        
+        <div class="w-full max-w-xs">
+            <!-- Logo y Título -->
+            <div class="text-center mb-10">
+                <!-- Icono de copa de cocktail -->
+                <svg class="w-14 h-14 mx-auto mb-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 22h8"></path>
+                    <path d="M12 12v10"></path>
+                    <path d="m19 2-7 10-7-10"></path>
+                </svg>
+                <h1 class="text-3xl font-bold tracking-tighter text-white">Bar POS</h1>
+            </div>
+
+            <!-- Formulario de Login -->
+            <form id="loginForm" class="space-y-6">
+                <!-- Campo de Usuario -->
+                <div>
+                    <label for="username" class="sr-only">Usuario</label>
+                    <input type="text" id="username" name="username" class="bg-gray-800 border border-gray-700 placeholder-gray-500 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-3.5 transition duration-300 ease-in-out" placeholder="Usuario" required>
+                </div>
+
+                <!-- Campo de Contraseña -->
+                <div>
+                    <label for="password" class="sr-only">Contraseña</label>
+                    <input type="password" id="password" name="password" class="bg-gray-800 border border-gray-700 placeholder-gray-500 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-3.5 transition duration-300 ease-in-out" placeholder="Contraseña" required>
+                </div>
+                
+                <!-- Mensaje de Error (oculto por defecto) -->
+                <div id="errorMessage" class="hidden text-red-400 text-sm pt-1 text-center">
+                    Usuario o contraseña incorrectos.
+                </div>
+
+                <!-- Botón de Iniciar Sesión -->
+                <button type="submit" class="w-full text-gray-900 bg-amber-400 hover:bg-amber-500 focus:ring-4 focus:outline-none focus:ring-amber-300 font-medium rounded-lg text-sm px-5 py-3.5 text-center transition duration-300 ease-in-out transform hover:scale-105">
+                    Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault(); // Evita que el formulario se envíe
+            
+            const username = document.getElementById('username').value;
+            
+            // Simulación simple: si el usuario no es 'admin', muestra error.
+            if (username.toLowerCase() !== 'admin') {
+                errorMessage.classList.remove('hidden');
+            } else {
+                errorMessage.classList.add('hidden');
+                // Aquí iría la lógica para redirigir al dashboard correcto
+                console.log('¡Login exitoso! Redirigiendo al panel...');
+                // Por ejemplo: window.location.href = '/dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>
+

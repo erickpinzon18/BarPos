@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar POS - Detalle del Pedido</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .modal-enter {
+            animation: fadeIn 0.3s ease-out;
+        }
+        .modal-leave {
+            animation: fadeOut 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.95); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar (igual que en el dashboard) -->
+        <aside class="sidebar bg-gray-800 text-gray-100 w-64 space-y-6 py-7 px-2 hidden md:block">
+            <!-- Logo -->
+            <div class="flex items-center justify-center px-4">
+                 <svg class="w-10 h-10 mr-2 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 22h8"></path><path d="M12 12v10"></path><path d="m19 2-7 10-7-10"></path>
+                </svg>
+                <span class="text-2xl font-bold tracking-tighter text-white">Bar POS</span>
+            </div>
+            <!-- Navegación -->
+            <nav>
+                <a href="dashboard.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>Mesas
+                </a>
+                <!-- Otros links del menú -->
+            </nav>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 p-4 md:p-8">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-white">Pedido - Mesa 4</h1>
+                    <p class="text-gray-400">Gestiona los productos y el cobro de la mesa.</p>
+                </div>
+                <a href="dashboard.html" class="flex items-center bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Volver a Mesas
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <!-- Columna Izquierda: Lista de Items -->
+                <div class="lg:col-span-2">
+                    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                        <h2 class="text-xl font-semibold text-white mb-4">Items del Pedido</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-400">
+                                <thead class="text-xs text-gray-300 uppercase bg-gray-700">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">Cant.</th>
+                                        <th scope="col" class="px-6 py-3">Producto</th>
+                                        <th scope="col" class="px-6 py-3">Precio Unit.</th>
+                                        <th scope="col" class="px-6 py-3">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-700">
+                                        <td class="px-6 py-4 font-medium text-white">2</td>
+                                        <td class="px-6 py-4">Margarita Clásica</td>
+                                        <td class="px-6 py-4">$120.00</td>
+                                        <td class="px-6 py-4">$240.00</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-700">
+                                        <td class="px-6 py-4 font-medium text-white">1</td>
+                                        <td class="px-6 py-4">Guacamole Especial</td>
+                                        <td class="px-6 py-4">$150.50</td>
+                                        <td class="px-6 py-4">$150.50</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-700">
+                                        <td class="px-6 py-4 font-medium text-white">3</td>
+                                        <td class="px-6 py-4">Cerveza Artesanal</td>
+                                        <td class="px-6 py-4">$90.00</td>
+                                        <td class="px-6 py-4">$270.00</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-700">
+                                        <td class="px-6 py-4 font-medium text-white">2</td>
+                                        <td class="px-6 py-4">Tacos de Arrachera (Orden)</td>
+                                        <td class="px-6 py-4">$285.00</td>
+                                        <td class="px-6 py-4">$570.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-6 flex justify-end items-center">
+                            <span class="text-lg font-medium text-gray-300 mr-4">Total:</span>
+                            <span class="text-3xl font-bold text-amber-400">$1,230.50 MXN</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Info y Acciones -->
+                <div class="space-y-6">
+                    <!-- Información del Pedido -->
+                    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                        <h3 class="font-semibold text-white mb-4">Información</h3>
+                        <div class="space-y-3 text-sm">
+                            <p><strong class="text-gray-300">Mesero:</strong> Ana</p>
+                            <p><strong class="text-gray-300">Hora de Apertura:</strong> 19:15</p>
+                            <p><strong class="text-gray-300">Tiempo Transcurrido:</strong> 1 hr 15 min</p>
+                            <div>
+                                <strong class="text-gray-300 block mb-1">Notas:</strong>
+                                <p class="bg-gray-900 p-2 rounded-md text-gray-400">Cliente en la esquina es alérgico a la nuez.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gemini API Feature: Asistente de Ventas -->
+                    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                        <h3 class="font-semibold text-white mb-3">Asistente de Ventas IA</h3>
+                        <div id="sales-suggestion" class="bg-gray-900 p-3 rounded-lg min-h-[80px] flex items-center justify-center text-sm">
+                             <p id="sales-text" class="text-gray-400">Generando sugerencias...</p>
+                             <div id="sales-loader" class="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-400"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Acciones -->
+                    <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                         <div class="flex flex-col space-y-3">
+                            <button id="openModalButton" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-300">Agregar Producto</button>
+                            <button class="w-full bg-amber-500 text-gray-900 font-bold py-3 px-4 rounded-lg hover:bg-amber-600 transition duration-300">Proceder a Cobrar</button>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Agregar Producto (oculto por defecto) -->
+    <div id="addProductModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div id="modalContent" class="modal-enter bg-gray-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-700">
+            <!-- Header del Modal -->
+            <div class="flex justify-between items-center p-5 border-b border-gray-700">
+                <h2 class="text-2xl font-bold text-white">Agregar Producto</h2>
+                <button id="closeModalButton" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            
+            <!-- Contenido del Modal -->
+            <div class="p-6 flex-grow overflow-y-auto">
+                 <!-- Filtros y Búsqueda -->
+                <div class="mb-6">
+                    <input type="text" placeholder="Buscar producto..." class="w-full bg-gray-900 border border-gray-700 placeholder-gray-500 text-white text-sm rounded-lg p-3">
+                    <div class="flex space-x-2 mt-4 overflow-x-auto pb-2">
+                        <button class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-full whitespace-nowrap">Todo</button>
+                        <button class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-full whitespace-nowrap">Cocktails</button>
+                        <button class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-full whitespace-nowrap">Cervezas</button>
+                        <button class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-full whitespace-nowrap">Comida</button>
+                        <button class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-full whitespace-nowrap">Sin Alcohol</button>
+                    </div>
+                </div>
+
+                <!-- Gemini API: Recomendaciones para el Cliente -->
+                 <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-white mb-3">Recomendaciones para el Cliente (IA)</h3>
+                     <div id="recommendation-suggestion" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Loader -->
+                        <div id="recommendation-loader" class="md:col-span-3 flex items-center justify-center p-4 bg-gray-900 rounded-lg">
+                             <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-400"></div>
+                             <p class="ml-3 text-gray-400">Analizando el pedido actual...</p>
+                        </div>
+                        <!-- Las recomendaciones se insertarán aquí -->
+                     </div>
+                 </div>
+
+                <!-- Grid de Productos -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Producto de ejemplo 1 -->
+                    <div class="bg-gray-900 rounded-lg p-4 flex flex-col text-center">
+                        <img src="https://placehold.co/200x150/111827/4b5563?text=Mojito" alt="Mojito" class="rounded-md mb-3 h-24 object-cover">
+                        <h4 class="font-semibold text-white text-sm flex-grow">Mojito Clásico</h4>
+                        <p class="text-gray-400 text-sm my-1">$125.00</p>
+                        <button class="w-full mt-2 bg-blue-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-700 transition duration-300 text-xs">Agregar</button>
+                    </div>
+                     <!-- Producto de ejemplo 2 -->
+                    <div class="bg-gray-900 rounded-lg p-4 flex flex-col text-center">
+                        <img src="https://placehold.co/200x150/111827/4b5563?text=Alitas" alt="Alitas" class="rounded-md mb-3 h-24 object-cover">
+                        <h4 class="font-semibold text-white text-sm flex-grow">Alitas BBQ (12 pz)</h4>
+                        <p class="text-gray-400 text-sm my-1">$180.00</p>
+                        <button class="w-full mt-2 bg-blue-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-blue-700 transition duration-300 text-xs">Agregar</button>
+                    </div>
+                    <!-- ... más productos -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Lógica para Gemini API: Asistente de Ventas (en la página principal) ---
+        const salesText = document.getElementById('sales-text');
+        const salesLoader = document.getElementById('sales-loader');
+
+        async function getSalesSuggestion() {
+            salesText.classList.add('hidden');
+            salesLoader.classList.remove('hidden');
+
+            const apiKey = ""; // Canvas se encargará de la clave de API
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const orderItems = "2 Margaritas, 1 Guacamole, 3 Cervezas Artesanales, 2 órdenes de Tacos de Arrachera";
+            const userPrompt = `Basado en el siguiente pedido de un cliente en un bar: "${orderItems}", sugiere 1 o 2 productos complementarios que el mesero podría ofrecer. Sé breve, amigable y persuasivo en tu sugerencia. Por ejemplo: 'Para acompañar tus tacos, ¿qué tal un shot de nuestro mezcal artesanal?'`;
+
+            const payload = { contents: [{ parts: [{ text: userPrompt }] }] };
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                salesText.textContent = (candidate && candidate.content?.parts?.[0]?.text) ? candidate.content.parts[0].text : 'No hay sugerencias por ahora.';
+            } catch (error) {
+                console.error("Error con la API de Gemini (Asistente):", error);
+                salesText.textContent = 'No se pudieron cargar las sugerencias.';
+            } finally {
+                salesText.classList.remove('hidden');
+                salesLoader.classList.add('hidden');
+            }
+        }
+        
+        window.addEventListener('load', getSalesSuggestion);
+
+        // --- Lógica del Modal ---
+        const addProductModal = document.getElementById('addProductModal');
+        const modalContent = document.getElementById('modalContent');
+        const openModalButton = document.getElementById('openModalButton');
+        const closeModalButton = document.getElementById('closeModalButton');
+
+        openModalButton.addEventListener('click', () => {
+            addProductModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Evita scroll de fondo
+            getProductRecommendations(); // Llama a la IA de recomendaciones al abrir el modal
+        });
+
+        const closeModal = () => {
+            modalContent.classList.add('modal-leave');
+            modalContent.classList.remove('modal-enter');
+            setTimeout(() => {
+                addProductModal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+                modalContent.classList.remove('modal-leave');
+            }, 300);
+        };
+
+        closeModalButton.addEventListener('click', closeModal);
+        addProductModal.addEventListener('click', (event) => {
+            if (event.target === addProductModal) {
+                closeModal();
+            }
+        });
+
+        // --- Lógica para Gemini API: Recomendaciones de Productos (dentro del modal) ---
+        const recommendationContainer = document.getElementById('recommendation-suggestion');
+        const recommendationLoader = document.getElementById('recommendation-loader');
+
+        async function getProductRecommendations() {
+            recommendationLoader.style.display = 'flex';
+            
+            // Limpia recomendaciones anteriores
+            while(recommendationContainer.children.length > 1) {
+                recommendationContainer.removeChild(recommendationContainer.lastChild);
+            }
+
+            const apiKey = ""; // Canvas se encargará de la clave de API
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const orderItems = "2 Margaritas, 1 Guacamole, 3 Cervezas Artesanales, 2 órdenes de Tacos de Arrachera";
+            const userPrompt = `Un cliente pidió: "${orderItems}". Sugiere exactamente 3 productos de un menú de bar que combinarían bien. Devuelve solo un array JSON con objetos, donde cada objeto tenga las claves "nombre" (string), "precio" (number), y "categoria" (string, ej: "Postre", "Cocktail", "Entrada"). No incluyas texto explicativo, solo el array JSON.`;
+            
+             const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                const jsonText = candidate?.content?.parts?.[0]?.text;
+
+                if (jsonText) {
+                    const recommendations = JSON.parse(jsonText);
+                    displayRecommendations(recommendations);
+                } else {
+                    throw new Error("Respuesta JSON vacía o inválida.");
+                }
+
+            } catch (error) {
+                console.error("Error con la API de Gemini (Recomendaciones):", error);
+                recommendationLoader.style.display = 'none';
+                const errorEl = document.createElement('p');
+                errorEl.textContent = 'No se pudieron generar recomendaciones.';
+                errorEl.className = 'text-red-400 md:col-span-3 text-center';
+                recommendationContainer.appendChild(errorEl);
+            }
+        }
+        
+        function displayRecommendations(recommendations) {
+            recommendationLoader.style.display = 'none';
+            recommendations.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'bg-gray-700 rounded-lg p-3 flex items-center justify-between';
+                itemEl.innerHTML = `
+                    <div>
+                        <h5 class="font-semibold text-amber-400 text-sm">${item.nombre}</h5>
+                        <p class="text-xs text-gray-300">$${item.precio.toFixed(2)} - ${item.categoria}</p>
+                    </div>
+                    <button class="bg-blue-600 text-white font-bold p-2 rounded-lg hover:bg-blue-700 text-xs">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                `;
+                recommendationContainer.appendChild(itemEl);
+            });
+        }
+    </script>
+</body>
+</html>
+

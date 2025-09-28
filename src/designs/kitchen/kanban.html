@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar POS - Vista de Cocina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .kanban-column {
+            min-width: 320px;
+            max-width: 380px;
+            height: calc(100vh - 120px);
+        }
+        .toast {
+            animation: fadeInOut 5s ease-in-out forwards;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translateY(20px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 overflow-hidden">
+
+    <!-- Toast Notification Area -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50"></div>
+
+    <div class="flex flex-col h-screen">
+        <!-- Header -->
+        <header class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Comandas en Tiempo Real</h1>
+                <p class="text-gray-400">Pedidos pendientes de Cocina y Barra</p>
+            </div>
+            <div class="text-right">
+                <p id="clock" class="text-2xl font-semibold text-white">10:30 PM</p>
+                <p class="text-sm text-amber-400">Pedidos Completados Hoy: <span id="completed-count">3</span></p>
+            </div>
+        </header>
+
+        <!-- Kanban Board -->
+        <main class="flex-1 flex gap-6 p-6 overflow-x-auto">
+            
+            <!-- Column: Nuevos Pedidos -->
+            <div class="kanban-column flex flex-col bg-gray-800 rounded-2xl border border-gray-700">
+                <h2 class="font-bold text-lg text-white p-4 border-b border-gray-700 flex items-center justify-between">
+                    <span>Nuevos Pedidos</span>
+                    <span class="bg-red-600 text-white text-sm font-bold px-2.5 py-1 rounded-full">2</span>
+                </h2>
+                <div class="flex-1 p-4 space-y-4 overflow-y-auto">
+                    <!-- Order Card -->
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-600">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-amber-400 text-lg">Mesa 5</h3>
+                            <span class="text-xs text-gray-400">Mesero: Ana</span>
+                        </div>
+                        <ul class="space-y-1 text-sm list-disc list-inside">
+                            <li><span class="font-semibold">2x</span> Tacos de Arrachera</li>
+                            <li><span class="font-semibold">1x</span> Guacamole</li>
+                        </ul>
+                        <button class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition">Empezar a Preparar</button>
+                    </div>
+                     <!-- Order Card -->
+                     <div class="bg-gray-900 p-4 rounded-xl border border-gray-600">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-amber-400 text-lg">Mesa 2</h3>
+                            <span class="text-xs text-gray-400">Mesero: Luis</span>
+                        </div>
+                        <ul class="space-y-1 text-sm list-disc list-inside">
+                            <li><span class="font-semibold">2x</span> Mojito Clásico</li>
+                            <li><span class="font-semibold">1x</span> Margarita Fresa</li>
+                        </ul>
+                        <button class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition">Empezar a Preparar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column: En Preparación -->
+            <div class="kanban-column flex flex-col bg-gray-800 rounded-2xl border border-gray-700">
+                 <h2 class="font-bold text-lg text-white p-4 border-b border-gray-700 flex items-center justify-between">
+                    <span>En Preparación</span>
+                    <span class="bg-yellow-500 text-gray-900 text-sm font-bold px-2.5 py-1 rounded-full">1</span>
+                </h2>
+                 <div class="flex-1 p-4 space-y-4 overflow-y-auto">
+                    <!-- Order Card -->
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-600">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-amber-400 text-lg">Mesa 3</h3>
+                            <span class="text-xs text-gray-400">Mesero: Carlos</span>
+                        </div>
+                        <ul class="space-y-1 text-sm list-disc list-inside">
+                            <li><span class="font-semibold">1x</span> Cerveza Artesanal</li>
+                        </ul>
+                        <button class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition">Marcar como Listo</button>
+                    </div>
+                 </div>
+            </div>
+
+            <!-- Column: Listos para Recoger -->
+             <div class="kanban-column flex flex-col bg-gray-800 rounded-2xl border border-gray-700">
+                 <h2 class="font-bold text-lg text-white p-4 border-b border-gray-700 flex items-center justify-between">
+                    <span>Listos para Recoger</span>
+                    <span class="bg-green-600 text-white text-sm font-bold px-2.5 py-1 rounded-full">1</span>
+                </h2>
+                 <div class="flex-1 p-4 space-y-4 overflow-y-auto">
+                     <!-- Order Card -->
+                     <div class="bg-gray-900 p-4 rounded-xl border-2 border-green-500 opacity-75">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-green-400 text-lg">Mesa 8</h3>
+                            <span class="text-xs text-gray-400">Mesero: Ana</span>
+                        </div>
+                        <ul class="space-y-1 text-sm list-disc list-inside">
+                            <li><span class="font-semibold">1x</span> Gin Tonic</li>
+                        </ul>
+                         <p class="text-center mt-4 text-xs font-semibold text-green-400">¡LISTO! Notificando al mesero...</p>
+                    </div>
+                 </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // --- Clock Logic ---
+        const clockEl = document.getElementById('clock');
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            clockEl.textContent = `${hours}:${minutes}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // --- Toast Notification Logic ---
+        const toastContainer = document.getElementById('toast-container');
+        function showToast(mesa, mesero) {
+            const toast = document.createElement('div');
+            toast.className = 'toast bg-amber-500 text-gray-900 font-bold p-4 rounded-xl shadow-lg flex items-center gap-3';
+            toast.innerHTML = `
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                <div>
+                    <p>¡Nuevo Pedido!</p>
+                    <p class="text-sm font-normal">Mesa ${mesa} (${mesero}) ha ordenado.</p>
+                </div>
+            `;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
+        // Simulate new order after 5 seconds
+        setTimeout(() => {
+            showToast('1', 'Luis');
+        }, 5000);
+    </script>
+
+</body>
+</html>

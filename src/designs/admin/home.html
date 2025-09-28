@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar POS - Panel Principal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="sidebar bg-gray-800 text-gray-100 w-64 space-y-6 py-7 px-2 hidden md:block">
+            <div class="flex items-center justify-center px-4">
+                <svg class="w-10 h-10 mr-2 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22h8"></path><path d="M12 12v10"></path><path d="m19 2-7 10-7-10"></path></svg>
+                <span class="text-2xl font-bold tracking-tighter text-white">Bar POS</span>
+            </div>
+            <nav>
+                <a href="dashboard.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 bg-gray-700 text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>Mesas
+                </a>
+                <a href="statistics.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                     <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>Estadísticas
+                </a>
+                <a href="products.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>Productos
+                </a>
+                <a href="expenses.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Gastos
+                </a>
+                 <a href="reservations.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>Reservaciones
+                </a>
+                <a href="marketing.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.136a1.76 1.76 0 011.176-2.373l5.573-1.928a1.76 1.76 0 012.373 1.176l2.147 6.136a1.76 1.76 0 01-3.417-.592V5.882z"></path></svg>Marketing
+                </a>
+                <a href="settings.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Configuración
+                </a>
+            </nav>
+            <!-- User Profile Section -->
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8">
+            <h1 class="text-3xl font-bold text-white mb-6">Panel de Mesas</h1>
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                <!-- Tables -->
+                <div class="xl:col-span-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- Mesa Activa -->
+                    <a href="order-details.html" class="block bg-gray-800 p-4 rounded-2xl border-2 border-green-500 shadow-lg hover:scale-105 transition-transform duration-200">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-bold text-white">Mesa 1</span>
+                            <span class="bg-green-500 text-green-100 text-xs font-bold px-2 py-1 rounded-full">Activa</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mt-2">Mesero: Juan P.</p>
+                        <p class="text-2xl font-bold text-amber-400 mt-1">$850.00</p>
+                    </a>
+                    <!-- Mesa Libre -->
+                    <a href="#" class="block bg-gray-800 p-4 rounded-2xl border border-gray-700 hover:border-amber-400 transition-colors duration-200">
+                         <div class="flex justify-between items-center"><span class="text-lg font-bold text-white">Mesa 2</span><span class="bg-gray-600 text-gray-200 text-xs font-bold px-2 py-1 rounded-full">Libre</span></div>
+                         <div class="text-center text-gray-500 mt-4">
+                            <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            <p class="text-sm mt-1">Ocupar</p>
+                         </div>
+                    </a>
+                    <!-- Add more tables... -->
+                </div>
+                <!-- Reservations Panel -->
+                <div class="xl:col-span-1 bg-gray-800 p-6 rounded-2xl border border-gray-700">
+                    <h2 class="text-xl font-bold text-white mb-4">Reservaciones por Asignar</h2>
+                    <div class="space-y-4">
+                        <!-- Reservation Item -->
+                        <div class="bg-gray-700/50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-white">Carlos Sánchez (4p)</p>
+                                    <p class="text-sm text-amber-400">08:30 PM</p>
+                                </div>
+                                <button class="assign-btn bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-full hover:bg-blue-700 transition">Asignar</button>
+                            </div>
+                        </div>
+                        <!-- Reservation Item Assigned-->
+                         <div class="bg-gray-700/50 p-3 rounded-lg opacity-50">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold text-white">Mariana Vega (2p)</p>
+                                    <p class="text-sm text-amber-400">08:00 PM</p>
+                                </div>
+                                <span class="text-green-400 text-xs font-bold">Asignada</span>
+                            </div>
+                        </div>
+                         <!-- Add more reservations... -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        document.querySelectorAll('.assign-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const item = e.target.closest('div');
+                item.innerHTML = `<span class="text-green-400 text-xs font-bold">Asignada</span>`;
+                e.target.closest('.bg-gray-700\\/50').classList.add('opacity-50');
+            });
+        });
+    </script>
+</body>
+</html>
+
+

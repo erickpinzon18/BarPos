@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar POS - Checkout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+        .payment-btn-active {
+            background-color: #f59e0b;
+            color: #111827;
+            border-color: #f59e0b;
+        }
+        .modal-backdrop { background-color: rgba(0, 0, 0, 0.7); }
+        /* Hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-10 border-b border-gray-700">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-20">
+                    <a href="waiter-order-details.html" class="flex items-center gap-2 text-gray-300 hover:text-amber-400 transition">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        <span class="font-semibold">Volver al Pedido</span>
+                    </a>
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-2xl font-bold text-white">Checkout: Mesa 3</h1>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 container mx-auto p-4 sm:p-6 lg:p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                <!-- Columna Izquierda: Ticket Final y División de Cuenta -->
+                <div class="bg-gray-800 rounded-2xl border border-gray-700 p-6 self-start">
+                    <h2 class="text-2xl font-bold text-white mb-6">Recibo Final</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center"><p>Mojito Clásico (x2)</p><p>$260.00</p></div>
+                        <div class="flex justify-between items-center"><p>Tacos de Arrachera (x1)</p><p>$180.00</p></div>
+                        <div class="flex justify-between items-center"><p>Agua Mineral (x1)</p><p>$35.00</p></div>
+                    </div>
+                    <div class="border-t border-gray-700 my-4"></div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between"><p>Subtotal</p><p>$475.00</p></div>
+                        <div class="flex justify-between"><p>Propina (10%)</p><p>$47.50</p></div>
+                        <div class="flex justify-between font-bold text-2xl text-amber-400 mt-2"><span>TOTAL A PAGAR</span><span id="total-to-pay">$522.50</span></div>
+                    </div>
+
+                     <!-- Botón para registrar cliente -->
+                    <div class="mt-6">
+                        <button id="register-client-btn" class="w-full text-center py-3 px-4 rounded-xl transition text-blue-400 hover:bg-blue-900/50 border border-blue-800/50 font-semibold">
+                            + Agregar Cliente al CRM
+                        </button>
+                    </div>
+                    
+                    <!-- Dividir Cuenta -->
+                    <div class="border-t border-gray-700 my-6"></div>
+                    <h3 class="text-xl font-bold text-white mb-4">Dividir la Cuenta</h3>
+                    <div class="flex items-center gap-4">
+                        <label for="split-count" class="font-medium">Dividir entre:</label>
+                        <input id="split-count" type="number" min="1" value="1" class="w-20 bg-gray-700 text-center rounded-lg p-2 border border-gray-600 focus:border-amber-500 focus:ring-amber-500">
+                        <span>personas</span>
+                    </div>
+                    <div id="split-result" class="mt-4 bg-gray-900/50 p-4 rounded-xl text-center hidden">
+                        <p class="text-gray-400">Total por persona:</p>
+                        <p id="amount-per-person" class="text-2xl font-bold text-amber-400"></p>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Opciones de Pago -->
+                <div class="space-y-6">
+                    <div class="bg-gray-800 rounded-2xl border border-gray-700 p-6">
+                        <h3 class="text-xl font-bold text-white mb-4">Método de Pago</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button id="cash-btn" class="payment-btn flex items-center justify-center gap-3 py-4 border-2 border-gray-600 rounded-xl transition">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                <span class="font-bold text-lg">Efectivo</span>
+                            </button>
+                            <button id="card-btn" class="payment-btn flex items-center justify-center gap-3 py-4 border-2 border-gray-600 rounded-xl transition">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                                <span class="font-bold text-lg">Tarjeta</span>
+                            </button>
+                        </div>
+                        <!-- Calculadora de Cambio (oculta por defecto) -->
+                        <div id="cash-payment-section" class="mt-6 space-y-4 hidden">
+                            <div>
+                                <label for="amount-received" class="block mb-2 font-medium">Monto Recibido ($)</label>
+                                <input id="amount-received" type="number" class="w-full bg-gray-700 text-2xl text-center rounded-lg p-3 border border-gray-600 focus:border-amber-500 focus:ring-amber-500" placeholder="0.00">
+                            </div>
+                            <div class="bg-gray-900/50 p-4 rounded-xl text-center">
+                                <p class="text-gray-400">Cambio a devolver:</p>
+                                <p id="change-amount" class="text-3xl font-bold text-green-400">$0.00</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-5 px-6 rounded-2xl text-xl transition">Confirmar Pago y Cerrar Mesa</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Registrar Cliente -->
+    <div id="crm-modal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg m-4 border border-gray-700">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <h3 class="text-xl font-bold text-white">Registrar Cliente en CRM</h3>
+                    <button id="close-crm-modal-btn" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                </div>
+                <p class="text-sm text-gray-400 mt-1">Ofrece promociones y beneficios registrando al cliente.</p>
+                <form id="crm-form" class="mt-6 space-y-4">
+                    <div>
+                        <label for="client-name" class="block mb-2 text-sm font-medium text-gray-300">Nombre Completo</label>
+                        <input type="text" id="client-name" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:ring-amber-500 focus:border-amber-500" placeholder="Ej: Laura Gómez" required>
+                    </div>
+                    <div>
+                        <label for="client-email" class="block mb-2 text-sm font-medium text-gray-300">Correo Electrónico (Opcional)</label>
+                        <input type="email" id="client-email" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:ring-amber-500 focus:border-amber-500" placeholder="ejemplo@email.com">
+                    </div>
+                    <div>
+                        <label for="client-phone" class="block mb-2 text-sm font-medium text-gray-300">Teléfono (Opcional)</label>
+                        <input type="tel" id="client-phone" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 focus:ring-amber-500 focus:border-amber-500" placeholder="55-1234-5678">
+                    </div>
+                    <div class="pt-4 flex justify-end gap-3">
+                        <button type="button" id="cancel-crm-btn" class="py-2.5 px-5 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg transition">Cancelar</button>
+                        <button type="submit" class="py-2.5 px-5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition">Guardar Cliente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Elements ---
+        const totalToPayEl = document.getElementById('total-to-pay');
+        const splitCountInput = document.getElementById('split-count');
+        const splitResultEl = document.getElementById('split-result');
+        const amountPerPersonEl = document.getElementById('amount-per-person');
+        const cashBtn = document.getElementById('cash-btn');
+        const cardBtn = document.getElementById('card-btn');
+        const cashPaymentSection = document.getElementById('cash-payment-section');
+        const amountReceivedInput = document.getElementById('amount-received');
+        const changeAmountEl = document.getElementById('change-amount');
+
+        let totalToPay = parseFloat(totalToPayEl.textContent.replace('$', ''));
+
+        // --- Bill Splitting Logic ---
+        function calculateSplit() {
+            const splitCount = parseInt(splitCountInput.value);
+            if (isNaN(splitCount) || splitCount < 1) {
+                splitResultEl.style.display = 'none';
+                return;
+            }
+            if (splitCount === 1) {
+                splitResultEl.style.display = 'none';
+            } else {
+                const amountPerPerson = totalToPay / splitCount;
+                amountPerPersonEl.textContent = `$${amountPerPerson.toFixed(2)}`;
+                splitResultEl.style.display = 'block';
+            }
+        }
+        splitCountInput.addEventListener('input', calculateSplit);
+
+        // --- Payment Method Selection ---
+        cashBtn.addEventListener('click', () => {
+            cashBtn.classList.add('payment-btn-active');
+            cardBtn.classList.remove('payment-btn-active');
+            cashPaymentSection.style.display = 'block';
+        });
+        cardBtn.addEventListener('click', () => {
+            cardBtn.classList.add('payment-btn-active');
+            cashBtn.classList.remove('payment-btn-active');
+            cashPaymentSection.style.display = 'none';
+            amountReceivedInput.value = '';
+            changeAmountEl.textContent = '$0.00';
+        });
+
+        // --- Change Calculation Logic ---
+        function calculateChange() {
+            const amountReceived = parseFloat(amountReceivedInput.value);
+            if (isNaN(amountReceived) || amountReceived < totalToPay) {
+                changeAmountEl.textContent = '$0.00';
+                return;
+            }
+            const change = amountReceived - totalToPay;
+            changeAmountEl.textContent = `$${change.toFixed(2)}`;
+        }
+        amountReceivedInput.addEventListener('input', calculateChange);
+
+        // --- CRM Modal Logic ---
+        const crmModal = document.getElementById('crm-modal');
+        const registerClientBtn = document.getElementById('register-client-btn');
+        const closeCrmModalBtn = document.getElementById('close-crm-modal-btn');
+        const cancelCrmBtn = document.getElementById('cancel-crm-btn');
+        const crmForm = document.getElementById('crm-form');
+
+        registerClientBtn.addEventListener('click', () => {
+            crmModal.style.display = 'flex';
+        });
+
+        function closeCrmModal() {
+            crmModal.style.display = 'none';
+            crmForm.reset();
+        }
+
+        closeCrmModalBtn.addEventListener('click', closeCrmModal);
+        cancelCrmBtn.addEventListener('click', closeCrmModal);
+
+        crmForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const submitButton = crmForm.querySelector('button[type="submit"]');
+            submitButton.textContent = 'Guardado!';
+            submitButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+            submitButton.classList.add('bg-blue-600');
+            
+            setTimeout(() => {
+                closeCrmModal();
+                submitButton.textContent = 'Guardar Cliente';
+                submitButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                submitButton.classList.remove('bg-blue-600');
+                registerClientBtn.textContent = 'Cliente Agregado ✓';
+                registerClientBtn.disabled = true;
+                registerClientBtn.classList.add('text-green-400', 'border-green-800/50', 'cursor-not-allowed');
+                registerClientBtn.classList.remove('text-blue-400', 'hover:bg-blue-900/50', 'border-blue-800/50');
+            }, 1500);
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === crmModal) {
+                closeCrmModal();
+            }
+        });
+    </script>
+</body>
+</html>
+

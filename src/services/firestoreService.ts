@@ -1,0 +1,422 @@
+// src/services/firestoreService.ts
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  Timestamp,
+  writeBatch
+} from 'firebase/firestore';
+import { db } from './firebase';
+import type {
+  User,
+  Product,
+  Table,
+  Order,
+  OrderItem,
+  CreateData,
+  UpdateData,
+  FirestoreResponse
+} from '../utils/types';
+
+// Helper function to convert Firestore timestamps to Date objects
+const convertTimestamps = (data: any) => {
+  const converted = { ...data };
+  if (converted.createdAt?.toDate) {
+    converted.createdAt = converted.createdAt.toDate();
+  }
+  if (converted.updatedAt?.toDate) {
+    converted.updatedAt = converted.updatedAt.toDate();
+  }
+  if (converted.completedAt?.toDate) {
+    converted.completedAt = converted.completedAt.toDate();
+  }
+  return converted;
+};
+
+// USER MANAGEMENT
+export const getUserByUid = async (uid: string): Promise<FirestoreResponse<User>> => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      const userData = convertTimestamps({ id: userDoc.id, ...userDoc.data() }) as User;
+      return { success: true, data: userData };
+    }
+    return { success: false, error: 'Usuario no encontrado' };
+  } catch (error) {
+    console.error('Error getting user:', error);
+    return { success: false, error: 'Error al obtener usuario' };
+  }
+};
+
+export const createUser = async (uid: string, userData: CreateData<User>): Promise<FirestoreResponse<User>> => {
+  try {
+    const now = Timestamp.now();
+    const userWithTimestamps = {
+      ...userData,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    await setDoc(doc(db, 'users', uid), userWithTimestamps);
+    const newUser = convertTimestamps({ id: uid, ...userWithTimestamps }) as User;
+    return { success: true, data: newUser };
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return { success: false, error: 'Error al crear usuario' };
+  }
+};
+
+// PRODUCT MANAGEMENT
+export const getProducts = async (): Promise<FirestoreResponse<Product[]>> => {
+  try {
+    const productsQuery = query(collection(db, 'products'), orderBy('name'));
+    const querySnapshot = await getDocs(productsQuery);
+    const products = querySnapshot.docs.map(doc => 
+      convertTimestamps({ id: doc.id, ...doc.data() }) as Product
+    );
+    return { success: true, data: products };
+  } catch (error) {
+    console.error('Error getting products:', error);
+    return { success: false, error: 'Error al obtener productos' };
+  }
+};
+
+export const addProduct = async (productData: CreateData<Product>): Promise<FirestoreResponse<Product>> => {
+  try {
+    const now = Timestamp.now();
+    const productWithTimestamps = {
+      ...productData,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    const docRef = await addDoc(collection(db, 'products'), productWithTimestamps);
+    const newProduct = convertTimestamps({ id: docRef.id, ...productWithTimestamps }) as Product;
+    return { success: true, data: newProduct };
+  } catch (error) {
+    console.error('Error adding product:', error);
+    return { success: false, error: 'Error al agregar producto' };
+  }
+};
+
+export const updateProduct = async (productId: string, updates: UpdateData<Product>): Promise<FirestoreResponse<Product>> => {
+  try {
+    const updateData = {
+      ...updates,
+      updatedAt: Timestamp.now()
+    };
+    
+    await updateDoc(doc(db, 'products', productId), updateData);
+    const updatedDoc = await getDoc(doc(db, 'products', productId));
+    const updatedProduct = convertTimestamps({ id: updatedDoc.id, ...updatedDoc.data() }) as Product;
+    return { success: true, data: updatedProduct };
+  } catch (error) {
+    console.error('Error updating product:', error);
+    return { success: false, error: 'Error al actualizar producto' };
+  }
+};
+
+export const deleteProduct = async (productId: string): Promise<FirestoreResponse<void>> => {
+  try {
+    await deleteDoc(doc(db, 'products', productId));
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    return { success: false, error: 'Error al eliminar producto' };
+  }
+};
+
+// TABLE MANAGEMENT
+export const getTables = async (): Promise<FirestoreResponse<Table[]>> => {
+  try {
+    const tablesQuery = query(collection(db, 'tables'), orderBy('number'));
+    const querySnapshot = await getDocs(tablesQuery);
+    const tables = querySnapshot.docs.map(doc => 
+      convertTimestamps({ id: doc.id, ...doc.data() }) as Table
+    );
+    return { success: true, data: tables };
+  } catch (error) {
+    console.error('Error getting tables:', error);
+    return { success: false, error: 'Error al obtener mesas' };
+  }
+};
+
+export const getTablesRealtime = (callback: (tables: Table[]) => void) => {
+  const tablesQuery = query(collection(db, 'tables'), orderBy('number'));
+  
+  return onSnapshot(tablesQuery, (snapshot) => {
+    const tables = snapshot.docs.map(doc => 
+      convertTimestamps({ id: doc.id, ...doc.data() }) as Table
+    );
+    callback(tables);
+  }, (error) => {
+    console.error('Error in tables realtime listener:', error);
+  });
+};
+
+export const openTable = async (tableId: string, waiterId: string, waiterName: string): Promise<FirestoreResponse<Order>> => {
+  try {
+    const batch = writeBatch(db);
+    
+    // Update table status
+    const tableRef = doc(db, 'tables', tableId);
+    batch.update(tableRef, {
+      status: 'ocupada',
+      waiterId,
+      waiterName,
+      updatedAt: Timestamp.now()
+    });
+    
+    // Create new order
+    const orderRef = doc(collection(db, 'orders'));
+    const tableDoc = await getDoc(tableRef);
+    const tableData = tableDoc.data() as Table;
+    
+    const orderData = {
+      tableId,
+      tableNumber: tableData.number,
+      waiterId,
+      waiterName,
+      items: [],
+      status: 'activo' as const,
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    };
+    
+    batch.set(orderRef, orderData);
+    
+    // Update table with current order ID
+    batch.update(tableRef, { currentOrderId: orderRef.id });
+    
+    await batch.commit();
+    
+    const newOrder = convertTimestamps({ id: orderRef.id, ...orderData }) as Order;
+    return { success: true, data: newOrder };
+  } catch (error) {
+    console.error('Error opening table:', error);
+    return { success: false, error: 'Error al abrir mesa' };
+  }
+};
+
+export const closeTable = async (tableId: string, orderId: string, paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia'): Promise<FirestoreResponse<void>> => {
+  try {
+    const batch = writeBatch(db);
+    
+    // Update table status
+    const tableRef = doc(db, 'tables', tableId);
+    batch.update(tableRef, {
+      status: 'libre',
+      waiterId: null,
+      waiterName: null,
+      currentOrderId: null,
+      updatedAt: Timestamp.now()
+    });
+    
+    // Update order status
+    const orderRef = doc(db, 'orders', orderId);
+    batch.update(orderRef, {
+      status: 'pagado',
+      paymentMethod,
+      completedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    });
+    
+    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    console.error('Error closing table:', error);
+    return { success: false, error: 'Error al cerrar mesa' };
+  }
+};
+
+// ORDER MANAGEMENT
+export const getOrdersByTable = async (tableId: string): Promise<FirestoreResponse<Order[]>> => {
+  try {
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      where('tableId', '==', tableId),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(ordersQuery);
+    const orders = querySnapshot.docs.map(doc => 
+      convertTimestamps({ id: doc.id, ...doc.data() }) as Order
+    );
+    return { success: true, data: orders };
+  } catch (error) {
+    console.error('Error getting orders:', error);
+    return { success: false, error: 'Error al obtener pedidos' };
+  }
+};
+
+export const getCurrentOrder = async (orderId: string): Promise<FirestoreResponse<Order>> => {
+  try {
+    const orderDoc = await getDoc(doc(db, 'orders', orderId));
+    if (orderDoc.exists()) {
+      const order = convertTimestamps({ id: orderDoc.id, ...orderDoc.data() }) as Order;
+      return { success: true, data: order };
+    }
+    return { success: false, error: 'Pedido no encontrado' };
+  } catch (error) {
+    console.error('Error getting current order:', error);
+    return { success: false, error: 'Error al obtener pedido actual' };
+  }
+};
+
+export const addItemToOrder = async (orderId: string, product: Product, quantity: number, notes?: string): Promise<FirestoreResponse<Order>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    
+    if (!orderDoc.exists()) {
+      return { success: false, error: 'Pedido no encontrado' };
+    }
+    
+    const orderData = orderDoc.data() as Order;
+    const newItem: OrderItem = {
+      id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      productId: product.id,
+      productName: product.name,
+      productPrice: product.price,
+      quantity,
+      status: 'pendiente',
+      notes,
+      category: product.category,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    const updatedItems = [...orderData.items, newItem];
+    const subtotal = updatedItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
+    const tax = subtotal * 0.16; // 16% tax
+    const total = subtotal + tax;
+    
+    await updateDoc(orderRef, {
+      items: updatedItems,
+      subtotal,
+      tax,
+      total,
+      updatedAt: Timestamp.now()
+    });
+    
+    const updatedOrderDoc = await getDoc(orderRef);
+    const updatedOrder = convertTimestamps({ id: updatedOrderDoc.id, ...updatedOrderDoc.data() }) as Order;
+    return { success: true, data: updatedOrder };
+  } catch (error) {
+    console.error('Error adding item to order:', error);
+    return { success: false, error: 'Error al agregar item al pedido' };
+  }
+};
+
+export const updateItemStatus = async (orderId: string, itemId: string, newStatus: OrderItem['status']): Promise<FirestoreResponse<Order>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    
+    if (!orderDoc.exists()) {
+      return { success: false, error: 'Pedido no encontrado' };
+    }
+    
+    const orderData = orderDoc.data() as Order;
+    const updatedItems = orderData.items.map(item => 
+      item.id === itemId 
+        ? { ...item, status: newStatus, updatedAt: new Date() }
+        : item
+    );
+    
+    await updateDoc(orderRef, {
+      items: updatedItems,
+      updatedAt: Timestamp.now()
+    });
+    
+    const updatedOrderDoc = await getDoc(orderRef);
+    const updatedOrder = convertTimestamps({ id: updatedOrderDoc.id, ...updatedOrderDoc.data() }) as Order;
+    return { success: true, data: updatedOrder };
+  } catch (error) {
+    console.error('Error updating item status:', error);
+    return { success: false, error: 'Error al actualizar estado del item' };
+  }
+};
+
+// KITCHEN MANAGEMENT
+export const getKitchenOrdersRealtime = (callback: (orders: Order[]) => void) => {
+  const ordersQuery = query(
+    collection(db, 'orders'),
+    where('status', '==', 'activo'),
+    orderBy('createdAt', 'asc')
+  );
+  
+  return onSnapshot(ordersQuery, (snapshot) => {
+    const orders = snapshot.docs
+      .map(doc => convertTimestamps({ id: doc.id, ...doc.data() }) as Order)
+      .filter(order => 
+        order.items.some(item => 
+          item.category === 'Comida' && 
+          ['pendiente', 'en_preparacion'].includes(item.status)
+        )
+      );
+    callback(orders);
+  }, (error) => {
+    console.error('Error in kitchen orders realtime listener:', error);
+  });
+};
+
+export const updateOrderStatusInKanban = async (orderId: string, itemId: string, newStatus: OrderItem['status']): Promise<FirestoreResponse<void>> => {
+  try {
+    const result = await updateItemStatus(orderId, itemId, newStatus);
+    return { success: result.success, error: result.error };
+  } catch (error) {
+    console.error('Error updating order status in kanban:', error);
+    return { success: false, error: 'Error al actualizar estado en kanban' };
+  }
+};
+
+// STATISTICS AND REPORTS
+export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>> => {
+  try {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      where('createdAt', '>=', Timestamp.fromDate(startOfDay)),
+      where('createdAt', '<=', Timestamp.fromDate(endOfDay)),
+      where('status', '==', 'pagado')
+    );
+    
+    const querySnapshot = await getDocs(ordersQuery);
+    const orders = querySnapshot.docs.map(doc => 
+      convertTimestamps({ id: doc.id, ...doc.data() }) as Order
+    );
+    
+    const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
+    const totalOrders = orders.length;
+    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+    
+    return {
+      success: true,
+      data: {
+        totalSales,
+        totalOrders,
+        averageOrderValue,
+        orders
+      }
+    };
+  } catch (error) {
+    console.error('Error getting daily stats:', error);
+    return { success: false, error: 'Error al obtener estadísticas diarias' };
+  }
+};

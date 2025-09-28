@@ -39,6 +39,15 @@ const convertTimestamps = (data: any) => {
   if (converted.completedAt?.toDate) {
     converted.completedAt = converted.completedAt.toDate();
   }
+  // Convert timestamps inside items array (order items)
+  if (Array.isArray(converted.items)) {
+    converted.items = converted.items.map((it: any) => {
+      const newItem = { ...it };
+      if (newItem.createdAt?.toDate) newItem.createdAt = newItem.createdAt.toDate();
+      if (newItem.updatedAt?.toDate) newItem.updatedAt = newItem.updatedAt.toDate();
+      return newItem;
+    });
+  }
   return converted;
 };
 
@@ -387,8 +396,8 @@ export const getKitchenOrdersRealtime = (callback: (orders: Order[]) => void) =>
       .map(doc => convertTimestamps({ id: doc.id, ...doc.data() }) as Order)
       .filter(order => 
         order.items.some(item => 
-          item.category === 'Comida' && 
-          ['pendiente', 'en_preparacion'].includes(item.status)
+          // include any item that is pending, in preparation or ready
+          ['pendiente', 'en_preparacion', 'listo'].includes(item.status)
         )
       );
     callback(orders);

@@ -16,7 +16,8 @@ export const AdminSidebar: React.FC = () => {
       </div>
       <nav className="space-y-1">
         <NavLink to="/admin/home" className={navLinkClass}>Mesas</NavLink>
-        <NavLink to="/admin/kanban" className={navLinkClass}>Kanban</NavLink>
+        <NavLink to="/admin/kanban/cocina" className={navLinkClass}>Cocina</NavLink>
+        <NavLink to="/admin/kanban/barra" className={navLinkClass}>Barra</NavLink>
         {/* <NavLink to="/admin/checkout" className={navLinkClass}>Checkout</NavLink> */}
       </nav>
     </aside>

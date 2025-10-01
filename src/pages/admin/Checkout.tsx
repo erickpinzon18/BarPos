@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useOrderById, useOrderByTableId } from '../../hooks/useOrders';
 import type { Order } from '../../utils/types';
-import { closeTable } from '../../services/firestoreService';
+import { closeTable, getConfig } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
 import { printTicket80mm } from '../../utils/printTicket';
@@ -36,6 +36,8 @@ const AdminCheckout: React.FC = () => {
     if (order) console.debug('Checkout loaded order:', order);
   }, [order]);
 
+  
+
   // Tip and payment state (percentage)
   const [tipPercent, setTipPercent] = useState<number>(0); // e.g. 0.15 for 15%
   const [customTipPercent, setCustomTipPercent] = useState<string>(''); // user's input like '15' means 15%
@@ -45,6 +47,20 @@ const AdminCheckout: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo');
   const [cashReceived, setCashReceived] = useState<string>(''); // string to allow empty and partial inputs
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
+  const [config, setConfig] = useState<any | null>(null);
+  // Load business config (name, address, phone) from Firestore to show on tickets
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const cfg = await getConfig();
+        if (mounted) setConfig(cfg?.success ? cfg.data : null);
+      } catch (e) {
+        console.debug('Could not load config/general:', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
   // peopleCount is saved on the order by OrderDetails; prefer order.peopleCount
   const peopleCount = order?.peopleCount ?? 1;
 
@@ -212,7 +228,7 @@ const AdminCheckout: React.FC = () => {
           <div className="ticket bg-gray-900 p-6 rounded-lg text-sm text-white">
             <div className="text-center mb-4">
               <h2 className="text-2xl font-extrabold text-amber-400">PASE DE SALIDA</h2>
-              <p className="text-sm text-gray-400">ChepeChupes — Ticket de salida</p>
+              <p className="text-sm text-gray-400">{config?.name ?? 'ChepeChupes'} — Ticket de salida</p>
               <p className="text-xs text-gray-500 mt-2">Fecha: {new Date().toLocaleString()}</p>
               <p className="text-xs text-gray-500 mt-1">Id: {order.id}</p>
             </div>
@@ -262,10 +278,10 @@ const AdminCheckout: React.FC = () => {
               <p className="text-sm text-gray-400">Gracias por su preferencia.</p>
             </div>
 
-            {/* Footer with address and phone (kept for Pase de Salida) */}
+            {/* Footer with address and phone (loaded from config/general when available) */}
             <div className="text-center mt-4 text-xs text-gray-400">
-              <div>Prof. Mercedes Camacho 82, Praderas del Sol, 76808 San Juan del Río, Qro.</div>
-              <div>Tel: 427-123-4567</div>
+              <div>{config?.address ?? 'Prof. Mercedes Camacho 82, Praderas del Sol, 76808 San Juan del Río, Qro.'}</div>
+              <div>Tel: {config?.phone ?? '427-123-4567'}</div>
             </div>
           </div>
         </div>

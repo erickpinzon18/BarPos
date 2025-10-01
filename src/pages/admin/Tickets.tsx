@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOrders } from '../../hooks/useOrders';
 import printTicket80mm from '../../utils/printTicket';
+import { getConfig } from '../../services/firestoreService';
 import type { Order } from '../../utils/types';
 
 const AdminTickets: React.FC = () => {
@@ -8,9 +9,24 @@ const AdminTickets: React.FC = () => {
   const { orders, loading } = useOrders('pagado');
   const [selected, setSelected] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [config, setConfig] = useState<any | null>(null);
 
   const openModal = (order: Order) => setSelected(order);
   const closeModal = () => setSelected(null);
+
+  // Load business config (name, address, phone) from Firestore for ticket display
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const cfg = await getConfig();
+        if (mounted) setConfig(cfg?.success ? cfg.data : null);
+      } catch (err) {
+        console.debug('Could not load config/general for Tickets:', err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const handlePrint = (order: Order) => {
     // compute totals similar to Checkout
@@ -142,7 +158,7 @@ const AdminTickets: React.FC = () => {
             <div className="p-8">
                 <div className="text-center mb-6 border-b border-gray-600 pb-6">
                 <h2 className="text-2xl font-bold text-amber-400 tracking-widest">PASE DE SALIDA</h2>
-                <p className="text-lg font-semibold text-white mt-1">ChepeChupes — Ticket de salida</p>
+                <p className="text-lg font-semibold text-white mt-1">{config?.name ?? 'ChepeChupes'} — Ticket de salida</p>
                 <p className="text-sm text-gray-400">Fecha: {new Date(selected.createdAt || Date.now()).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date(selected.createdAt || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
                 <p className="text-xs text-gray-400 mt-1">ID ticket: {selected.id}</p>
                 {selected.payments && selected.payments.length > 0 && (
@@ -167,7 +183,7 @@ const AdminTickets: React.FC = () => {
               </div>
               <div className="text-center pt-6 border-t border-gray-600">
                 <p className="text-gray-400">Gracias por su preferencia.</p>
-                <p className="text-xs text-gray-500 mt-2">Prof. Mercedes Camacho 82, Praderas del Sol, 76808 San Juan del Río, Qro.<br/>Tel: 427-123-4567</p>
+                <p className="text-xs text-gray-500 mt-2">{config?.address ?? 'Prof. Mercedes Camacho 82, Praderas del Sol, 76808 San Juan del Río, Qro.'}<br/>Tel: {config?.phone ?? '427-123-4567'}</p>
               </div>
             </div>
             <div className="p-6 bg-gray-900/50 rounded-b-2xl flex gap-4">

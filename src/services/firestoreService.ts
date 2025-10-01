@@ -302,6 +302,28 @@ export async function getUsers() {
   }
 }
 
+// Create a user document with auto-generated ID in Firestore.
+// Note: this does NOT create a Firebase Auth account. Use this for storing
+// a user profile document; creating the actual Auth account must be done
+// via admin SDK / invitation flow.
+export async function addUserClient(userData: Partial<User>) {
+  try {
+    const now = Timestamp.now();
+    const toSave = {
+      ...userData,
+      active: userData.active ?? true,
+      createdAt: now,
+      updatedAt: now
+    } as any;
+    const ref = await addDoc(collection(db, 'users'), toSave);
+    const snap = await getDoc(ref);
+    return { success: true, data: convertTimestamps({ id: snap.id, ...snap.data() }) };
+  } catch (err: any) {
+    console.error('Error adding user client-side', err);
+    return { success: false, error: err?.message };
+  }
+}
+
 export const closeTable = async (
   tableId: string,
   orderId: string,

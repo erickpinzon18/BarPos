@@ -1,5 +1,6 @@
 import React from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { getConfig } from '../../services/firestoreService';
 import { NavLink, useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
 import {
@@ -27,6 +28,26 @@ const logoutButtonClass = `flex w-full items-center gap-3 py-2.5 px-4 rounded-lg
 export const AdminSidebar: React.FC = () => {
     const { currentUser, logout } = useAuth();
     const navigate = useNavigate();
+    const [businessName, setBusinessName] = React.useState<string | null>(null);
+    const [logoUrl, setLogoUrl] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        let mounted = true;
+        const load = async () => {
+            try {
+                const res = await getConfig('general');
+                if (!mounted) return;
+                if (res.success && res.data) {
+                    setBusinessName(res.data.name ?? null);
+                    setLogoUrl(res.data.logoUrl ?? null);
+                }
+            } catch (err) {
+                // ignore
+            }
+        };
+        void load();
+        return () => { mounted = false; };
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -42,21 +63,25 @@ export const AdminSidebar: React.FC = () => {
         <aside className="bg-gray-800 text-gray-100 w-64 p-4 hidden md:flex flex-col">
             {/* Logo y Título */}
             <div className="flex items-center justify-center px-4 py-4">
-                <svg
-                    className="w-10 h-10 mr-2 text-amber-400"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <path d="M8 22h8"></path>
-                    <path d="M12 12v10"></path>
-                    <path d="m19 2-7 10-7-10"></path>
-                </svg>
+                {logoUrl ? (
+                    <img src={logoUrl} alt="logo" className="w-10 h-10 mr-2 object-contain rounded" />
+                ) : (
+                    <svg
+                        className="w-10 h-10 mr-2 text-amber-400"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <path d="M8 22h8"></path>
+                        <path d="M12 12v10"></path>
+                        <path d="m19 2-7 10-7-10"></path>
+                    </svg>
+                )}
                 <span className="text-2xl font-bold tracking-tighter text-white">
-                    Bar POS
+                    {businessName ?? 'Bar POS'}
                 </span>
             </div>
 

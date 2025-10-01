@@ -228,6 +228,80 @@ export const openTable = async (tableId: string, waiterId: string, waiterName: s
   }
 };
 
+// CONFIG MANAGEMENT
+export const getConfig = async (docId = 'general'): Promise<FirestoreResponse<any>> => {
+  try {
+    const ref = doc(db, 'config', docId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return { success: true, data: null };
+    return { success: true, data: convertTimestamps({ id: snap.id, ...snap.data() }) };
+  } catch (error) {
+    console.error('Error getting config:', error);
+    return { success: false, error: 'Error al obtener configuración' };
+  }
+};
+
+export const saveConfig = async (payload: any, docId = 'general'): Promise<FirestoreResponse<any>> => {
+  try {
+    const now = Timestamp.now();
+    const ref = doc(db, 'config', docId);
+    const toSave = {
+      ...payload,
+      updatedAt: now,
+      ...(payload.createdAt ? {} : { createdAt: now })
+    };
+    await setDoc(ref, toSave, { merge: true });
+    const snap = await getDoc(ref);
+    return { success: true, data: convertTimestamps({ id: snap.id, ...snap.data() }) };
+  } catch (error) {
+    console.error('Error saving config:', error);
+    return { success: false, error: 'Error al guardar configuración' };
+  }
+};
+
+// Placeholder: disabling/enabling users requires Firebase Admin SDK (server-side).
+// Provide a thin client-side helper that will call a cloud function or other admin endpoint
+// once one is available. For now it returns an explanatory response so the UI can show a toast.
+export async function requestDisableUser(email: string, disable = true) {
+  try {
+    // Find user document by email
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('email', '==', email));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    const userDoc = snap.docs[0];
+    const userId = userDoc.id;
+    const newActive = !disable; // disable=true => active=false
+
+    await updateDoc(doc(db, 'users', userId), { active: newActive, updatedAt: Timestamp.now() });
+
+    const updated = await getDoc(doc(db, 'users', userId));
+    return { success: true, data: convertTimestamps({ id: updated.id, ...updated.data() }) };
+  } catch (err: any) {
+    console.error('Error toggling user active flag', err);
+    return { success: false, error: err?.message || 'Error al actualizar usuario' };
+  }
+}
+
+// Fetch all users from the 'users' collection (client-side view). This reads
+// the documents that represent users in Firestore. Note: some user fields
+// (like 'disabled') are only available if you store them in Firestore as well.
+export async function getUsers() {
+  try {
+    const q = query(collection(db, 'users'));
+    const snap = await getDocs(q);
+    const items: any[] = [];
+    snap.forEach((d) => items.push({ id: d.id, ...convertTimestamps(d.data()) }));
+    return { success: true, data: items };
+  } catch (err: any) {
+    console.error('Error fetching users', err);
+    return { success: false, error: err?.message };
+  }
+}
+
 export const closeTable = async (
   tableId: string,
   orderId: string,

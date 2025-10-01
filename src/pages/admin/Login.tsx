@@ -19,7 +19,7 @@ const AdminLogin: React.FC = () => {
       await login(email, password);
       navigate('/admin/home');
     } catch (err: any) {
-      setError('Usuario o contraseña incorrectos.');
+      setError(err?.message || 'Usuario o contraseña incorrectos.');
     } finally {
       setLoading(false);
     }

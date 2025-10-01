@@ -14,6 +14,7 @@ import AdminKanban from './pages/admin/Kanban';
 import AdminCheckout from './pages/admin/Checkout';
 import AdminOrderDetails from './pages/admin/OrderDetails';
 import AdminKitchenControl from './pages/admin/KitchenControl';
+import Settings from './pages/admin/Settings';
 import AdminTickets from './pages/admin/Tickets';
 import ManageProducts from './pages/admin/ManageProducts';
 
@@ -42,10 +43,10 @@ function App() {
           <Route path="kanban/barra" element={<AdminKanban />} />
           <Route path="tickets" element={<AdminTickets />} />
           <Route path="manage-products" element={<ManageProducts />} />
-          {/* <Route path="checkout" element={<AdminCheckout />} /> */}
           <Route path="checkout/:orderId" element={<AdminCheckout />} />
           <Route path="order/:tableId" element={<AdminOrderDetails />} />
-          <Route path="kitchen" element={<AdminKitchenControl />} />
+          <Route path="panel" element={<AdminKitchenControl />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Route>
 

@@ -60,10 +60,16 @@ const OrderDetails: React.FC = () => {
         setPinLoading(true);
         try {
             // Verificar PIN
-            const authorizedUser = await verifyUserPin(pin);
+                const authorizedUser = await verifyUserPin(pin);
 
-            // Eliminar item
-            await deleteOrderItem(order.id, itemToDelete, authorizedUser);
+                // Only admins can delete items
+                if (authorizedUser.role !== 'admin') {
+                    console.warn('Usuario no autorizado para eliminar item:', authorizedUser);
+                    throw new Error('PIN válido, pero el usuario no tiene permisos. Solo administradores pueden eliminar items.');
+                }
+
+                // Eliminar item
+                await deleteOrderItem(order.id, itemToDelete, authorizedUser);
 
             console.log('✅ Item eliminado exitosamente');
             setShowPinModal(false);

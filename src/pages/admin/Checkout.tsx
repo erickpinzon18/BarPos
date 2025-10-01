@@ -4,6 +4,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useOrderById, useOrderByTableId } from '../../hooks/useOrders';
 import type { Order } from '../../utils/types';
 import { closeTable } from '../../services/firestoreService';
+import { verifyUserPin } from '../../services/orderService';
+import PinModal from '../../components/common/PinModal';
 import { printTicket80mm } from '../../utils/printTicket';
 
 const AdminCheckout: React.FC = () => {
@@ -38,6 +40,8 @@ const AdminCheckout: React.FC = () => {
   const [tipPercent, setTipPercent] = useState<number>(0); // e.g. 0.15 for 15%
   const [customTipPercent, setCustomTipPercent] = useState<string>(''); // user's input like '15' means 15%
   const [closing, setClosing] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinLoading, setPinLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo');
   const [cashReceived, setCashReceived] = useState<string>(''); // string to allow empty and partial inputs
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
@@ -78,6 +82,13 @@ const AdminCheckout: React.FC = () => {
   };
 
   const handleFinalize = async () => {
+    // Instead of immediately finalizing, open PIN modal to verify cashier
+    if (!order) return;
+    setShowPinModal(true);
+  };
+
+  // Finalize after successful PIN verification
+  const finalizeWithAuthorizedUser = async (authorizedUser: any) => {
     if (!order) return;
     setClosing(true);
     try {
@@ -89,7 +100,9 @@ const AdminCheckout: React.FC = () => {
       if (paymentMethod === 'efectivo') {
         const received = Number(cashReceived || 0);
         const change = Math.max(0, received - total);
-        paymentDetails = { receivedAmount: received, change };
+        paymentDetails = { receivedAmount: received, change, cashierId: authorizedUser?.id };
+      } else {
+        paymentDetails = { cashierId: authorizedUser?.id };
       }
 
       const res = await closeTable(tableId, orderId, paymentMethod, peopleCount, paymentDetails);
@@ -102,6 +115,21 @@ const AdminCheckout: React.FC = () => {
       alert(err.message || 'Error al cerrar la mesa');
     } finally {
       setClosing(false);
+      setShowPinModal(false);
+      setPinLoading(false);
+    }
+  };
+
+  const handleConfirmPin = async (pin: string) => {
+    setPinLoading(true);
+    try {
+      const authorizedUser = await verifyUserPin(pin);
+      // proceed to finalize with the authorized user
+      await finalizeWithAuthorizedUser(authorizedUser);
+    } catch (err: any) {
+      console.error('PIN verification failed:', err);
+      setPinLoading(false);
+      throw err; // PinModal will display the error
     }
   };
 
@@ -375,6 +403,15 @@ const AdminCheckout: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* PIN modal shown when finalizing to identify cashier */}
+      <PinModal
+        isOpen={showPinModal}
+        onClose={() => { setShowPinModal(false); setPinLoading(false); }}
+        onConfirm={handleConfirmPin}
+        title="Confirmar Cobro"
+        message="Ingresa tu PIN para autorizar el cobro y registrar quién recibió el pago."
+        loading={pinLoading}
+      />
     </div>
   );
 };

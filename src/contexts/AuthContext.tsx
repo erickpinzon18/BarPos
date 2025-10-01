@@ -44,7 +44,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!userResponse.success || !userResponse.data) {
         throw new Error('Usuario no encontrado en la base de datos');
       }
-      
+      // Check 'active' flag
+      if (userResponse.data.active === false) {
+        // Sign out from firebase auth to avoid a logged-in state for inactive
+        await signOut(auth);
+        throw new Error('Usuario inactivo, contacte al administrador');
+      }
+
       setCurrentUser(userResponse.data);
       toast.success('Inicio de sesión exitoso');
     } catch (error: any) {
@@ -108,6 +114,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userResponse = await getUserByUid(firebaseUser.uid);
           
           if (userResponse.success && userResponse.data) {
+            // If user exists but is inactive, immediately sign out
+            if (userResponse.data.active === false) {
+              await signOut(auth);
+              setCurrentUser(null);
+              return;
+            }
             setCurrentUser(userResponse.data);
           } else {
             // User exists in Firebase Auth but not in Firestore

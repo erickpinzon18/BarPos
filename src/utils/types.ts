@@ -6,6 +6,7 @@ export interface User {
   id: string;
   email: string;
   displayName?: string;
+  active?: boolean; // true = activo, false = inactivo
   role: UserRole;
   pin?: string; // PIN para autorizar eliminaciones
   createdAt: Date;

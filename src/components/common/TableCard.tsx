@@ -41,7 +41,7 @@ export const TableCard: React.FC<TableCardProps> = memo(({ table, onClick }) => 
         </CardHeader>
         <CardContent>
           <div className="text-sm text-gray-300">
-            Capacidad: {table.capacity} persona{table.capacity !== 1 ? 's' : ''}
+            {/* Capacidad: {table.capacity} persona{table.capacity !== 1 ? 's' : ''} */}
           </div>
           {table.waiterName && (
             <div className="text-sm text-gray-400 mt-1">

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar POS - Gestión de Productos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .category-btn-active {
+            background-color: #f59e0b;
+            color: #111827;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="sidebar bg-gray-800 text-gray-100 w-64 space-y-6 py-7 px-2 hidden md:block">
+            <div class="flex items-center justify-center px-4">
+                 <svg class="w-10 h-10 mr-2 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 22h8"></path><path d="M12 12v10"></path><path d="m19 2-7 10-7-10"></path>
+                </svg>
+                <span class="text-2xl font-bold tracking-tighter text-white">Bar POS</span>
+            </div>
+            <nav>
+                <a href="dashboard.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>Mesas
+                </a>
+                <a href="statistics.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                     <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>Estadísticas
+                </a>
+                 <a href="products.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 bg-gray-700 text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>Productos
+                </a>
+                <a href="expenses.html" class="flex items-center py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700 hover:text-amber-400">
+                    <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Gastos
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 p-4 md:p-8">
+            <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-white">Gestión de Productos</h1>
+                    <p class="text-gray-400">Añade, edita y controla tu inventario.</p>
+                </div>
+                <button id="add-product-btn" class="w-full md:w-auto flex items-center justify-center bg-amber-500 text-gray-900 font-bold py-2.5 px-5 rounded-lg hover:bg-amber-600 transition">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Agregar Producto
+                </button>
+            </div>
+            
+            <!-- Filtros y Buscador -->
+            <div class="mb-6 bg-gray-800 p-4 rounded-2xl border border-gray-700">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-2">
+                        <label for="search-product" class="sr-only">Buscar</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                            <input type="search" id="search-product" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full pl-10 p-2.5" placeholder="Buscar producto...">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button class="category-btn category-btn-active px-4 py-2 text-sm font-medium rounded-lg" data-category="all">Todos</button>
+                    <button class="category-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600" data-category="Cocktails">Cocktails</button>
+                    <button class="category-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600" data-category="Comida">Comida</button>
+                    <button class="category-btn px-4 py-2 text-sm font-medium rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600" data-category="Cervezas">Cervezas</button>
+                </div>
+            </div>
+
+            <!-- Grid de Productos -->
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Tarjeta de Producto -->
+                <div class="product-card bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden" data-category="Cocktails" data-name="Mojito Clásico">
+                    <div class="p-5">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-bold text-white">Mojito Clásico</h3>
+                            <span class="bg-green-600 text-green-100 text-xs font-medium px-2.5 py-0.5 rounded-full">50+ en stock</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Cocktails</p>
+                        <div class="flex justify-between items-center mt-4">
+                            <p class="text-xl font-semibold text-amber-400">$130.00</p>
+                            <button class="font-medium text-blue-500 hover:underline text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Fin Tarjeta de Producto -->
+                 <div class="product-card bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden" data-category="Comida" data-name="Tacos de Arrachera">
+                    <div class="p-5">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-bold text-white">Tacos de Arrachera</h3>
+                            <span class="bg-yellow-500 text-yellow-100 text-xs font-medium px-2.5 py-0.5 rounded-full">12 en stock</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Comida</p>
+                        <div class="flex justify-between items-center mt-4">
+                            <p class="text-xl font-semibold text-amber-400">$180.00</p>
+                            <button class="font-medium text-blue-500 hover:underline text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="product-card bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden" data-category="Cervezas" data-name="Cerveza Artesanal IPA">
+                    <div class="p-5">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-bold text-white">Cerveza Artesanal IPA</h3>
+                            <span class="bg-red-600 text-red-100 text-xs font-medium px-2.5 py-0.5 rounded-full">4 en stock</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Cervezas</p>
+                        <div class="flex justify-between items-center mt-4">
+                            <p class="text-xl font-semibold text-amber-400">$95.00</p>
+                            <button class="font-medium text-blue-500 hover:underline text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                 <div class="product-card bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden" data-category="Cocktails" data-name="Margarita de Fresa">
+                    <div class="p-5">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-bold text-white">Margarita de Fresa</h3>
+                            <span class="bg-green-600 text-green-100 text-xs font-medium px-2.5 py-0.5 rounded-full">50+ en stock</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Cocktails</p>
+                        <div class="flex justify-between items-center mt-4">
+                            <p class="text-xl font-semibold text-amber-400">$140.00</p>
+                            <button class="font-medium text-blue-500 hover:underline text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modal para Añadir/Editar Producto -->
+    <div id="product-modal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop flex items-center justify-center">
+        <div class="bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg m-4 border border-gray-700">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <h3 id="modal-title" class="text-xl font-bold text-white">Agregar Nuevo Producto</h3>
+                    <button id="close-modal-btn" class="text-gray-400 hover:text-white">&times;</button>
+                </div>
+                <form id="product-form" class="mt-4 space-y-4">
+                    <div>
+                        <label for="product-name" class="block mb-2 text-sm font-medium text-gray-300">Nombre del Producto</label>
+                        <input type="text" id="product-name" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5" placeholder="Ej: Margarita de Fresa" required>
+                    </div>
+                     <div>
+                        <label for="product-description" class="block mb-2 text-sm font-medium text-gray-300">Descripción</label>
+                        <div class="relative">
+                            <textarea id="product-description" rows="3" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5" placeholder="Describe el producto..."></textarea>
+                            <button type="button" id="generate-desc-btn" class="absolute bottom-2 right-2 flex items-center text-xs bg-amber-600 text-white font-bold py-1 px-2 rounded-md hover:bg-amber-700 transition">
+                                <svg id="desc-btn-icon" class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                <span id="desc-btn-text">Generar IA</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                             <label for="product-category" class="block mb-2 text-sm font-medium text-gray-300">Categoría</label>
+                             <select id="product-category" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                                 <option>Cocktails</option><option>Comida</option><option>Cervezas</option><option>Vinos</option><option>Refrescos</option>
+                             </select>
+                        </div>
+                        <div>
+                            <label for="product-price" class="block mb-2 text-sm font-medium text-gray-300">Precio ($)</label>
+                            <input type="number" id="product-price" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5" placeholder="150.00" required>
+                        </div>
+                        <div>
+                            <label for="product-stock" class="block mb-2 text-sm font-medium text-gray-300">Stock</label>
+                            <input type="number" id="product-stock" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5" placeholder="50" required>
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button type="button" id="cancel-btn" class="mr-2 text-gray-300 bg-gray-700 hover:bg-gray-600 font-medium rounded-lg text-sm px-5 py-2.5">Cancelar</button>
+                        <button type="submit" class="text-gray-900 bg-amber-500 hover:bg-amber-600 font-bold rounded-lg text-sm px-5 py-2.5">Guardar Producto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- Lógica del Modal ---
+        const modal = document.getElementById('product-modal');
+        const addProductBtn = document.getElementById('add-product-btn');
+        const closeModalBtn = document.querySelector('#product-modal #close-modal-btn');
+        const cancelBtn = document.querySelector('#product-modal #cancel-btn');
+
+        const openModal = () => modal.style.display = 'flex';
+        const closeModal = () => modal.style.display = 'none';
+
+        if(addProductBtn) addProductBtn.addEventListener('click', openModal);
+        if(closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+        if(cancelBtn) cancelBtn.addEventListener('click', closeModal);
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) closeModal();
+        });
+        
+        // --- Lógica para Generador de Descripción IA ---
+        const generateDescBtn = document.getElementById('generate-desc-btn');
+        const productNameEl = document.getElementById('product-name');
+        const productDescEl = document.getElementById('product-description');
+        const descBtnText = document.getElementById('desc-btn-text');
+
+        if(generateDescBtn) {
+            generateDescBtn.addEventListener('click', async () => {
+                const productName = productNameEl.value;
+                if (!productName) {
+                    alert("Por favor, ingresa un nombre de producto primero.");
+                    return;
+                }
+
+                descBtnText.textContent = 'Generando...';
+                generateDescBtn.disabled = true;
+
+                const prompt = `Actúa como un copywriter para el menú de un bar moderno. Escribe una descripción corta, atractiva y apetitosa (máximo 20 palabras) para el siguiente producto: "${productName}". Usa un tono informal y tentador.`;
+                
+                const apiKey = ""; // Canvas handles the API key
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+                try {
+                     const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                     if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                     
+                     const result = await response.json();
+                     const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                     
+                     if(text) {
+                        productDescEl.value = text.trim().replace(/^"|"$/g, '');
+                     } else {
+                        productDescEl.value = "No se pudo generar una descripción.";
+                     }
+
+                } catch (error) {
+                    console.error("Error con Gemini API (Descripción):", error);
+                    productDescEl.value = "Error al generar descripción.";
+                } finally {
+                    descBtnText.textContent = 'Generar IA';
+                    generateDescBtn.disabled = false;
+                }
+            });
+        }
+
+        // --- Lógica de Filtros y Búsqueda ---
+        const searchInput = document.getElementById('search-product');
+        const categoryBtns = document.querySelectorAll('.category-btn');
+        const productCards = document.querySelectorAll('.product-card');
+        
+        let activeCategory = 'all';
+
+        function filterProducts() {
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            productCards.forEach(card => {
+                const cardName = card.dataset.name.toLowerCase();
+                const cardCategory = card.dataset.category;
+
+                const nameMatch = cardName.includes(searchTerm);
+                const categoryMatch = (activeCategory === 'all' || activeCategory === cardCategory);
+
+                if (nameMatch && categoryMatch) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        categoryBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                categoryBtns.forEach(b => b.classList.remove('category-btn-active'));
+                btn.classList.add('category-btn-active');
+                activeCategory = btn.dataset.category;
+                filterProducts();
+            });
+        });
+
+        searchInput.addEventListener('input', filterProducts);
+        
+    </script>
+</body>
+</html>
+
+

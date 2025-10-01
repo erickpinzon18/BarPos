@@ -13,9 +13,6 @@ const ManageProducts: React.FC = () => {
   const [modalTitle, setModalTitle] = useState('Agregar Nuevo Producto');
   const [form, setForm] = useState<ProductFormData>({ name: '', description: '', price: 0, category: 'Comida', available: true });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-
-  // (categories mapping removed - not used in this modal)
 
   useEffect(() => {
     // Reset form when modal closes
@@ -76,24 +73,6 @@ const ManageProducts: React.FC = () => {
     if (!confirm('Eliminar producto? Esta acción no se puede deshacer.')) return;
     const res = await deleteProduct(id);
     if (!res.success) alert(res.error || 'Error al eliminar producto');
-  };
-
-  const generateDescription = async () => {
-    // Placeholder: design had an IA button that calls an external API. We provide a simple fallback
-    if (!form.name) return alert('Agrega el nombre primero');
-    setAiLoading(true);
-    try {
-      // Fallback: create a short appetizing description programmatically
-      const fallback = `${form.name} — delicioso y perfecto para compartir.`;
-      // Simulate latency
-      await new Promise(r => setTimeout(r, 600));
-      setForm(prev => ({ ...prev, description: fallback }));
-    } catch (err) {
-      console.error('AI generate failed', err);
-      setForm(prev => ({ ...prev, description: 'No se pudo generar descripción.' }));
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   // animation states for modal (mount + active for transitions)

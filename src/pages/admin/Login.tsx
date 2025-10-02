@@ -16,10 +16,16 @@ const AdminLogin: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      await login(email, password);
+      const user = await login(email, password);
+      // Enforce admin role
+      if (user.role !== 'admin') {
+        setError('Acceso denegado. Solo administradores pueden acceder.');
+        setLoading(false);
+        return;
+      }
       navigate('/admin/home');
     } catch (err: any) {
-      setError('Usuario o contraseña incorrectos.');
+      setError(err?.message || 'Usuario o contraseña incorrectos.');
     } finally {
       setLoading(false);
     }

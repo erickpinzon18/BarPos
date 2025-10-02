@@ -21,6 +21,7 @@ import ManageProducts from './pages/admin/ManageProducts';
 // Waiter Pages
 import WaiterLogin from './pages/waiter/Login';
 import WaiterHome from './pages/waiter/Home';
+import WaiterOrderDetails from './pages/waiter/OrderDetails';
 import WaiterCheckout from './pages/waiter/Checkout';
 
 // Kitchen Pages
@@ -55,7 +56,8 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={['waiter']} />}>
         <Route path="/waiter" element={<WaiterLayout />}>
           <Route path="home" element={<WaiterHome />} />
-          <Route path="checkout" element={<WaiterCheckout />} />
+          <Route path="order/:tableId" element={<WaiterOrderDetails />} />
+          <Route path="checkout/:orderId" element={<WaiterCheckout />} />
         </Route>
       </Route>
 

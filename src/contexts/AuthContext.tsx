@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string): Promise<User> => {
     try {
       setLoading(true);
       
@@ -53,6 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setCurrentUser(userResponse.data);
       toast.success('Inicio de sesión exitoso');
+      return userResponse.data;
     } catch (error: any) {
       console.error('Login error:', error);
       let errorMessage = 'Error al iniciar sesión';

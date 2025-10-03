@@ -139,122 +139,74 @@ const AdminKanban: React.FC = () => {
     );
   };
 
-  const renderBoard = (label: string, category: string) => {
-    // If this is the Cocina board, render a single 3-column kanban that includes
-    // items from categories assigned to 'cocina' workstation. Each card will show its category.
-    if (label.toLowerCase() === 'cocina') {
-      const categories = getCategoriesByWorkstation('cocina').map(c => c.key);
-      // gather items from these categories
-      const pending = allItems
-        .filter(e => categories.includes(e.item.category) && e.item.status === 'pendiente')
-        .sort(sortByCreatedAt);
-
-      const ready = allItems
-        .filter(e => categories.includes(e.item.category) && e.item.status === 'listo')
-        .sort(sortByCreatedAt);
-
-      const delivered = allItems
-        .filter(e => 
-          categories.includes(e.item.category) && 
-          e.item.status === 'entregado' &&
-          isDeliveredRecently(e.item) // Solo mostrar entregados recientes
-        )
-        .sort(sortByCreatedAt);
-
-      return (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-200">{label}</h2>
-          <div className="bg-gray-800 rounded-lg p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <KanbanColumn title={`Pendientes (${pending.length})`}>
-                {pending.length === 0 ? (
-                  <p className="text-sm text-gray-400">No hay ítems pendientes.</p>
-                ) : (
-                  pending.map(renderItemCard)
-                )}
-              </KanbanColumn>
-
-              <KanbanColumn title={`Listos (${ready.length})`}>
-                {ready.length === 0 ? (
-                  <p className="text-sm text-gray-400">No hay ítems listos.</p>
-                ) : (
-                  ready.map(renderItemCard)
-                )}
-              </KanbanColumn>
-
-              <KanbanColumn title={`Entregados (${delivered.length})`}>
-                {delivered.length === 0 ? (
-                  <p className="text-sm text-gray-400">No hay ítems entregados.</p>
-                ) : (
-                  delivered.map(renderItemCard)
-                )}
-              </KanbanColumn>
-            </div>
-
-            {/* Optional legend showing counts per category inside Cocina */}
-            <div className="mt-4 flex gap-3 text-sm text-gray-300">
-              {categories.map(cat => {
-                // Only count items that are in the kanban (Entrada/Comida/Postre)
-                // and whose status is pendiente or listo (exclude entregado from count)
-                const allowedStatuses = new Set(['pendiente', 'listo']);
-                const count = allItems.filter(e => e.item.category === cat && allowedStatuses.has(e.item.status)).length;
-                return (
-                  <div key={cat} className="px-2 py-1 bg-white/5 rounded">
-                    <span className="text-amber-300 font-semibold">{cat}</span>
-                    <span className="ml-2">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Default behavior for other boards (e.g., Barra)
-    const catPending = allItems
-      .filter(e => e.item.category === category && e.item.status === 'pendiente')
+  const renderBoard = (label: string, workstation: 'cocina' | 'barra') => {
+    // Get all categories for this workstation
+    const categories = getCategoriesByWorkstation(workstation).map(c => c.key);
+    
+    // Gather items from these categories
+    const pending = allItems
+      .filter(e => categories.includes(e.item.category) && e.item.status === 'pendiente')
       .sort(sortByCreatedAt);
 
-    const catReady = allItems
-      .filter(e => e.item.category === category && e.item.status === 'listo')
+    const ready = allItems
+      .filter(e => categories.includes(e.item.category) && e.item.status === 'listo')
       .sort(sortByCreatedAt);
 
-    const catDelivered = allItems
+    const delivered = allItems
       .filter(e => 
-        e.item.category === category && 
+        categories.includes(e.item.category) && 
         e.item.status === 'entregado' &&
-        isDeliveredRecently(e.item) // Solo mostrar entregados recientes
+        isDeliveredRecently(e.item)
       )
       .sort(sortByCreatedAt);
 
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-200">{label}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <KanbanColumn title={`Pendientes (${catPending.length})`}>
-            {catPending.length === 0 ? (
-              <p className="text-sm text-gray-400">No hay ítems pendientes.</p>
-            ) : (
-              catPending.map(renderItemCard)
-            )}
-          </KanbanColumn>
+        <h2 className="text-xl font-semibold text-gray-200 flex items-center gap-2">
+          <span>{workstation === 'barra' ? '🍹' : '👨‍🍳'}</span>
+          <span>{label}</span>
+        </h2>
+        <div className="bg-gray-800 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <KanbanColumn title={`Pendientes (${pending.length})`}>
+              {pending.length === 0 ? (
+                <p className="text-sm text-gray-400">No hay ítems pendientes.</p>
+              ) : (
+                pending.map(renderItemCard)
+              )}
+            </KanbanColumn>
 
-          <KanbanColumn title={`Listos (${catReady.length})`}>
-            {catReady.length === 0 ? (
-              <p className="text-sm text-gray-400">No hay ítems listos.</p>
-            ) : (
-              catReady.map(renderItemCard)
-            )}
-          </KanbanColumn>
+            <KanbanColumn title={`Listos (${ready.length})`}>
+              {ready.length === 0 ? (
+                <p className="text-sm text-gray-400">No hay ítems listos.</p>
+              ) : (
+                ready.map(renderItemCard)
+              )}
+            </KanbanColumn>
 
-          <KanbanColumn title={`Entregados (${catDelivered.length})`}>
-            {catDelivered.length === 0 ? (
-              <p className="text-sm text-gray-400">No hay ítems entregados.</p>
-            ) : (
-              catDelivered.map(renderItemCard)
-            )}
-          </KanbanColumn>
+            <KanbanColumn title={`Entregados (${delivered.length})`}>
+              {delivered.length === 0 ? (
+                <p className="text-sm text-gray-400">No hay ítems entregados.</p>
+              ) : (
+                delivered.map(renderItemCard)
+              )}
+            </KanbanColumn>
+          </div>
+
+          {/* Legend showing all categories for this workstation */}
+          <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-300">
+            {getCategoriesByWorkstation(workstation).map(cat => {
+              const allowedStatuses = new Set(['pendiente', 'listo']);
+              const count = allItems.filter(e => e.item.category === cat.key && allowedStatuses.has(e.item.status)).length;
+              return (
+                <div key={cat.key} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
+                  <span className={`w-3 h-3 rounded-full ${cat.color}`}></span>
+                  <span>{cat.icon} {cat.label}</span>
+                  <span className="ml-2 font-semibold text-amber-300">{count}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
@@ -281,8 +233,8 @@ const AdminKanban: React.FC = () => {
         </div>
       </div>
       <div className={`grid grid-cols-1 ${gridColsClass} gap-8`}>
-        {showCocina && renderBoard('Cocina', 'Comida')}
-        {showBarra && renderBoard('Barra', 'Bebida')}
+        {showCocina && renderBoard('Cocina', 'cocina')}
+        {showBarra && renderBoard('Barra', 'barra')}
       </div>
     </div>
   );

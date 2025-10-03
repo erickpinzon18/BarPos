@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import KanbanColumn from '../../components/common/KanbanColumn';
 import type { Order, OrderItemStatus } from '../../utils/types';
 import { updateOrderStatusInKanban } from '../../services/firestoreService';
+import { getCategoriesByWorkstation } from '../../utils/categories';
 
 const AdminKanban: React.FC = () => {
   const { orders, loading } = useKitchenOrders();
@@ -123,9 +124,9 @@ const AdminKanban: React.FC = () => {
 
   const renderBoard = (label: string, category: string) => {
     // If this is the Cocina board, render a single 3-column kanban that includes
-    // items from Entrada, Comida and Postre. Each card will show its category.
+    // items from categories assigned to 'cocina' workstation. Each card will show its category.
     if (label.toLowerCase() === 'cocina') {
-      const categories = ['Entrada', 'Comida', 'Postre'];
+      const categories = getCategoriesByWorkstation('cocina').map(c => c.key);
       // gather items from these categories
       const pending = allItems
         .filter(e => categories.includes(e.item.category) && e.item.status === 'pendiente')

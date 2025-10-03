@@ -1,4 +1,5 @@
 // src/utils/types.ts
+import type { CategoryKey } from './categories';
 
 export type UserRole = 'admin' | 'waiter' | 'kitchen';
 
@@ -18,7 +19,7 @@ export interface Product {
   name: string;
   description?: string;
   price: number;
-  category: 'Bebida' | 'Comida' | 'Postre' | 'Entrada';
+  category: CategoryKey;
   imageUrl?: string;
   available: boolean;
   createdAt: Date;

@@ -2,8 +2,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useProducts } from '../../hooks/useProducts';
 import { addProduct, updateProduct, deleteProduct } from '../../services/firestoreService';
 import type { ProductFormData, Product } from '../../utils/types';
+import { FILTER_CATEGORIES, getCategoryLabels } from '../../utils/categories';
 
-const designCategories = ['Todos', 'Bebida', 'Entrada', 'Comida', 'Postre'];
+const designCategories = FILTER_CATEGORIES;
 
 const ManageProducts: React.FC = () => {
   const { products, loading } = useProducts(false);
@@ -201,10 +202,9 @@ const ManageProducts: React.FC = () => {
                     <div>
                       <label htmlFor="product-category" className="block mb-2 text-sm font-medium text-gray-300">Categoría</label>
                       <select id="product-category" value={form.category} onChange={(e) => setForm(prev => ({ ...prev, category: e.target.value as any }))} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-opacity-60 block w-full p-2.5">
-                        <option>Bebida</option>
-                        <option>Entrada</option>
-                        <option>Comida</option>
-                        <option>Postre</option>
+                        {getCategoryLabels().map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
                       </select>
                     </div>
                     <div>

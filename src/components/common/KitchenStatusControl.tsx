@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { ChefHat, Clock, CheckCircle, Truck } from 'lucide-react';
 import type { OrderItemStatus } from '../../utils/types';
+import { getCategoryInfo, type CategoryKey } from '../../utils/categories';
 
 interface KitchenStatusControlProps {
   currentStatus: OrderItemStatus;
@@ -80,9 +81,9 @@ const KitchenStatusControl: React.FC<KitchenStatusControlProps> = ({
 
   const statuses: OrderItemStatus[] = ['pendiente', 'listo', 'entregado'];
 
-  // Determinar si es item de cocina o barra
-  const isKitchenItem = category === 'Comida' || category === 'Entrada';
-  const workstation = isKitchenItem ? '🍳 Cocina' : '🍹 Barra';
+  // Determinar si es item de cocina o barra usando el diccionario de categorías
+  const categoryInfo = getCategoryInfo(category as CategoryKey);
+  const workstation = categoryInfo?.workstation === 'cocina' ? '🍳 Cocina' : '🍹 Barra';
 
   return (
     <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">

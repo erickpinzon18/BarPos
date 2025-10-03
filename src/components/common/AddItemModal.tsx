@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Plus } from 'lucide-react';
 import QuantityModal from './QuantityModal';
 import type { Product } from '../../utils/types';
+import { FILTER_CATEGORIES } from '../../utils/categories';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -20,13 +21,13 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
   loading = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Todo');
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
   
   // Estados para el modal de cantidad
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const categories = ['Todo', 'Bebida', 'Comida', 'Postre', 'Entrada'];
+  const categories = FILTER_CATEGORIES;
 
   // Filtrar productos
   const filteredProducts = products.filter(product => {
@@ -35,7 +36,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCategory = selectedCategory === 'Todo' || product.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'Todos' || product.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
   });
@@ -65,7 +66,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 
   const handleClose = () => {
     setSearchTerm('');
-    setSelectedCategory('Todo');
+    setSelectedCategory('Todos');
     onClose();
   };
 

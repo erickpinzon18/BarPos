@@ -5,6 +5,7 @@ import { updateItemStatus } from '../../services/orderService';
 import KitchenStatusControl from '../../components/common/KitchenStatusControl';
 import { ChefHat, Wine, Filter, RefreshCw } from 'lucide-react';
 import type { OrderItemStatus } from '../../utils/types';
+import { getCategoriesByWorkstation } from '../../utils/categories';
 
 const KitchenControl: React.FC = () => {
   const { orders, loading, error } = useActiveOrders();
@@ -24,9 +25,12 @@ const KitchenControl: React.FC = () => {
   );
 
   // Filtrar items por estación de trabajo
+  const kitchenCategories = getCategoriesByWorkstation('cocina').map(c => c.key);
+  const barCategories = getCategoriesByWorkstation('barra').map(c => c.key);
+
   const filteredItems = allItems.filter(item => {
-    const isKitchenItem = item.category === 'Comida' || item.category === 'Entrada';
-    const isBarItem = item.category === 'Bebida' || item.category === 'Postre';
+    const isKitchenItem = kitchenCategories.includes(item.category as any);
+    const isBarItem = barCategories.includes(item.category as any);
 
     let stationMatch = true;
     if (filter === 'kitchen') stationMatch = isKitchenItem;

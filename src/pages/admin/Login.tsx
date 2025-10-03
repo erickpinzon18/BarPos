@@ -51,6 +51,7 @@ const AdminLogin: React.FC = () => {
             <path d="m19 2-7 10-7-10"></path>
           </svg>
           <h1 className="text-3xl font-bold tracking-tighter text-white">Bar POS</h1>
+          <p className="text-sm text-gray-400 mt-2">Administrador</p>
         </div>
 
         {/* Formulario de Login */}

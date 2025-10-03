@@ -17,6 +17,7 @@ import AdminKitchenControl from './pages/admin/KitchenControl';
 import Settings from './pages/admin/Settings';
 import AdminTickets from './pages/admin/Tickets';
 import ManageProducts from './pages/admin/ManageProducts';
+import DailySummary from './pages/admin/DailySummary';
 
 // Waiter Pages
 import WaiterLogin from './pages/waiter/Login';
@@ -47,6 +48,7 @@ function App() {
           <Route path="checkout/:orderId" element={<AdminCheckout />} />
           <Route path="order/:tableId" element={<AdminOrderDetails />} />
           <Route path="panel" element={<AdminKitchenControl />} />
+          <Route path="cierre" element={<DailySummary />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Route>

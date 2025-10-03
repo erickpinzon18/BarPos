@@ -60,9 +60,9 @@ export const AdminSidebar: React.FC = () => {
     };
 
     return (
-        <aside className="bg-gray-800 text-gray-100 w-64 p-4 hidden md:flex flex-col">
+        <aside className="bg-gray-800 text-gray-100 w-64 p-4 hidden md:flex flex-col h-screen overflow-y-auto">
             {/* Logo y Título */}
-            <div className="flex items-center justify-center px-4 py-4">
+            <div className="flex items-center justify-center px-4 py-4 flex-shrink-0">
                 {logoUrl ? (
                     <img src={logoUrl} alt="logo" className="w-10 h-10 mr-2 object-contain rounded" />
                 ) : (

@@ -270,8 +270,7 @@ const OrderDetails: React.FC = () => {
     // Calcular totales dinámicamente basado en items activos
     const activeItems = order.items.filter(item => !item.isDeleted);
     const calculatedSubtotal = activeItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
-    const calculatedTax = calculatedSubtotal * 0.16;
-    const calculatedTotal = calculatedSubtotal + calculatedTax;
+    const calculatedTotal = calculatedSubtotal;
 
     return (
         <div className="p-4 md:p-8">
@@ -555,15 +554,7 @@ const OrderDetails: React.FC = () => {
                 {/* Order Summary */}
                 <div className="p-6 bg-gray-700/50 border-t border-gray-600">
                     <div className="space-y-2">
-                        <div className="flex justify-between text-gray-300">
-                            <span>Subtotal:</span>
-                            <span>${calculatedSubtotal.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-300">
-                            <span>IVA (16%):</span>
-                            <span>${calculatedTax.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-xl font-bold text-white border-t border-gray-600 pt-2">
+                        <div className="flex justify-between text-xl font-bold text-white">
                             <span>Total:</span>
                             <span>${calculatedTotal.toFixed(2)}</span>
                         </div>

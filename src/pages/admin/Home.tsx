@@ -132,9 +132,7 @@ const AdminHome: React.FC = () => {
     const totalAmount = currentOrder ? 
       (() => {
         const activeItems = currentOrder.items.filter(item => !item.isDeleted);
-        const subtotal = activeItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
-        const tax = subtotal * 0.16;
-        const total = subtotal + tax;
+        const total = activeItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
         return total.toFixed(2);
       })() : '0.00';
     

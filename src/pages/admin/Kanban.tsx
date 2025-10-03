@@ -100,15 +100,7 @@ const AdminKanban: React.FC = () => {
           </div>
         </div>
         <div className="mt-3 flex items-center justify-end gap-2">
-          {item.status !== 'en_preparacion' && item.status !== 'listo' && (
-            <button
-              onClick={() => handleMoveTo(orderId, item.id, 'en_preparacion')}
-              className="px-3 py-1 bg-yellow-500 text-black rounded-md text-sm font-medium hover:opacity-95"
-            >
-              Preparar
-            </button>
-          )}
-          {item.status !== 'listo' && item.status !== 'pendiente' && (
+          {item.status === 'pendiente' && (
             <button
               onClick={() => handleMoveTo(orderId, item.id, 'listo')}
               className="px-3 py-1 bg-green-600 text-white rounded-md text-sm font-medium hover:opacity-95"
@@ -139,12 +131,12 @@ const AdminKanban: React.FC = () => {
         .filter(e => categories.includes(e.item.category) && e.item.status === 'pendiente')
         .sort(sortByCreatedAt);
 
-      const inProgress = allItems
-        .filter(e => categories.includes(e.item.category) && e.item.status === 'en_preparacion')
-        .sort(sortByCreatedAt);
-
       const ready = allItems
         .filter(e => categories.includes(e.item.category) && e.item.status === 'listo')
+        .sort(sortByCreatedAt);
+
+      const delivered = allItems
+        .filter(e => categories.includes(e.item.category) && e.item.status === 'entregado')
         .sort(sortByCreatedAt);
 
       return (
@@ -160,19 +152,19 @@ const AdminKanban: React.FC = () => {
                 )}
               </KanbanColumn>
 
-              <KanbanColumn title={`En Preparación (${inProgress.length})`}>
-                {inProgress.length === 0 ? (
-                  <p className="text-sm text-gray-400">No hay ítems en preparación.</p>
-                ) : (
-                  inProgress.map(renderItemCard)
-                )}
-              </KanbanColumn>
-
               <KanbanColumn title={`Listos (${ready.length})`}>
                 {ready.length === 0 ? (
                   <p className="text-sm text-gray-400">No hay ítems listos.</p>
                 ) : (
                   ready.map(renderItemCard)
+                )}
+              </KanbanColumn>
+
+              <KanbanColumn title={`Entregados (${delivered.length})`}>
+                {delivered.length === 0 ? (
+                  <p className="text-sm text-gray-400">No hay ítems entregados.</p>
+                ) : (
+                  delivered.map(renderItemCard)
                 )}
               </KanbanColumn>
             </div>
@@ -181,8 +173,8 @@ const AdminKanban: React.FC = () => {
             <div className="mt-4 flex gap-3 text-sm text-gray-300">
               {categories.map(cat => {
                 // Only count items that are in the kanban (Entrada/Comida/Postre)
-                // and whose status is pendiente, en_preparacion or listo (exclude entregado)
-                const allowedStatuses = new Set(['pendiente', 'en_preparacion', 'listo']);
+                // and whose status is pendiente or listo (exclude entregado from count)
+                const allowedStatuses = new Set(['pendiente', 'listo']);
                 const count = allItems.filter(e => e.item.category === cat && allowedStatuses.has(e.item.status)).length;
                 return (
                   <div key={cat} className="px-2 py-1 bg-white/5 rounded">
@@ -202,12 +194,12 @@ const AdminKanban: React.FC = () => {
       .filter(e => e.item.category === category && e.item.status === 'pendiente')
       .sort(sortByCreatedAt);
 
-    const catInProgress = allItems
-      .filter(e => e.item.category === category && e.item.status === 'en_preparacion')
-      .sort(sortByCreatedAt);
-
     const catReady = allItems
       .filter(e => e.item.category === category && e.item.status === 'listo')
+      .sort(sortByCreatedAt);
+
+    const catDelivered = allItems
+      .filter(e => e.item.category === category && e.item.status === 'entregado')
       .sort(sortByCreatedAt);
 
     return (
@@ -222,19 +214,19 @@ const AdminKanban: React.FC = () => {
             )}
           </KanbanColumn>
 
-          <KanbanColumn title={`En Preparación (${catInProgress.length})`}>
-            {catInProgress.length === 0 ? (
-              <p className="text-sm text-gray-400">No hay ítems en preparación.</p>
-            ) : (
-              catInProgress.map(renderItemCard)
-            )}
-          </KanbanColumn>
-
           <KanbanColumn title={`Listos (${catReady.length})`}>
             {catReady.length === 0 ? (
               <p className="text-sm text-gray-400">No hay ítems listos.</p>
             ) : (
               catReady.map(renderItemCard)
+            )}
+          </KanbanColumn>
+
+          <KanbanColumn title={`Entregados (${catDelivered.length})`}>
+            {catDelivered.length === 0 ? (
+              <p className="text-sm text-gray-400">No hay ítems entregados.</p>
+            ) : (
+              catDelivered.map(renderItemCard)
             )}
           </KanbanColumn>
         </div>

@@ -78,7 +78,7 @@ const KitchenStatusControl: React.FC<KitchenStatusControlProps> = ({
     }
   };
 
-  const statuses: OrderItemStatus[] = ['pendiente', 'en_preparacion', 'listo', 'entregado'];
+  const statuses: OrderItemStatus[] = ['pendiente', 'listo', 'entregado'];
 
   // Determinar si es item de cocina o barra
   const isKitchenItem = category === 'Comida' || category === 'Entrada';
@@ -96,7 +96,7 @@ const KitchenStatusControl: React.FC<KitchenStatusControlProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {statuses.map((status) => {
           const config = getStatusConfig(status);
           const Icon = config.icon;

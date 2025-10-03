@@ -207,7 +207,6 @@ export const openTable = async (tableId: string, waiterId: string, waiterName: s
       items: [],
       status: 'activo' as const,
       subtotal: 0,
-      tax: 0,
       total: 0,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
@@ -329,7 +328,7 @@ export const closeTable = async (
   orderId: string,
   paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia',
   peopleCount?: number,
-  paymentDetails?: { receivedAmount?: number; change?: number; cashierId?: string }
+  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string }
 ): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);
@@ -365,6 +364,8 @@ export const closeTable = async (
         method: paymentMethod,
         receivedAmount: typeof paymentDetails.receivedAmount === 'number' ? paymentDetails.receivedAmount : null,
         change: typeof paymentDetails.change === 'number' ? paymentDetails.change : null,
+        tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : null,
+        tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : null,
         cashierId: paymentDetails.cashierId ?? null,
         createdAt: Timestamp.now()
       };
@@ -440,13 +441,11 @@ export const addItemToOrder = async (orderId: string, product: Product, quantity
     
     const updatedItems = [...orderData.items, newItem];
     const subtotal = updatedItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
-    const tax = subtotal * 0.16; // 16% tax
-    const total = subtotal + tax;
+    const total = subtotal;
     
     await updateDoc(orderRef, {
       items: updatedItems,
       subtotal,
-      tax,
       total,
       updatedAt: Timestamp.now()
     });
@@ -559,12 +558,10 @@ export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>>
     );
     
     const totalSales = orders.reduce((sum, order) => {
-      // Use explicit total if present, otherwise compute from items and tax
+      // Use explicit total if present, otherwise compute from items
       if (typeof order.total === 'number') return sum + order.total;
       const itemsSubtotal = (order.items || []).reduce((s, it) => s + ((it.productPrice || 0) * (it.quantity || 0)), 0);
-      const tax = typeof order.tax === 'number' ? order.tax : itemsSubtotal * 0.16;
-      const computedTotal = itemsSubtotal + tax;
-      return sum + computedTotal;
+      return sum + itemsSubtotal;
     }, 0);
     const totalOrders = orders.length;
     const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;

@@ -67,11 +67,10 @@ const AdminCheckout: React.FC = () => {
   const activeItems = order?.items?.filter(i => !i.isDeleted) ?? [];
 
   const subtotal = useMemo(() => activeItems.reduce((s, it) => s + (it.productPrice * it.quantity), 0), [activeItems]);
-  const tax = useMemo(() => subtotal * 0.16, [subtotal]);
 
   // tipPercent is stored as decimal (0.15). tipAmount is computed from subtotal.
   const tipAmount = useMemo(() => subtotal * tipPercent, [subtotal, tipPercent]);
-  const total = useMemo(() => subtotal + tax + tipAmount, [subtotal, tax, tipAmount]);
+  const total = useMemo(() => subtotal + tipAmount, [subtotal, tipAmount]);
 
   const updateTotalWithPercent = (percent: number) => {
     setTipPercent(percent);
@@ -94,7 +93,7 @@ const AdminCheckout: React.FC = () => {
   const handlePrint = () => {
     if (!order) return;
     const perPerson = ((total) / Math.max(1, (order.peopleCount ?? 1)));
-    printTicket80mm({ order: order as Order, subtotal, tax, tipAmount, total, perPerson });
+    printTicket80mm({ order: order as Order, subtotal, tipAmount, tipPercent, total, perPerson });
   };
 
   const handleFinalize = async () => {
@@ -112,13 +111,13 @@ const AdminCheckout: React.FC = () => {
       const orderId = order.id;
 
       // Prepare payment details when paying with cash
-      let paymentDetails: { receivedAmount?: number; change?: number; cashierId?: string } | undefined;
+      let paymentDetails: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string } | undefined;
       if (paymentMethod === 'efectivo') {
         const received = Number(cashReceived || 0);
         const change = Math.max(0, received - total);
-        paymentDetails = { receivedAmount: received, change, cashierId: authorizedUser?.id };
+        paymentDetails = { receivedAmount: received, change, tipAmount: tipAmount, tipPercent: tipPercent, cashierId: authorizedUser?.id };
       } else {
-        paymentDetails = { cashierId: authorizedUser?.id };
+        paymentDetails = { tipAmount: tipAmount, tipPercent: tipPercent, cashierId: authorizedUser?.id };
       }
 
       const res = await closeTable(tableId, orderId, paymentMethod, peopleCount, paymentDetails);
@@ -261,7 +260,8 @@ const AdminCheckout: React.FC = () => {
 
             <div className="border-t border-dashed border-gray-600 mt-4 pt-2">
               <div className="flex justify-between"><span className="font-bold">Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="font-bold">IVA (16%):</span><span>${tax.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
+              {/* <div className="flex justify-between"><span>Propina ({(tipPercent * 100).toFixed(0)}%):</span><span>${tipAmount.toFixed(2)}</span></div> */}
               <div className="flex justify-between"><span className="font-bold">Propina ({(tipPercent * 100).toFixed(0)}%):</span><span id="tip-amount">${tipAmount.toFixed(2)}</span></div>
               <div className="flex justify-between text-xl mt-2 text-amber-400"><span className="font-bold">TOTAL:</span><span id="total-amount">${total.toFixed(2)}</span></div>
 

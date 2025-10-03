@@ -268,8 +268,7 @@ const WaiterOrderDetails: React.FC = () => {
     // Calcular totales dinámicamente basado en items activos
     const activeItems = order.items.filter(item => !item.isDeleted);
     const calculatedSubtotal = activeItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
-    const calculatedTax = calculatedSubtotal * 0.16;
-    const calculatedTotal = calculatedSubtotal + calculatedTax;
+    const calculatedTotal = calculatedSubtotal;
 
     return (
         <div className="min-h-screen bg-gray-900 pb-24">
@@ -498,15 +497,7 @@ const WaiterOrderDetails: React.FC = () => {
                     {/* Resumen - Compacto */}
                     <div className="p-4 bg-gray-700/50 border-t border-gray-600">
                         <div className="space-y-1.5 mb-4">
-                            <div className="flex justify-between text-sm text-gray-300">
-                                <span>Subtotal:</span>
-                                <span>${calculatedSubtotal.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm text-gray-300">
-                                <span>IVA (16%):</span>
-                                <span>${calculatedTax.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-lg font-bold text-white border-t border-gray-600 pt-2">
+                            <div className="flex justify-between text-lg font-bold text-white">
                                 <span>Total:</span>
                                 <span>${calculatedTotal.toFixed(2)}</span>
                             </div>

@@ -83,6 +83,8 @@ export interface Payment {
   method: 'efectivo' | 'tarjeta' | 'transferencia';
   receivedAmount?: number;
   change?: number;
+  tipAmount?: number;
+  tipPercent?: number; // Percentage as decimal (e.g., 0.15 for 15%)
   cashierId?: string;
   createdAt: Date;
 }

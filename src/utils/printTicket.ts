@@ -4,14 +4,14 @@ import type { Order } from '../utils/types';
 type PrintOptions = {
   order: Order;
   subtotal: number;
-  tax: number;
   tipAmount: number;
+  tipPercent?: number; // Optional percentage as decimal (e.g., 0.15 for 15%)
   total: number;
   perPerson?: number;
 };
 
 export const printTicket80mm = (opts: PrintOptions) => {
-  const { order, subtotal, tax, tipAmount, total, perPerson } = opts;
+  const { order, subtotal, tipAmount, tipPercent, total, perPerson } = opts;
 
   // Build minimal, print-focused HTML. Use inline CSS sized for 80mm (~3.15 inches).
   const html = `
@@ -58,8 +58,7 @@ export const printTicket80mm = (opts: PrintOptions) => {
         <div class="divider"></div>
 
         <div class="row"><div>Subtotal</div><div>$${subtotal.toFixed(2)}</div></div>
-        <div class="row"><div>IVA (16%)</div><div>$${tax.toFixed(2)}</div></div>
-        <div class="row"><div>Propina</div><div>$${tipAmount.toFixed(2)}</div></div>
+        <div class="row"><div>Propina${typeof tipPercent === 'number' && tipPercent > 0 ? ` (${(tipPercent * 100).toFixed(0)}%)` : ''}</div><div>$${tipAmount.toFixed(2)}</div></div>
         <div class="row total"><div>TOTAL</div><div>$${total.toFixed(2)}</div></div>
 
         ${typeof perPerson === 'number' ? `<div class="divider"></div><div class="row"><div>Total por persona</div><div>$${perPerson.toFixed(2)}</div></div>` : ''}

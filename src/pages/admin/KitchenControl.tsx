@@ -41,7 +41,6 @@ const KitchenControl: React.FC = () => {
   // Agrupar por estado para mejor organización
   const groupedItems = {
     pendiente: filteredItems.filter(item => item.status === 'pendiente'),
-    en_preparacion: filteredItems.filter(item => item.status === 'en_preparacion'),
     listo: filteredItems.filter(item => item.status === 'listo'),
     entregado: filteredItems.filter(item => item.status === 'entregado')
   };
@@ -134,7 +133,7 @@ const KitchenControl: React.FC = () => {
 
           {/* Status Filter */}
           <div className="flex space-x-2">
-            {(['all', 'pendiente', 'en_preparacion', 'listo', 'entregado'] as const).map((status) => (
+            {(['all', 'pendiente', 'listo', 'entregado'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -146,7 +145,6 @@ const KitchenControl: React.FC = () => {
               >
                 {status === 'all' ? 'Todos los estados' : 
                  status === 'pendiente' ? 'Pendiente' :
-                 status === 'en_preparacion' ? 'Preparando' :
                  status === 'listo' ? 'Listo' : 'Entregado'}
               </button>
             ))}
@@ -155,14 +153,10 @@ const KitchenControl: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-yellow-900/20 border border-yellow-600 p-4 rounded-lg">
           <div className="text-yellow-400 text-2xl font-bold">{groupedItems.pendiente.length}</div>
           <div className="text-yellow-300 text-sm">Pendientes</div>
-        </div>
-        <div className="bg-orange-900/20 border border-orange-600 p-4 rounded-lg">
-          <div className="text-orange-400 text-2xl font-bold">{groupedItems.en_preparacion.length}</div>
-          <div className="text-orange-300 text-sm">Preparando</div>
         </div>
         <div className="bg-green-900/20 border border-green-600 p-4 rounded-lg">
           <div className="text-green-400 text-2xl font-bold">{groupedItems.listo.length}</div>

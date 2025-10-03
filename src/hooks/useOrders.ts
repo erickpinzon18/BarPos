@@ -39,6 +39,12 @@ export const useOrders = (status?: 'activo' | 'pagado' | 'cancelado') => {
             updatedAt: item.updatedAt?.toDate ? item.updatedAt.toDate() : new Date(item.updatedAt || Date.now()),
             deletedAt: item.deletedAt?.toDate ? item.deletedAt.toDate() : undefined
           }));
+
+          // Procesar payments con timestamps correctos
+          const processedPayments = (data.payments || []).map((payment: any) => ({
+            ...payment,
+            createdAt: payment.createdAt?.toDate ? payment.createdAt.toDate() : new Date(payment.createdAt || Date.now())
+          }));
           
           ordersData.push({
             id: doc.id,
@@ -50,6 +56,12 @@ export const useOrders = (status?: 'activo' | 'pagado' | 'cancelado') => {
             status: data.status,
             paymentMethod: data.paymentMethod,
             peopleCount: data.peopleCount,
+            // Financial data
+            subtotal: data.subtotal,
+            total: data.total,
+            tax: data.tax,
+            payments: processedPayments,
+            // Timestamps
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
             updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
             completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : undefined
@@ -134,6 +146,12 @@ export const useOrderByTableId = (tableId?: string) => {
           deletedAt: item.deletedAt?.toDate ? item.deletedAt.toDate() : undefined
         }));
 
+        // Procesar payments con timestamps correctos
+        const processedPayments = (data.payments || []).map((payment: any) => ({
+          ...payment,
+          createdAt: payment.createdAt?.toDate ? payment.createdAt.toDate() : new Date(payment.createdAt || Date.now())
+        }));
+
         const orderObj: Order = {
           id: docSnap.id,
           tableId: data.tableId,
@@ -143,11 +161,16 @@ export const useOrderByTableId = (tableId?: string) => {
           items: processedItems,
           status: data.status,
           paymentMethod: data.paymentMethod,
+          peopleCount: data.peopleCount,
+          // Financial data
+          subtotal: data.subtotal,
+          total: data.total,
+          tax: data.tax,
+          payments: processedPayments,
+          // Timestamps
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
           updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
-          completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : undefined,
-          // include optional numeric fields if present
-          peopleCount: data.peopleCount
+          completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : undefined
         } as Order;
 
         setOrder(orderObj);
@@ -202,6 +225,12 @@ export const useOrderById = (orderId?: string | null) => {
           deletedAt: item.deletedAt?.toDate ? item.deletedAt.toDate() : undefined
         }));
 
+        // Procesar payments con timestamps correctos
+        const processedPayments = (data.payments || []).map((payment: any) => ({
+          ...payment,
+          createdAt: payment.createdAt?.toDate ? payment.createdAt.toDate() : new Date(payment.createdAt || Date.now())
+        }));
+
         const orderObj: Order = {
           id: docSnap.id,
           tableId: data.tableId,
@@ -212,6 +241,12 @@ export const useOrderById = (orderId?: string | null) => {
           status: data.status,
           paymentMethod: data.paymentMethod,
           peopleCount: data.peopleCount,
+          // Financial data
+          subtotal: data.subtotal,
+          total: data.total,
+          tax: data.tax,
+          payments: processedPayments,
+          // Timestamps
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
           updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now()),
           completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : undefined

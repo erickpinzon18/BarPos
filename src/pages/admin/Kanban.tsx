@@ -6,6 +6,7 @@ import KanbanColumn from '../../components/common/KanbanColumn';
 import type { Order, OrderItemStatus } from '../../utils/types';
 import { updateOrderStatusInKanban } from '../../services/firestoreService';
 import { getCategoriesByWorkstation } from '../../utils/categories';
+import { KANBAN_DELIVERED_RETENTION_MINUTES } from '../../utils/constants';
 
 const AdminKanban: React.FC = () => {
   const { orders, loading } = useKitchenOrders();
@@ -53,6 +54,22 @@ const AdminKanban: React.FC = () => {
     return da.getTime() - db.getTime();
   };
 
+  // Función para verificar si un item entregado está dentro del tiempo de retención
+  const isDeliveredRecently = (item: NonNullable<Order['items']>[number]): boolean => {
+    if (item.status !== 'entregado') return true; // No filtrar si no está entregado
+    
+    // Si no tiene updatedAt, asumimos que es reciente para no ocultarlo
+    if (!item.updatedAt) return true;
+    
+    const updatedDate = parseDate(item.updatedAt);
+    if (!updatedDate) return true;
+    
+    const now = new Date();
+    const diffMinutes = (now.getTime() - updatedDate.getTime()) / (1000 * 60);
+    
+    return diffMinutes <= KANBAN_DELIVERED_RETENTION_MINUTES;
+  };
+
   
 
   const handleMoveTo = async (orderId: string, itemId: string, newStatus: OrderItemStatus) => {
@@ -79,7 +96,7 @@ const AdminKanban: React.FC = () => {
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-amber-300">Mesa {tableNumber ?? '-'}</span>
+                <span className="text-sm font-semibold text-amber-300">{tableNumber === 0 ? '🍹 Barra' : `Mesa ${tableNumber ?? '-'}`}</span>
                 <span className="text-xs text-gray-400">{waiterName}</span>
               </div>
               <span className="ml-auto text-xs text-gray-400">{timeLabel}</span>
@@ -137,7 +154,11 @@ const AdminKanban: React.FC = () => {
         .sort(sortByCreatedAt);
 
       const delivered = allItems
-        .filter(e => categories.includes(e.item.category) && e.item.status === 'entregado')
+        .filter(e => 
+          categories.includes(e.item.category) && 
+          e.item.status === 'entregado' &&
+          isDeliveredRecently(e.item) // Solo mostrar entregados recientes
+        )
         .sort(sortByCreatedAt);
 
       return (
@@ -200,7 +221,11 @@ const AdminKanban: React.FC = () => {
       .sort(sortByCreatedAt);
 
     const catDelivered = allItems
-      .filter(e => e.item.category === category && e.item.status === 'entregado')
+      .filter(e => 
+        e.item.category === category && 
+        e.item.status === 'entregado' &&
+        isDeliveredRecently(e.item) // Solo mostrar entregados recientes
+      )
       .sort(sortByCreatedAt);
 
     return (
@@ -244,7 +269,17 @@ const AdminKanban: React.FC = () => {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">Kanban</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Kanban</h1>
+        <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span className="text-sm text-gray-400">
+            Entregados: últimos {KANBAN_DELIVERED_RETENTION_MINUTES} min
+          </span>
+        </div>
+      </div>
       <div className={`grid grid-cols-1 ${gridColsClass} gap-8`}>
         {showCocina && renderBoard('Cocina', 'Comida')}
         {showBarra && renderBoard('Barra', 'Bebida')}

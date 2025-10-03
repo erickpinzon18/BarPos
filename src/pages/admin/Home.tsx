@@ -103,6 +103,9 @@ const AdminHome: React.FC = () => {
     // Una mesa está activa solo si tiene una orden activa
     const isActive = table.status === 'ocupada' && !!currentOrder;
     
+    // Determinar si es la barra (mesa 0)
+    const isBar = table.number === 0;
+    
     // Logs para debugging
     // console.log('🔍 Renderizando tarjeta para mesa:', {
     //   id: table.id,
@@ -184,16 +187,18 @@ const AdminHome: React.FC = () => {
         onClick={() => handleTableClick(table)}
         className={`bg-gray-800 p-6 rounded-2xl shadow-lg hover:scale-105 transition-transform duration-200 cursor-pointer min-h-[200px] ${
           isActive 
-            ? 'border-2 border-amber-500' 
-            : 'border border-gray-700 hover:border-amber-400 transition-colors duration-200'
+            ? `border-2 ${isBar ? 'border-purple-500' : 'border-amber-500'}` 
+            : `border border-gray-700 hover:border-${isBar ? 'purple' : 'amber'}-400 transition-colors duration-200`
         }`}
       >
         {isActive ? (
-          // Mesa Activa
+          // Mesa/Barra Activa
           <>
             <div className="flex justify-between items-center mb-4">
-              <span className="text-xl font-bold text-white">Mesa {table.number}</span>
-              <span className="bg-amber-500 text-amber-100 text-sm font-bold px-3 py-1 rounded-full">
+              <span className="text-xl font-bold text-white">
+                {isBar ? '🍹 Barra' : `Mesa ${table.number}`}
+              </span>
+              <span className={`${isBar ? 'bg-purple-500 text-purple-100' : 'bg-amber-500 text-amber-100'} text-sm font-bold px-3 py-1 rounded-full`}>
                 Activa
               </span>
             </div>
@@ -244,7 +249,7 @@ const AdminHome: React.FC = () => {
                     })()
                   )}
                 </div>
-                <p className="text-3xl font-bold text-amber-400 text-center">
+                <p className={`text-3xl font-bold ${isBar ? 'text-purple-400' : 'text-amber-400'} text-center`}>
                   ${totalAmount} MXN
                 </p>
               </>
@@ -258,11 +263,13 @@ const AdminHome: React.FC = () => {
             )}
           </>
         ) : (
-          // Mesa Libre
+          // Mesa/Barra Libre
           <>
             <div className="flex justify-between items-center mb-6">
-              <span className="text-xl font-bold text-white">Mesa {table.number}</span>
-              <span className="bg-gray-600 text-gray-200 text-sm font-bold px-3 py-1 rounded-full">
+              <span className="text-xl font-bold text-white">
+                {isBar ? '🍹 Barra' : `Mesa ${table.number}`}
+              </span>
+              <span className={`${isBar ? 'bg-purple-600' : 'bg-gray-600'} text-gray-200 text-sm font-bold px-3 py-1 rounded-full`}>
                 Libre
               </span>
             </div>
@@ -270,7 +277,7 @@ const AdminHome: React.FC = () => {
               <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
-              <p className="text-lg font-medium">Abrir Mesa</p>
+              <p className="text-lg font-medium">{isBar ? 'Abrir Barra' : 'Abrir Mesa'}</p>
               {/* <p className="text-sm text-gray-600 mt-1">Capacidad: {table.capacity} personas</p> */}
             </div>
           </>
@@ -285,7 +292,14 @@ const AdminHome: React.FC = () => {
       
       {/* Grid de Mesas - Tarjetas más grandes */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
-        {tables.map((table) => getTableCard(table))}
+        {/* Ordenar: Barra (mesa 0) primero, luego el resto por número */}
+        {tables
+          .sort((a, b) => {
+            if (a.number === 0) return -1; // Barra siempre primero
+            if (b.number === 0) return 1;
+            return a.number - b.number; // Resto por número ascendente
+          })
+          .map((table) => getTableCard(table))}
       </div>
     </div>
   );

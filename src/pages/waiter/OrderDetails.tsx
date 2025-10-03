@@ -283,7 +283,7 @@ const WaiterOrderDetails: React.FC = () => {
                             <ArrowLeft className="w-6 h-6 text-gray-400" />
                         </button>
                         <div className="flex-1">
-                            <h1 className="text-2xl font-bold text-white">Mesa {order.tableNumber}</h1>
+                            <h1 className="text-2xl font-bold text-white">{order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber}`}</h1>
                             <p className="text-xs text-gray-400">#{order.id.slice(-8)}</p>
                         </div>
                     </div>

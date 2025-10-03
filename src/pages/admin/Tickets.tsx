@@ -29,13 +29,11 @@ const AdminTickets: React.FC = () => {
   }, []);
 
   const handlePrint = (order: Order) => {
-    // compute totals similar to Checkout
-    const activeItems = (order.items || []).filter(i => !i.isDeleted);
-    const subtotal = activeItems.reduce((s, it) => s + ( (it.productPrice ?? 0) * (it.quantity ?? 1) ), 0);
-    // Extract tip and tipPercent from order.payments if available
-    const tip = (order.payments && order.payments.length > 0 && order.payments[0].tipAmount) ? order.payments[0].tipAmount : 0;
-    const tipPercent = (order.payments && order.payments.length > 0 && order.payments[0].tipPercent) ? order.payments[0].tipPercent : undefined;
-    const total = subtotal + tip;
+    // Use the already calculated values from the order
+    const subtotal = order.subtotal ?? 0;
+    const total = order.total ?? 0;
+    const tip = total - subtotal;
+    const tipPercent = order.payments?.[0]?.tipPercent;
     const perPerson = order.peopleCount ? total / order.peopleCount : undefined;
 
     printTicket80mm({ order, subtotal, tipAmount: tip, tipPercent, total, perPerson });
@@ -126,16 +124,11 @@ const AdminTickets: React.FC = () => {
                                 <div className="text-xs">{new Date(order.completedAt || Date.now()).toLocaleDateString('es-ES')}</div>
                               </div>
                             </div>
-                            <p className="text-sm text-gray-300"><span className="font-semibold">Mesa:</span> {order.tableNumber ?? '-'}</p>
+                            <p className="text-sm text-gray-300"><span className="font-semibold">{order.tableNumber === 0 ? 'Barra:' : 'Mesa:'}</span> {order.tableNumber === 0 ? 'Principal' : (order.tableNumber ?? '-')}</p>
                             <p className="text-sm text-gray-300"><span className="font-semibold">Mesero:</span> {order.waiterName ?? '-'}</p>
                           </div>
                             <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
-                            <p className="text-xl font-bold text-amber-400">${(() => {
-                              const subtotal = (order.items || []).filter(i => !i.isDeleted).reduce((s, it) => s + ((it.productPrice ?? 0) * (it.quantity ?? 1)), 0);
-                              const tip = (order.payments && order.payments.length > 0 && order.payments[0].tipAmount) ? order.payments[0].tipAmount : 0;
-                              const total = subtotal + tip;
-                              return total.toFixed(2);
-                            })()}</p>
+                            <p className="text-xl font-bold text-amber-400">${(order.total ?? 0).toFixed(2)}</p>
                             <div className="flex gap-2">
                               <button onClick={() => openModal(order)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Ver / Reimprimir</button>
                             </div>
@@ -167,7 +160,7 @@ const AdminTickets: React.FC = () => {
                 )}
               </div>
               <div className="grid grid-cols-3 gap-4 mb-6 text-center">
-                <div><p className="text-sm text-gray-400">Mesa</p><p className="font-bold text-white text-lg">{selected.tableNumber ?? '-'}</p></div>
+                <div><p className="text-sm text-gray-400">{selected.tableNumber === 0 ? 'Barra' : 'Mesa'}</p><p className="font-bold text-white text-lg">{selected.tableNumber === 0 ? 'Principal' : (selected.tableNumber ?? '-')}</p></div>
                 <div><p className="text-sm text-gray-400">Mesero</p><p className="font-bold text-white text-lg">{selected.waiterName ?? '-'}</p></div>
                 <div><p className="text-sm text-gray-400">Personas</p><p className="font-bold text-white text-lg">{selected.peopleCount ?? 1}</p></div>
               </div>
@@ -178,15 +171,24 @@ const AdminTickets: React.FC = () => {
                 ))}
               </div>
               <div className="py-6 space-y-2">
-                <div className="flex justify-between items-center text-md"><span className="text-gray-300">Subtotal:</span><span className="font-semibold text-white">${(() => { const s = (selected.items || []).filter(i => !i.isDeleted).reduce((sum, it) => sum + ((it.productPrice ?? 0) * (it.quantity ?? 1)), 0); return s.toFixed(2); })()}</span></div>
+                <div className="flex justify-between items-center text-md">
+                  <span className="text-gray-300">Subtotal:</span>
+                  <span className="font-semibold text-white">${(selected.subtotal ?? 0).toFixed(2)}</span>
+                </div>
                 <div className="flex justify-between items-center text-md">
                   <span className="text-gray-300">Propina{(() => {
-                    const tipPercent = (selected.payments && selected.payments.length > 0 && selected.payments[0].tipPercent) ? selected.payments[0].tipPercent : 0;
+                    const tipPercent = selected.payments?.[0]?.tipPercent ?? 0;
                     return tipPercent > 0 ? ` (${(tipPercent * 100).toFixed(0)}%)` : '';
                   })()}:</span>
-                  <span className="font-semibold text-white">${(() => { const tip = (selected.payments && selected.payments.length > 0 && selected.payments[0].tipAmount) ? selected.payments[0].tipAmount : 0; return tip.toFixed(2); })()}</span>
+                  <span className="font-semibold text-white">${(() => { 
+                    const tip = (selected.total ?? 0) - (selected.subtotal ?? 0);
+                    return tip.toFixed(2); 
+                  })()}</span>
                 </div>
-                <div className="flex justify-between items-center text-2xl mt-2"><span className="font-bold text-amber-400">TOTAL:</span><span className="font-bold text-amber-400">${(() => { const s = (selected.items || []).filter(i => !i.isDeleted).reduce((sum, it) => sum + ((it.productPrice ?? 0) * (it.quantity ?? 1)), 0); const tip = (selected.payments && selected.payments.length > 0 && selected.payments[0].tipAmount) ? selected.payments[0].tipAmount : 0; return (s + tip).toFixed(2); })()}</span></div>
+                <div className="flex justify-between items-center text-2xl mt-2">
+                  <span className="font-bold text-amber-400">TOTAL:</span>
+                  <span className="font-bold text-amber-400">${(selected.total ?? 0).toFixed(2)}</span>
+                </div>
               </div>
               <div className="text-center pt-6 border-t border-gray-600">
                 <p className="text-gray-400">Gracias por su preferencia.</p>

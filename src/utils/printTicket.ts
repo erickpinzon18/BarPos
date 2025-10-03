@@ -46,7 +46,7 @@ export const printTicket80mm = (opts: PrintOptions) => {
 
         <div class="divider"></div>
 
-        <div class="row"><div>Mesa</div><div>${order.tableNumber}</div></div>
+        <div class="row"><div>${order.tableNumber === 0 ? 'Barra' : 'Mesa'}</div><div>${order.tableNumber === 0 ? 'Principal' : order.tableNumber}</div></div>
         <div class="row"><div>Mesero</div><div>${order.waiterName}</div></div>
         <div class="row"><div>Personas</div><div>${order.peopleCount ?? 1}</div></div>
 

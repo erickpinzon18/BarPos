@@ -222,7 +222,7 @@ const WaiterCheckout: React.FC = () => {
             </button>
             <div className="flex-1">
               <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
-                Checkout - Mesa {order.tableNumber}
+                Checkout - {order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber}`}
                 {/* Status badge */}
                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === 'pagado' ? 'bg-green-600 text-white' : order.status === 'cancelado' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-gray-900'}`}>
                   {order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE'}

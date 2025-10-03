@@ -178,7 +178,7 @@ const KitchenControl: React.FC = () => {
           <div key={`${item.orderId}-${item.id}`} className="relative">
             {/* Table info badge */}
             <div className="absolute -top-2 -right-2 bg-amber-500 text-gray-900 text-xs font-bold px-2 py-1 rounded-full z-10">
-              Mesa {item.tableNumber}
+              {item.tableNumber === 0 ? '🍹 Barra' : `Mesa ${item.tableNumber}`}
             </div>
             
             <KitchenStatusControl

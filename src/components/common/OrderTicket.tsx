@@ -8,7 +8,7 @@ export const OrderTicket: React.FC<{ order: Order }> = ({ order }) => {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <span className="font-semibold">Mesa {order.tableNumber}</span>
+          <span className="font-semibold">{order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber}`}</span>
           <span className="text-sm text-gray-400">Mesero: {order.waiterName}</span>
         </div>
       </CardHeader>

@@ -42,6 +42,25 @@ export const TAX_RATE = 0.16; // 16% IVA
 
 export const TOAST_DURATION = 4000;
 
+/**
+ * Tiempo en minutos que los items entregados permanecen visibles en el Kanban
+ * antes de ser ocultados automáticamente.
+ * 
+ * Por defecto: 30 minutos
+ * 
+ * Este valor determina cuánto tiempo se muestran los items con estado "entregado"
+ * en las columnas del Kanban de Cocina y Barra. Después de este tiempo, los items
+ * desaparecen automáticamente para mantener la vista limpia.
+ * 
+ * Ejemplos de valores:
+ * - 15 minutos = Vista más limpia, items desaparecen rápido
+ * - 30 minutos = Balance recomendado (por defecto)
+ * - 60 minutos = Vista con más historial
+ * 
+ * Para desactivar el filtro y mostrar todos los entregados, usar: Infinity
+ */
+export const KANBAN_DELIVERED_RETENTION_MINUTES = 30;
+
 export const STATUS_COLORS = {
   [ORDER_ITEM_STATUSES.PENDING]: 'bg-yellow-600/20 text-yellow-400',
   [ORDER_ITEM_STATUSES.IN_PROGRESS]: 'bg-blue-600/20 text-blue-400',

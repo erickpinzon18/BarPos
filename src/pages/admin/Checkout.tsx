@@ -208,7 +208,7 @@ const AdminCheckout: React.FC = () => {
         <div>
           <div className="flex items-center space-x-3">
             <div>
-              <h1 className="text-3xl font-bold text-white">Checkout - Mesa {order.tableNumber}</h1>
+              <h1 className="text-3xl font-bold text-white">Checkout - {order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber}`}</h1>
               {order.payments && order.payments.length > 0 && (
                 <div className="text-xs text-gray-400">Pago: {order.payments[0].id} — {order.payments[0].method} ${order.payments[0].receivedAmount ?? order.payments[0].change ?? ''}</div>
               )}
@@ -235,7 +235,7 @@ const AdminCheckout: React.FC = () => {
             <div className="border-t border-dashed border-gray-600 pt-3 mb-3 flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Mesa</p>
-                <p className="text-lg font-semibold text-white">{order.tableNumber}</p>
+                <p className="text-lg font-semibold text-white">{order.tableNumber === 0 ? 'Barra' : `${order.tableNumber}`}</p>
               </div>
 
               <div>

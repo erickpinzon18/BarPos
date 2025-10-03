@@ -284,7 +284,7 @@ const OrderDetails: React.FC = () => {
                         <ArrowLeft className="w-6 h-6 text-gray-400" />
                     </button>
                     <div>
-                        <h1 className="text-3xl font-bold text-white">Mesa {order.tableNumber}</h1>
+                        <h1 className="text-3xl font-bold text-white">{order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber}`}</h1>
                         <p className="text-gray-400">Orden #{order.id.slice(-8)}</p>
                     </div>
                 </div>

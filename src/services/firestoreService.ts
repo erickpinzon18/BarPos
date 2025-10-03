@@ -333,6 +333,26 @@ export const closeTable = async (
   try {
     const batch = writeBatch(db);
     
+    // Get current order to calculate totals
+    const orderDoc = await getDoc(doc(db, 'orders', orderId));
+    if (!orderDoc.exists()) {
+      return { success: false, error: 'Orden no encontrada' };
+    }
+    
+    const orderData = orderDoc.data();
+    const items = orderData.items || [];
+    
+    // Calculate subtotal from active items
+    const subtotal = items
+      .filter((item: any) => !item.isDeleted)
+      .reduce((sum: number, item: any) => sum + (item.productPrice * item.quantity), 0);
+    
+    // Get tip amount (default to 0 if not provided)
+    const tipAmount = paymentDetails?.tipAmount ?? 0;
+    
+    // Calculate total (subtotal + tip, NO TAX)
+    const total = subtotal + tipAmount;
+    
     // Update table status
     const tableRef = doc(db, 'tables', tableId);
     batch.update(tableRef, {
@@ -343,11 +363,14 @@ export const closeTable = async (
       updatedAt: Timestamp.now()
     });
     
-    // Update order status
+    // Update order status with calculated totals
     const orderRef = doc(db, 'orders', orderId);
     const orderUpdate: any = {
       status: 'pagado',
       paymentMethod,
+      subtotal,
+      total,
+      tax: null, // Explicitly set to null to remove any old tax values
       completedAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
@@ -364,8 +387,8 @@ export const closeTable = async (
         method: paymentMethod,
         receivedAmount: typeof paymentDetails.receivedAmount === 'number' ? paymentDetails.receivedAmount : null,
         change: typeof paymentDetails.change === 'number' ? paymentDetails.change : null,
-        tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : null,
-        tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : null,
+        tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
+        tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
         cashierId: paymentDetails.cashierId ?? null,
         createdAt: Timestamp.now()
       };
@@ -376,6 +399,13 @@ export const closeTable = async (
     }
     
     await batch.commit();
+    console.log('✅ Mesa cerrada correctamente:', {
+      orderId,
+      subtotal,
+      tipAmount,
+      total,
+      paymentMethod
+    });
     return { success: true };
   } catch (error) {
     console.error('Error closing table:', error);
@@ -502,8 +532,8 @@ export const getKitchenOrdersRealtime = (callback: (orders: Order[]) => void) =>
       .map(doc => convertTimestamps({ id: doc.id, ...doc.data() }) as Order)
       .filter(order => 
         order.items.some(item => 
-          // include any item that is pending, in preparation or ready
-          ['pendiente', 'en_preparacion', 'listo'].includes(item.status)
+          // include any item that is pending, ready or delivered (exclude only deleted items)
+          ['pendiente', 'listo', 'entregado'].includes(item.status) && !item.isDeleted
         )
       );
     callback(orders);

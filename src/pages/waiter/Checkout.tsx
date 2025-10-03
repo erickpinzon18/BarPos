@@ -262,7 +262,9 @@ const WaiterCheckout: React.FC = () => {
               <div className="border-t border-dashed border-gray-600 pt-3 mb-3 grid grid-cols-3 gap-2">
                 <div>
                   <p className="text-xs text-gray-400">Mesa</p>
-                  <p className="text-base md:text-lg font-semibold text-white">{order.tableNumber}</p>
+                  <p className="text-base md:text-lg font-semibold text-white">
+                    {order.tableNumber === 0 ? 'Barra' : order.tableNumber}
+                  </p>
                 </div>
 
                 <div>

@@ -270,6 +270,9 @@ const WaiterOrderDetails: React.FC = () => {
     const calculatedSubtotal = activeItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
     const calculatedTotal = calculatedSubtotal;
 
+    // Determinar si es la barra (mesa 0)
+    const isBar = order.tableNumber === 0;
+
     return (
         <div className="min-h-screen bg-gray-900 pb-24">
             {/* Fixed Header - Mobile Optimized */}
@@ -283,12 +286,12 @@ const WaiterOrderDetails: React.FC = () => {
                             <ArrowLeft className="w-6 h-6 text-gray-400" />
                         </button>
                         <div className="flex-1">
-                            <h1 className="text-2xl font-bold text-white">{order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber}`}</h1>
+                            <h1 className="text-2xl font-bold text-white">{isBar ? '🍹 Barra' : `Mesa ${order.tableNumber}`}</h1>
                             <p className="text-xs text-gray-400">#{order.id.slice(-8)}</p>
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-2xl font-bold text-green-400">${calculatedTotal.toFixed(2)}</p>
+                        <p className={`text-2xl font-bold ${isBar ? 'text-purple-400' : 'text-green-400'}`}>${calculatedTotal.toFixed(2)}</p>
                         <p className="text-xs text-gray-400">Total</p>
                     </div>
                 </div>

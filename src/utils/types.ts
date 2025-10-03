@@ -1,7 +1,7 @@
 // src/utils/types.ts
 import type { CategoryKey } from './categories';
 
-export type UserRole = 'admin' | 'waiter' | 'kitchen';
+export type UserRole = 'admin' | 'waiter' | 'kitchen' | 'barra';
 
 export interface User {
   id: string;

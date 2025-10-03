@@ -65,9 +65,10 @@ function App() {
 
       {/* Kitchen Routes */}
       <Route path="/kitchen/login" element={<KitchenLogin />} />
-      <Route element={<ProtectedRoute allowedRoles={['kitchen']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['kitchen', 'barra']} />}>
         <Route path="/kitchen" element={<KitchenLayout />}>
-          <Route path="kanban" element={<KitchenKanban />} />
+          <Route path="cocina" element={<KitchenKanban />} />
+          <Route path="barra" element={<KitchenKanban />} />
         </Route>
       </Route>
 

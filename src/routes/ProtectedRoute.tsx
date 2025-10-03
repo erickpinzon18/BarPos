@@ -13,6 +13,7 @@ const roleDefaultDashboard: Record<UserRole, string> = {
   admin: '/admin/home',
   waiter: '/waiter/home',
   kitchen: '/kitchen/kanban',
+  barra: '/kitchen/kanban',
 };
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, redirectTo }) => {

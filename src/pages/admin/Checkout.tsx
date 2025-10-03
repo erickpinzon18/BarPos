@@ -365,11 +365,11 @@ const AdminCheckout: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs text-gray-400">Banco</div>
-                      <div className="font-semibold">Banco Ejemplo</div>
+                      <div className="font-semibold">Mercado Pago W</div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => { navigator.clipboard?.writeText('Banco Ejemplo') }}
+                      onClick={() => { navigator.clipboard?.writeText('Mercado Pago W') }}
                       className="ml-4 bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-2 rounded-lg"
                     >
                       Copiar
@@ -379,11 +379,11 @@ const AdminCheckout: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs text-gray-400">Cuenta / CLABE</div>
-                      <div className="font-mono">012345678901234567</div>
+                      <div className="font-mono">5428 7801 3323 8824</div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => { navigator.clipboard?.writeText('012345678901234567') }}
+                      onClick={() => { navigator.clipboard?.writeText('5428780133238824') }}
                       className="ml-4 bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-2 rounded-lg"
                     >
                       Copiar
@@ -393,11 +393,11 @@ const AdminCheckout: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs text-gray-400">Titular</div>
-                      <div className="font-semibold">Chepe Chupes S.A. de C.V.</div>
+                      <div className="font-semibold">Oswaldo Reyes Olivera</div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => { navigator.clipboard?.writeText('Chepe Chupes S.A. de C.V.') }}
+                      onClick={() => { navigator.clipboard?.writeText('Oswaldo Reyes Olivera') }}
                       className="ml-4 bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-2 rounded-lg"
                     >
                       Copiar

@@ -101,6 +101,16 @@ const WaiterLogin: React.FC = () => {
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
+
+          {/* Link para ir a login de mesero o cocina */}
+          <div className="text-sm text-center">
+            <a
+              href="/admin/login"
+              className="text-amber-400 hover:text-amber-500 transition-colors opacity-70"
+            >
+              Iniciar sesión como Administrador
+            </a>
+          </div>
         </form>
       </div>
     </div>

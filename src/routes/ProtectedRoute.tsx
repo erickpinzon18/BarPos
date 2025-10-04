@@ -12,8 +12,8 @@ interface ProtectedRouteProps {
 const roleDefaultDashboard: Record<UserRole, string> = {
   admin: '/admin/home',
   waiter: '/waiter/home',
-  kitchen: '/kitchen/kanban',
-  barra: '/kitchen/kanban',
+  kitchen: '/kitchen/cocina',
+  barra: '/kitchen/barra',
 };
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, redirectTo }) => {

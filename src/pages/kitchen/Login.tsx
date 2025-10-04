@@ -1,14 +1,16 @@
 // src/pages/kitchen/Login.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import PinModal from "../../components/common/PinModal";
-import { verifyUserPin } from "../../services/orderService";
+import { useAuth } from "../../contexts/AuthContext";
 import { getConfig } from "../../services/firestoreService";
-import toast from "react-hot-toast";
 
 const KitchenLogin: React.FC = () => {
     const navigate = useNavigate();
-    const [showPinModal, setShowPinModal] = useState(false);
+    const { login } = useAuth();
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
     const [config, setConfig] = useState<any | null>(null);
 
     useEffect(() => {
@@ -26,20 +28,24 @@ const KitchenLogin: React.FC = () => {
         };
     }, []);
 
-    const handlePinSubmit = async (pin: string) => {
-        try {
-            const user = await verifyUserPin(pin);
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!email || !password) {
+            setError("Por favor completa todos los campos");
+            return;
+        }
 
-            if (!user) {
-                toast.error("PIN incorrecto");
-                return;
-            }
+        setLoading(true);
+        setError("");
+
+        try {
+            const user = await login(email, password);
 
             // Verificar que sea kitchen o barra
             if (user.role !== "kitchen" && user.role !== "barra") {
-                toast.error(
-                    "Acceso denegado. Solo personal de cocina/barra puede acceder."
-                );
+                setError("Acceso denegado. Solo personal de cocina/barra puede acceder.");
+                setLoading(false);
                 return;
             }
 
@@ -49,18 +55,19 @@ const KitchenLogin: React.FC = () => {
                 user.displayName || user.email || "Usuario"
             );
 
+            console.log("Logged in user:", user.role);   
+
             // Redirigir según el rol
             if (user.role === "kitchen") {
                 navigate("/kitchen/cocina");
             } else {
                 navigate("/kitchen/barra");
             }
-
-            setShowPinModal(false);
-            toast.success(`Bienvenido, ${user.displayName || user.email}`);
         } catch (error: any) {
-            console.error("Error verifying PIN:", error);
-            toast.error(error?.message || "PIN incorrecto");
+            console.error("Login error:", error);
+            setError(error?.message || "Error al iniciar sesión");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -100,11 +107,11 @@ const KitchenLogin: React.FC = () => {
                         Cocina & Barra
                     </p>
                     <p className="text-sm text-gray-500 mt-2">
-                        Ingresa tu PIN para continuar
+                        Ingresa tus credenciales para continuar
                     </p>
                 </div>
 
-                {/* Card de Acceso */}
+                {/* Card de Login */}
                 <div className="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
                     <div className="text-center mb-6">
                         <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -123,74 +130,130 @@ const KitchenLogin: React.FC = () => {
                             </svg>
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">
-                            Autenticación
+                            Iniciar Sesión
                         </h2>
                         <p className="text-gray-400 text-sm">
-                            Toca el botón para ingresar tu PIN
+                            Acceso para personal de cocina y barra
                         </p>
                     </div>
 
-                    <button
-                        onClick={() => setShowPinModal(true)}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-orange-500/50"
-                    >
-                        <div className="flex items-center justify-center gap-3">
-                            <svg
-                                className="w-6 h-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                                ></path>
-                            </svg>
-                            <span>Ingresar PIN</span>
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                            <p className="text-red-400 text-sm text-center">{error}</p>
                         </div>
-                    </button>
+                    )}
+
+                    {/* Login Form */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                                Correo Electrónico
+                            </label>
+                            <input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                                placeholder="usuario@ejemplo.com"
+                                required
+                                autoComplete="email"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                                Contraseña
+                            </label>
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                                placeholder="••••••••"
+                                required
+                                autoComplete="current-password"
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-500/50 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-orange-500/50 disabled:transform-none disabled:shadow-none"
+                        >
+                            {loading ? (
+                                <div className="flex items-center justify-center gap-3">
+                                    <svg
+                                        className="animate-spin h-5 w-5 text-white"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                        ></circle>
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
+                                    </svg>
+                                    <span>Iniciando sesión...</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center gap-3">
+                                    <svg
+                                        className="w-6 h-6"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                                        ></path>
+                                    </svg>
+                                    <span>Iniciar Sesión</span>
+                                </div>
+                            )}
+                        </button>
+                    </form>
 
                     <div className="mt-6 pt-6 border-t border-gray-700">
                         <p className="text-xs text-gray-500 text-center">
-                            💡 Tu PIN de 4 dígitos te redirigirá automáticamente
-                            a tu estación
+                            💡 Serás redirigido a tu estación (cocina o barra) automáticamente
                         </p>
                     </div>
                 </div>
 
-                {/* Link para ir a login de mesero o cocina */}
+                {/* Links a otros logins */}
                 <div className="text-sm mt-4 text-center">
                     <a
                         href="/admin/login"
-                        className="text-amber-400 hover:text-amber-500 transition-colors opacity-70"
+                        className="text-orange-400 hover:text-orange-500 transition-colors opacity-70"
                     >
                         Iniciar sesión como Administrador
                     </a>
                 </div>
 
-                {/* Link para ir a login de mesero o cocina */}
                 <div className="text-sm mt-2 text-center">
                     <a
                         href="/waiter/login"
-                        className="text-amber-400 hover:text-amber-500 transition-colors opacity-70"
+                        className="text-orange-400 hover:text-orange-500 transition-colors opacity-70"
                     >
                         Iniciar sesión como Mesero
                     </a>
                 </div>
             </div>
-
-            {/* PIN Modal */}
-            {showPinModal && (
-                <PinModal
-                    isOpen={showPinModal}
-                    onClose={() => setShowPinModal(false)}
-                    onConfirm={handlePinSubmit}
-                    title="Ingresa tu PIN"
-                    message="PIN de 4 dígitos"
-                />
-            )}
         </div>
     );
 };

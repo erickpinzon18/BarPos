@@ -1,51 +1,35 @@
 // src/utils/notificationSound.ts
-// Generate a bell/ding notification sound using Web Audio API
+// Play notification sound using audio file
+import ding from "../assets/ding.mp3"
 
 export const playNotificationSound = () => {
+  console.log('🔔 [NOTIFICATION SOUND] Intentando reproducir sonido...');
   try {
-    // Create audio context
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audio = new Audio(ding);
+    audio.volume = 0.8; // 80% volume
+    console.log('🔔 [NOTIFICATION SOUND] Audio creado, ruta:', ding);
+    console.log('🔔 [NOTIFICATION SOUND] Volumen configurado:', audio.volume);
     
-    // Create oscillator for the bell sound
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    // Connect nodes
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    // Bell-like sound settings
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // High pitch for bell
-    
-    // Envelope for bell effect (quick attack, slow decay)
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01); // Attack
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5); // Decay
-    
-    // Start and stop
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.5);
-    
-    // Clean up after sound finishes
-    setTimeout(() => {
-      try {
-        audioContext.close();
-      } catch (e) {
-        // ignore cleanup errors
-      }
-    }, 600);
+    audio.play()
+      .then(() => {
+        console.log('✅ [NOTIFICATION SOUND] Sonido reproducido exitosamente');
+      })
+      .catch(error => {
+        console.error('❌ [NOTIFICATION SOUND] Error al reproducir:', error);
+      });
   } catch (error) {
-    console.warn('Could not play notification sound:', error);
+    console.error('❌ [NOTIFICATION SOUND] Error en catch:', error);
   }
 };
 
 // Alternative: Double ding for more noticeable notification
 export const playDoubleNotificationSound = () => {
+  console.log('🔔🔔 [DOUBLE DING] Reproduciendo doble ding...');
   playNotificationSound();
   setTimeout(() => {
+    console.log('🔔🔔 [DOUBLE DING] Reproduciendo segundo ding...');
     playNotificationSound();
-  }, 150);
+  }, 1000); // Wait 1 second for the first ding to finish
 };
 
 export default playNotificationSound;

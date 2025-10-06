@@ -1,5 +1,5 @@
 // src/pages/kitchen/Kanban.tsx
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useKitchenOrders } from '../../hooks/useKitchenOrders';
 import KanbanColumn from '../../components/common/KanbanColumn';
@@ -7,6 +7,7 @@ import { updateOrderStatusInKanban } from '../../services/firestoreService';
 import type { Order, OrderItemStatus } from '../../utils/types';
 import { getCategoriesByWorkstation } from '../../utils/categories';
 import { KANBAN_DELIVERED_RETENTION_MINUTES } from '../../utils/constants';
+import { playNotificationSound } from '../../utils/notificationSound';
 
 const KitchenKanban: React.FC = () => {
   const { orders, loading } = useKitchenOrders();
@@ -16,6 +17,26 @@ const KitchenKanban: React.FC = () => {
   const path = location.pathname.toLowerCase();
   const station = path.includes('/barra') ? 'barra' : 'cocina';
   const stationLabel = station === 'barra' ? 'Barra' : 'Cocina';
+  
+  // Track previous pending items count to detect new orders
+  const prevPendingCountRef = useRef<number>(0);
+  const isFirstRenderRef = useRef<boolean>(true);
+  const [soundEnabled, setSoundEnabled] = React.useState<boolean>(false);
+  
+  // Enable sound with user interaction
+  const enableSound = () => {
+    console.log('🔊 Habilitando notificaciones sonoras...');
+    // Play a test sound to unlock audio
+    playNotificationSound();
+    setSoundEnabled(true);
+    localStorage.setItem('kitchen-sound-enabled', 'true');
+  };
+  
+  // Check if sound was previously enabled
+  React.useEffect(() => {
+    const enabled = localStorage.getItem('kitchen-sound-enabled') === 'true';
+    setSoundEnabled(enabled);
+  }, []);
 
   if (loading) {
     return (
@@ -77,10 +98,50 @@ const KitchenKanban: React.FC = () => {
     return diffMinutes <= KANBAN_DELIVERED_RETENTION_MINUTES;
   };
 
-  // Handle status change
-  const handleMoveTo = async (orderId: string, itemId: string, newStatus: OrderItemStatus) => {
-    await updateOrderStatusInKanban(orderId, itemId, newStatus);
-  };
+  // Get categories for the current station
+  const categories = getCategoriesByWorkstation(station).map(c => c.key);
+
+  // Filter items by station categories
+  const pending = allItems
+    .filter(e => categories.includes(e.item.category) && e.item.status === 'pendiente')
+    .sort(sortByCreatedAt);
+
+  // Play notification sound when new pending items arrive
+  useEffect(() => {
+    if (loading) return; // Don't play sound while loading
+    
+    const currentPendingCount = pending.length;
+
+    if (isFirstRenderRef.current) {
+      // Skip on first render
+      isFirstRenderRef.current = false;
+      prevPendingCountRef.current = currentPendingCount;
+      return;
+    }
+
+    if (currentPendingCount > prevPendingCountRef.current) {
+      // New pending items detected!
+      if (soundEnabled) {
+        console.log('🔔 Nuevo pedido detectado, reproduciendo sonido...');
+        playNotificationSound();
+      } else {
+        console.log('🔕 Nuevo pedido detectado pero sonido deshabilitado');
+      }
+    }
+
+    prevPendingCountRef.current = currentPendingCount;
+  }, [pending.length, loading, soundEnabled]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-400 mx-auto mb-4"></div>
+          <p className="text-gray-400">Cargando pedidos...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Render item card
   const renderItemCard = (entry: ItemEntry) => {
@@ -136,13 +197,10 @@ const KitchenKanban: React.FC = () => {
     );
   };
 
-  // Get categories for the current station
-  const categories = getCategoriesByWorkstation(station).map(c => c.key);
-
-  // Filter items by station categories
-  const pending = allItems
-    .filter(e => categories.includes(e.item.category) && e.item.status === 'pendiente')
-    .sort(sortByCreatedAt);
+  // Handle status change
+  const handleMoveTo = async (orderId: string, itemId: string, newStatus: OrderItemStatus) => {
+    await updateOrderStatusInKanban(orderId, itemId, newStatus);
+  };
 
   const ready = allItems
     .filter(e => categories.includes(e.item.category) && e.item.status === 'listo')
@@ -158,18 +216,39 @@ const KitchenKanban: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <span>{station === 'barra' ? '🍹' : '👨‍🍳'}</span>
           <span>Kanban de {stationLabel}</span>
         </h1>
-        <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <span className="text-sm text-gray-400">
-            Entregados: últimos {KANBAN_DELIVERED_RETENTION_MINUTES} min
-          </span>
+        <div className="flex flex-wrap items-center gap-3">
+          {!soundEnabled && (
+            <button
+              onClick={enableSound}
+              className={`flex items-center gap-2 ${station === 'barra' ? 'bg-purple-600 hover:bg-purple-700 border-purple-500' : 'bg-orange-600 hover:bg-orange-700 border-orange-500'} text-white px-4 py-2 rounded-lg border transition-colors`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+              </svg>
+              <span className="text-sm font-medium">Habilitar Sonido</span>
+            </button>
+          )}
+          {soundEnabled && (
+            <div className="flex items-center gap-2 bg-green-600/20 text-green-400 px-4 py-2 rounded-lg border border-green-600">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+              </svg>
+              <span className="text-sm font-medium">Sonido Activo</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span className="text-sm text-gray-400">
+              Entregados: últimos {KANBAN_DELIVERED_RETENTION_MINUTES} min
+            </span>
+          </div>
         </div>
       </div>
 

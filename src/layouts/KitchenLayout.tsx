@@ -13,9 +13,8 @@ const KitchenLayout: React.FC = () => {
   const [userName, setUserName] = useState<string>('Usuario');
 
   // Determinar estación actual (cocina o barra)
-  const station = location.pathname.includes('/barra') ? 'Barra' : 'Cocina';
-  const stationIcon = station === 'Barra' ? '🍹' : '👨‍🍳';
-  const stationColor = station === 'Barra' ? 'text-purple-400' : 'text-orange-400';
+  const isInCocina = location.pathname.includes('/cocina');
+  const isInBarra = location.pathname.includes('/barra');
 
   // Load business config (name, logo) from Firestore
   useEffect(() => {
@@ -42,7 +41,7 @@ const KitchenLayout: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem('kitchenUserName');
     toast.success('Sesión cerrada');
-    navigate('/kitchen/login');
+    navigate('/login');
   };
 
   return (
@@ -71,9 +70,34 @@ const KitchenLayout: React.FC = () => {
                 {config?.name ?? 'Bar POS'}
               </span>
             </div>
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full bg-gray-700/50 ${stationColor}`}>
-              <span className="text-2xl">{stationIcon}</span>
-              <span className="font-bold">{station}</span>
+
+            {/* Station Navigation Buttons */}
+            <div className="flex items-center gap-2">
+              {/* Cocina Button */}
+              <button
+                onClick={() => navigate('/kitchen/cocina')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${
+                  isInCocina
+                    ? 'bg-orange-600 text-white shadow-lg shadow-orange-500/50'
+                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-orange-400'
+                }`}
+              >
+                <span className="text-2xl">👨‍🍳</span>
+                <span className="font-bold">Cocina</span>
+              </button>
+
+              {/* Barra Button */}
+              <button
+                onClick={() => navigate('/kitchen/barra')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${
+                  isInBarra
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/50'
+                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-purple-400'
+                }`}
+              >
+                <span className="text-2xl">🍹</span>
+                <span className="font-bold">Barra</span>
+              </button>
             </div>
           </div>
         </div>
@@ -94,7 +118,9 @@ const KitchenLayout: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-white">{userName}</p>
-                  <p className="text-xs text-gray-400">{station}</p>
+                  <p className="text-xs text-gray-400">
+                    {isInCocina ? 'Cocina' : 'Barra'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -113,9 +139,9 @@ const KitchenLayout: React.FC = () => {
         {/* Floating Button */}
         <button
           onClick={() => setShowUserMenu(!showUserMenu)}
-          className={`${station === 'Barra' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-orange-600 hover:bg-orange-700'} text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3 group`}
+          className={`${isInBarra ? 'bg-purple-600 hover:bg-purple-700' : 'bg-orange-600 hover:bg-orange-700'} text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3 group`}
         >
-          <div className={`w-8 h-8 rounded-full ${station === 'Barra' ? 'bg-purple-500' : 'bg-orange-500'} flex items-center justify-center`}>
+          <div className={`w-8 h-8 rounded-full ${isInBarra ? 'bg-purple-500' : 'bg-orange-500'} flex items-center justify-center`}>
             <User className="w-5 h-5" />
           </div>
           <span className="font-medium pr-2">

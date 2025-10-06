@@ -56,6 +56,8 @@ export const useOrders = (status?: 'activo' | 'pagado' | 'cancelado') => {
             status: data.status,
             paymentMethod: data.paymentMethod,
             peopleCount: data.peopleCount,
+            tableName: data.tableName,
+            adminComments: data.adminComments,
             // Financial data
             subtotal: data.subtotal,
             total: data.total,
@@ -162,6 +164,8 @@ export const useOrderByTableId = (tableId?: string) => {
           status: data.status,
           paymentMethod: data.paymentMethod,
           peopleCount: data.peopleCount,
+          tableName: data.tableName,
+          adminComments: data.adminComments,
           // Financial data
           subtotal: data.subtotal,
           total: data.total,
@@ -241,6 +245,8 @@ export const useOrderById = (orderId?: string | null) => {
           status: data.status,
           paymentMethod: data.paymentMethod,
           peopleCount: data.peopleCount,
+          tableName: data.tableName,
+          adminComments: data.adminComments,
           // Financial data
           subtotal: data.subtotal,
           total: data.total,

@@ -28,8 +28,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, re
   }
 
   if (!currentUser) {
-    // Not authenticated; send to root login (admin by default)
-    return <Navigate to={redirectTo ?? '/admin/login'} replace />;
+    // Not authenticated; send to unified login
+    return <Navigate to={redirectTo ?? '/login'} replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(currentUser.role)) {

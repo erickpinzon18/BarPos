@@ -64,6 +64,7 @@ export interface Order {
   id: string;
   tableId: string;
   tableNumber: number;
+  tableName?: string; // Nombre personalizado de la mesa (ej: "Mesa de Andrea")
   waiterId: string;
   waiterName: string;
   items: OrderItem[];
@@ -74,6 +75,7 @@ export interface Order {
   subtotal?: number;
   tax?: number;
   total?: number;
+  adminComments?: string; // Comentarios administrativos (no visibles en ticket de cliente)
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;

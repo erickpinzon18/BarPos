@@ -5,7 +5,7 @@ import { ArrowLeft, Clock, Package, User, Plus, Trash2 } from 'lucide-react';
 import { useOrderByTableId } from '../../hooks/useOrders';
 import { useProducts } from '../../hooks/useProducts';
 import { deleteOrderItem, addItemToOrder, verifyUserPin } from '../../services/orderService';
-import { updateOrderPeopleCount } from '../../services/firestoreService';
+import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments } from '../../services/firestoreService';
 import PinModal from '../../components/common/PinModal';
 import AddItemModal from '../../components/common/AddItemModal';
 import QuantityModal from '../../components/common/QuantityModal';
@@ -33,15 +33,26 @@ const WaiterOrderDetails: React.FC = () => {
     // Local state to edit people count (saved via +/- clicks)
     const [peopleCount, setPeopleCount] = useState<number>(order?.peopleCount ?? 1);
 
-    // Ensure we initialize peopleCount from the DB when the order first loads
+    // Local state for table name and admin comments
+    const [tableName, setTableName] = useState<string>(order?.tableName ?? '');
+    const [adminComments, setAdminComments] = useState<string>(order?.adminComments ?? '');
+
+    // Ensure we initialize and sync peopleCount, tableName, and adminComments from the DB
     const lastOrderIdRef = React.useRef<string | null>(null);
     React.useEffect(() => {
         if (!order) return;
 
-        // When a different order loads (or first load), initialize peopleCount from DB
+        // When a different order loads (or first load), initialize from DB
         if (lastOrderIdRef.current !== order.id) {
             lastOrderIdRef.current = order.id;
             setPeopleCount(order.peopleCount ?? 1);
+            setTableName(order.tableName ?? '');
+            setAdminComments(order.adminComments ?? '');
+        } else {
+            // Same order, but sync fields that might have changed from other sources (real-time updates)
+            setPeopleCount(order.peopleCount ?? 1);
+            setTableName(order.tableName ?? '');
+            setAdminComments(order.adminComments ?? '');
         }
     }, [order]);
 
@@ -190,6 +201,50 @@ const WaiterOrderDetails: React.FC = () => {
         const next = Math.max(1, peopleCount + 1);
         setPeopleCount(next);
         void savePeopleCountToDB(next);
+    };
+
+    // Save table name to DB
+    const saveTableNameToDB = async (name: string) => {
+        if (!order) return;
+        try {
+            const res = await updateOrderTableName(order.id, name);
+            if (!res.success) {
+                console.error('Error saving table name:', res.error);
+            }
+        } catch (err) {
+            console.error('Error saving table name:', err);
+        }
+    };
+
+    const handleTableNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newName = e.target.value;
+        setTableName(newName);
+    };
+
+    const handleTableNameBlur = () => {
+        void saveTableNameToDB(tableName);
+    };
+
+    // Save admin comments to DB
+    const saveAdminCommentsToDB = async (comments: string) => {
+        if (!order) return;
+        try {
+            const res = await updateOrderAdminComments(order.id, comments);
+            if (!res.success) {
+                console.error('Error saving admin comments:', res.error);
+            }
+        } catch (err) {
+            console.error('Error saving admin comments:', err);
+        }
+    };
+
+    const handleAdminCommentsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newComments = e.target.value;
+        setAdminComments(newComments);
+    };
+
+    const handleAdminCommentsBlur = () => {
+        void saveAdminCommentsToDB(adminComments);
     };
 
     if (loading) {
@@ -357,6 +412,25 @@ const WaiterOrderDetails: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Custom Table Name - Administrative Identifier */}
+                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <label htmlFor="tableName" className="block text-xs font-medium text-gray-400 mb-2">
+                        🏷️ Nombre de Mesa / Identificación
+                    </label>
+                    <input
+                        id="tableName"
+                        type="text"
+                        value={tableName}
+                        onChange={handleTableNameChange}
+                        onBlur={handleTableNameBlur}
+                        placeholder="ej: Mesa de Andrea, Cumpleaños..."
+                        className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Personaliza la identificación de esta mesa
+                    </p>
+                </div>
+
                 {/* Estado de Preparación - Compacto para móvil */}
                 <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
                     <h3 className="text-sm font-semibold text-white mb-3 flex items-center">
@@ -504,6 +578,25 @@ const WaiterOrderDetails: React.FC = () => {
                                 <span>Total:</span>
                                 <span>${calculatedTotal.toFixed(2)}</span>
                             </div>
+                        </div>
+
+                        {/* Administrative Comments */}
+                        <div className="pt-4 border-t border-gray-600">
+                            <label htmlFor="adminComments" className="block text-xs font-medium text-gray-400 mb-2">
+                                📝 Comentarios Administrativos
+                            </label>
+                            <textarea
+                                id="adminComments"
+                                value={adminComments}
+                                onChange={handleAdminCommentsChange}
+                                onBlur={handleAdminCommentsBlur}
+                                placeholder="Notas: alergias, solicitudes especiales..."
+                                rows={2}
+                                className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Notas internas (no aparecen en el ticket)
+                            </p>
                         </div>
                     </div>
                 </div>

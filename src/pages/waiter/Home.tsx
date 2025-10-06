@@ -163,6 +163,11 @@ const WaiterHome: React.FC = () => {
                 {isBar ? 'Tu Barra' : 'Tu Mesa'}
               </span>
             </div>
+            {currentOrder?.tableName && (
+              <div className="mb-3 px-3 py-2 bg-gray-700/50 rounded-lg border border-gray-600">
+                <p className="text-sm font-medium text-green-300 truncate">🏷️ {currentOrder.tableName}</p>
+              </div>
+            )}
             <div className="space-y-2 mb-4">
               <p className="text-base text-gray-400">
                 Items: {itemCount}

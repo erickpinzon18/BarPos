@@ -49,7 +49,7 @@ const AdminTickets: React.FC = () => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar por ticket, id de pago, mesa, mesero..."
+          placeholder="Buscar por ticket, id de pago, mesa, mesero, nombre de mesa, comentarios..."
           className="w-full md:w-1/2 bg-gray-800 text-white rounded-lg p-3 border border-gray-700"
         />
       </div>
@@ -85,6 +85,10 @@ const AdminTickets: React.FC = () => {
             if (o.waiterName && o.waiterName.toLowerCase().includes(q)) return true;
             // match payment ids
             if (Array.isArray(o.payments) && o.payments.some(p => p.id && p.id.toLowerCase().includes(q))) return true;
+            // match table name
+            if (o.tableName && o.tableName.toLowerCase().includes(q)) return true;
+            // match admin comments
+            if (o.adminComments && o.adminComments.toLowerCase().includes(q)) return true;
             return false;
           });
 
@@ -125,6 +129,9 @@ const AdminTickets: React.FC = () => {
                               </div>
                             </div>
                             <p className="text-sm text-gray-300"><span className="font-semibold">{order.tableNumber === 0 ? 'Barra:' : 'Mesa:'}</span> {order.tableNumber === 0 ? 'Principal' : (order.tableNumber ?? '-')}</p>
+                            {order.tableName && (
+                              <p className="text-sm text-amber-300"><span className="font-semibold">🏷️</span> {order.tableName}</p>
+                            )}
                             <p className="text-sm text-gray-300"><span className="font-semibold">Mesero:</span> {order.waiterName ?? '-'}</p>
                           </div>
                             <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">

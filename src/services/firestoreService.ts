@@ -567,6 +567,36 @@ export const updateOrderPeopleCount = async (orderId: string, peopleCount: numbe
   }
 };
 
+// Update order table name (custom name for the table)
+export const updateOrderTableName = async (orderId: string, tableName: string): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      tableName: tableName.trim() || null,
+      updatedAt: Timestamp.now()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating table name:', error);
+    return { success: false, error: 'Error al actualizar nombre de mesa' };
+  }
+};
+
+// Update order admin comments (administrative notes, not visible on customer ticket)
+export const updateOrderAdminComments = async (orderId: string, comments: string): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      adminComments: comments.trim() || null,
+      updatedAt: Timestamp.now()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating admin comments:', error);
+    return { success: false, error: 'Error al actualizar comentarios' };
+  }
+};
+
 // STATISTICS AND REPORTS
 export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>> => {
   try {

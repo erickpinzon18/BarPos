@@ -7,8 +7,10 @@ import AdminLayout from './layouts/AdminLayout';
 import WaiterLayout from './layouts/WaiterLayout';
 import KitchenLayout from './layouts/KitchenLayout';
 
+// Unified Login
+import Login from './pages/Login';
+
 // Admin Pages
-import AdminLogin from './pages/admin/Login';
 import AdminHome from './pages/admin/Home';
 import AdminKanban from './pages/admin/Kanban';
 import AdminCheckout from './pages/admin/Checkout';
@@ -20,23 +22,26 @@ import ManageProducts from './pages/admin/ManageProducts';
 import DailySummary from './pages/admin/DailySummary';
 
 // Waiter Pages
-import WaiterLogin from './pages/waiter/Login';
 import WaiterHome from './pages/waiter/Home';
 import WaiterOrderDetails from './pages/waiter/OrderDetails';
 import WaiterCheckout from './pages/waiter/Checkout';
 
 // Kitchen Pages
-import KitchenLogin from './pages/kitchen/Login';
 import KitchenKanban from './pages/kitchen/Kanban';
 
 function App() {
   return (
     <Routes>
-      {/* Default redirect to admin login */}
-      <Route path="/" element={<Navigate to="/admin/login" replace />} />
+      {/* Unified Login - Default route */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
+      
+      {/* Legacy login routes - redirect to unified login */}
+      <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+      <Route path="/waiter/login" element={<Navigate to="/login" replace />} />
+      <Route path="/kitchen/login" element={<Navigate to="/login" replace />} />
       
       {/* Admin Routes */}
-      <Route path="/admin/login" element={<AdminLogin />} />
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="home" element={<AdminHome />} />
@@ -54,7 +59,6 @@ function App() {
       </Route>
 
       {/* Waiter Routes */}
-      <Route path="/waiter/login" element={<WaiterLogin />} />
       <Route element={<ProtectedRoute allowedRoles={['waiter']} />}>
         <Route path="/waiter" element={<WaiterLayout />}>
           <Route path="home" element={<WaiterHome />} />
@@ -64,7 +68,6 @@ function App() {
       </Route>
 
       {/* Kitchen Routes */}
-      <Route path="/kitchen/login" element={<KitchenLogin />} />
       <Route element={<ProtectedRoute allowedRoles={['kitchen', 'barra']} />}>
         <Route path="/kitchen" element={<KitchenLayout />}>
           <Route path="cocina" element={<KitchenKanban />} />
@@ -72,8 +75,8 @@ function App() {
         </Route>
       </Route>
 
-      {/* Catch all - redirect to admin login */}
-      <Route path="*" element={<Navigate to="/admin/login" replace />} />
+      {/* Catch all - redirect to unified login */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

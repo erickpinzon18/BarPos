@@ -9,7 +9,7 @@ import { ArrowLeft, Clock, User, Package, Trash2, Plus } from 'lucide-react';
 import type { OrderItem, Product } from '../../utils/types';
 import { useProducts } from '../../hooks/useProducts';
 import AddItemModal from '../../components/common/AddItemModal';
-import { updateOrderPeopleCount } from '../../services/firestoreService';
+import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments } from '../../services/firestoreService';
 
 const OrderDetails: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
@@ -35,15 +35,26 @@ const OrderDetails: React.FC = () => {
     // Local state to edit people count (saved via +/- clicks)
     const [peopleCount, setPeopleCount] = useState<number>(order?.peopleCount ?? 1);
 
-    // Ensure we initialize peopleCount from the DB when the order first loads
+    // Local state for table name and admin comments
+    const [tableName, setTableName] = useState<string>(order?.tableName ?? '');
+    const [adminComments, setAdminComments] = useState<string>(order?.adminComments ?? '');
+
+    // Ensure we initialize and sync peopleCount, tableName, and adminComments from the DB
     const lastOrderIdRef = React.useRef<string | null>(null);
     React.useEffect(() => {
         if (!order) return;
 
-        // When a different order loads (or first load), initialize peopleCount from DB
+        // When a different order loads (or first load), initialize from DB
         if (lastOrderIdRef.current !== order.id) {
             lastOrderIdRef.current = order.id;
             setPeopleCount(order.peopleCount ?? 1);
+            setTableName(order.tableName ?? '');
+            setAdminComments(order.adminComments ?? '');
+        } else {
+            // Same order, but sync fields that might have changed from other sources (real-time updates)
+            setPeopleCount(order.peopleCount ?? 1);
+            setTableName(order.tableName ?? '');
+            setAdminComments(order.adminComments ?? '');
         }
     }, [order]);
 
@@ -194,6 +205,50 @@ const OrderDetails: React.FC = () => {
         void savePeopleCountToDB(next);
     };
 
+    // Save table name to DB
+    const saveTableNameToDB = async (name: string) => {
+        if (!order) return;
+        try {
+            const res = await updateOrderTableName(order.id, name);
+            if (!res.success) {
+                console.error('Error saving table name:', res.error);
+            }
+        } catch (err) {
+            console.error('Error saving table name:', err);
+        }
+    };
+
+    const handleTableNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newName = e.target.value;
+        setTableName(newName);
+    };
+
+    const handleTableNameBlur = () => {
+        void saveTableNameToDB(tableName);
+    };
+
+    // Save admin comments to DB
+    const saveAdminCommentsToDB = async (comments: string) => {
+        if (!order) return;
+        try {
+            const res = await updateOrderAdminComments(order.id, comments);
+            if (!res.success) {
+                console.error('Error saving admin comments:', res.error);
+            }
+        } catch (err) {
+            console.error('Error saving admin comments:', err);
+        }
+    };
+
+    const handleAdminCommentsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const newComments = e.target.value;
+        setAdminComments(newComments);
+    };
+
+    const handleAdminCommentsBlur = () => {
+        void saveAdminCommentsToDB(adminComments);
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-64">
@@ -292,6 +347,25 @@ const OrderDetails: React.FC = () => {
                     <p className="text-3xl font-bold text-amber-400">${calculatedTotal.toFixed(2)} MXN</p>
                     <p className="text-sm text-gray-400">Total (calculado)</p>
                 </div>
+            </div>
+
+            {/* Custom Table Name - Administrative Identifier */}
+            <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 mb-6">
+                <label htmlFor="tableName" className="block text-sm font-medium text-gray-400 mb-2">
+                    🏷️ Nombre de Mesa / Identificación
+                </label>
+                <input
+                    id="tableName"
+                    type="text"
+                    value={tableName}
+                    onChange={handleTableNameChange}
+                    onBlur={handleTableNameBlur}
+                    placeholder="ej: Mesa de Andrea, Cumpleaños de Juan, VIP, Terraza..."
+                    className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                    Personaliza la identificación de esta mesa para facilitar su ubicación
+                </p>
             </div>
 
             {/* Info Cards - make four equal cards on md+ screens */}
@@ -558,6 +632,25 @@ const OrderDetails: React.FC = () => {
                             <span>Total:</span>
                             <span>${calculatedTotal.toFixed(2)}</span>
                         </div>
+                    </div>
+
+                    {/* Administrative Comments */}
+                    <div className="mt-6 pt-6 border-t border-gray-600">
+                        <label htmlFor="adminComments" className="block text-sm font-medium text-gray-400 mb-2">
+                            📝 Comentarios Administrativos
+                        </label>
+                        <textarea
+                            id="adminComments"
+                            value={adminComments}
+                            onChange={handleAdminCommentsChange}
+                            onBlur={handleAdminCommentsBlur}
+                            placeholder="Notas internas: alergias, solicitudes especiales, observaciones del servicio..."
+                            rows={3}
+                            className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all resize-none"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            Estos comentarios son internos y NO aparecerán en el ticket del cliente
+                        </p>
                     </div>
 
                     {/* Action Buttons */}

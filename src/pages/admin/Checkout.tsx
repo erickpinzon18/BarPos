@@ -6,6 +6,7 @@ import type { Order } from '../../utils/types';
 import { closeTable, getConfig } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
+import MercadoPagoTerminalModal from '../../components/common/MercadoPagoTerminalModal';
 import { printTicket80mm } from '../../utils/printTicket';
 
 const AdminCheckout: React.FC = () => {
@@ -48,6 +49,7 @@ const AdminCheckout: React.FC = () => {
   const [cashReceived, setCashReceived] = useState<string>(''); // string to allow empty and partial inputs
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
   const [config, setConfig] = useState<any | null>(null);
+  const [showMPTerminalModal, setShowMPTerminalModal] = useState(false);
   // Load business config (name, address, phone) from Firestore to show on tickets
   React.useEffect(() => {
     let mounted = true;
@@ -97,8 +99,15 @@ const AdminCheckout: React.FC = () => {
   };
 
   const handleFinalize = async () => {
-    // Instead of immediately finalizing, open PIN modal to verify cashier
     if (!order) return;
+    
+    // Si es tarjeta o transferencia (Mercado Pago), usar el modal de terminal
+    if (paymentMethod === 'tarjeta' || paymentMethod === 'transferencia') {
+      setShowMPTerminalModal(true);
+      return;
+    }
+    
+    // Para efectivo, usar PIN modal
     setShowPinModal(true);
   };
 
@@ -146,6 +155,47 @@ const AdminCheckout: React.FC = () => {
       setPinLoading(false);
       throw err; // PinModal will display the error
     }
+  };
+
+  // Handlers for Mercado Pago Terminal
+  const handleMPTerminalSuccess = async () => {
+    console.log('✅ [Checkout] Pago con MP Terminal exitoso');
+    setShowMPTerminalModal(false);
+    
+    // Finalizar sin pedir PIN porque MP ya validó el pago
+    if (!order) return;
+    setClosing(true);
+    try {
+      const tableId = order.tableId;
+      const orderId = order.id;
+
+      // Payment details for MP Terminal (no cashier ID needed, MP handles auth)
+      const paymentDetails = { 
+        tipAmount: tipAmount, 
+        tipPercent: tipPercent,
+        cashierId: 'mp-terminal' // Identifier for MP Terminal payments
+      };
+
+      const res = await closeTable(tableId, orderId, paymentMethod, peopleCount, paymentDetails);
+      if (!res.success) throw new Error(res.error || 'Error al cerrar mesa');
+      setIsReadOnly(true);
+    } catch (err: any) {
+      console.error('Error closing table:', err);
+      alert(err.message || 'Error al cerrar la mesa');
+    } finally {
+      setClosing(false);
+    }
+  };
+
+  const handleMPTerminalError = (error: string) => {
+    console.error('❌ [Checkout] Error en MP Terminal:', error);
+    setShowMPTerminalModal(false);
+    alert('Error en el pago: ' + error);
+  };
+
+  const handleMPTerminalClose = () => {
+    console.log('🔴 [Checkout] Usuario cerró modal de MP Terminal');
+    setShowMPTerminalModal(false);
   };
 
   // Sync local paymentMethod and read-only state from the live order
@@ -427,6 +477,16 @@ const AdminCheckout: React.FC = () => {
         title="Confirmar Cobro"
         message="Ingresa tu PIN para autorizar el cobro y registrar quién recibió el pago."
         loading={pinLoading}
+      />
+
+      {/* Mercado Pago Terminal modal for transferencia payments */}
+      <MercadoPagoTerminalModal
+        isOpen={showMPTerminalModal}
+        onClose={handleMPTerminalClose}
+        onSuccess={handleMPTerminalSuccess}
+        onError={handleMPTerminalError}
+        amount={total}
+        orderId={order?.id || ''}
       />
     </div>
   );

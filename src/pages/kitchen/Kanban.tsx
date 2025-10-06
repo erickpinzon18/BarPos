@@ -38,17 +38,6 @@ const KitchenKanban: React.FC = () => {
     setSoundEnabled(enabled);
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-400 mx-auto mb-4"></div>
-          <p className="text-gray-400">Cargando pedidos...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Flatten items across orders into a list of item-entries with parent order metadata
   type ItemEntry = {
     orderId: string;
@@ -132,6 +121,23 @@ const KitchenKanban: React.FC = () => {
     prevPendingCountRef.current = currentPendingCount;
   }, [pending.length, loading, soundEnabled]);
 
+  // Handle status change
+  const handleMoveTo = async (orderId: string, itemId: string, newStatus: OrderItemStatus) => {
+    await updateOrderStatusInKanban(orderId, itemId, newStatus);
+  };
+
+  const ready = allItems
+    .filter(e => categories.includes(e.item.category) && e.item.status === 'listo')
+    .sort(sortByCreatedAt);
+
+  const delivered = allItems
+    .filter(e => 
+      categories.includes(e.item.category) && 
+      e.item.status === 'entregado' &&
+      isDeliveredRecently(e.item)
+    )
+    .sort(sortByCreatedAt);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -196,23 +202,6 @@ const KitchenKanban: React.FC = () => {
       </div>
     );
   };
-
-  // Handle status change
-  const handleMoveTo = async (orderId: string, itemId: string, newStatus: OrderItemStatus) => {
-    await updateOrderStatusInKanban(orderId, itemId, newStatus);
-  };
-
-  const ready = allItems
-    .filter(e => categories.includes(e.item.category) && e.item.status === 'listo')
-    .sort(sortByCreatedAt);
-
-  const delivered = allItems
-    .filter(e => 
-      categories.includes(e.item.category) && 
-      e.item.status === 'entregado' &&
-      isDeliveredRecently(e.item)
-    )
-    .sort(sortByCreatedAt);
 
   return (
     <div>

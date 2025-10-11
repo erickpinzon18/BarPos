@@ -23,13 +23,32 @@ interface MercadoPagoConfig {
 }
 
 // Configuración de terminales
-interface Terminal {
+export interface Terminal {
   id: string;
   name: string;
   location: string;
   storeId: string;  // ID de la tienda en Mercado Pago
   posId: string;    // ID del punto de venta (cada terminal física tiene uno)
   externalId: string; // ID externo para tu aplicación
+  enabled?: boolean; // Si la terminal está habilitada para usar en el sistema
+}
+
+// Respuesta de la API de dispositivos
+interface MercadoPagoDevice {
+  id: string;
+  pos_id: number;
+  store_id: string;
+  external_pos_id: string;
+  operating_mode: 'PDV' | 'STANDALONE';
+}
+
+interface MercadoPagoDevicesResponse {
+  devices: MercadoPagoDevice[];
+  paging: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
 }
 
 // ========================================
@@ -51,31 +70,16 @@ const CONFIG: MercadoPagoConfig = {
 };
 
 // Configuración de terminales físicas
-// TODO: Actualiza con la información real de tus terminales Point
+// ✅ Configurado con datos reales de Mercado Pago
+// NOTA: Esta configuración es para fallback. Las terminales se obtienen dinámicamente de la API.
 const TERMINALS: Terminal[] = [
   {
-    id: 'terminal-1',
-    name: 'Terminal 1 - Caja Principal',
-    location: 'Planta Baja',
-    storeId: 'STORE-ID-1',  // Obtén este ID de tu panel de Mercado Pago
-    posId: 'POS-ID-1',      // Obtén este ID de tu terminal Point
-    externalId: 'BAR-POS-TERMINAL-1'
-  },
-  {
-    id: 'terminal-2',
-    name: 'Terminal 2 - Barra',
-    location: 'Área de Bar',
-    storeId: 'STORE-ID-2',
-    posId: 'POS-ID-2',
-    externalId: 'BAR-POS-TERMINAL-2'
-  },
-  {
-    id: 'terminal-3',
-    name: 'Terminal 3 - Terraza',
-    location: 'Segundo Piso',
-    storeId: 'STORE-ID-3',
-    posId: 'POS-ID-3',
-    externalId: 'BAR-POS-TERMINAL-3'
+    id: 'NEWLAND_N950__N950NCC303060763',  // Device ID completo de la API
+    name: 'Terminal Casa Pedre - Cuarto',
+    location: 'Cuarto',
+    storeId: '75133024',                    // Store ID real de la API
+    posId: '119553847',                     // POS ID real de la API
+    externalId: 'BAR-POS-CASA-PEDRE-CUARTO'
   },
 ];
 
@@ -115,6 +119,12 @@ export interface PaymentStatusResponse {
 // URL BASE DE LA API
 // ========================================
 const getBaseUrl = () => {
+  // En desarrollo, usar el proxy de Vite para evitar problemas de CORS
+  if (import.meta.env.DEV) {
+    return '/api/mercadopago';
+  }
+  
+  // En producción, necesitarás un backend que haga las peticiones
   return CONFIG.environment === 'production'
     ? 'https://api.mercadopago.com'
     : 'https://api.mercadopago.com'; // Sandbox usa la misma URL
@@ -132,10 +142,56 @@ export const getTerminal = (terminalId: string): Terminal | undefined => {
 };
 
 /**
- * Obtiene todas las terminales disponibles
+ * Obtiene todas las terminales disponibles (configuradas manualmente)
  */
 export const getAvailableTerminals = (): Terminal[] => {
   return TERMINALS;
+};
+
+/**
+ * Obtiene las terminales reales desde la API de Mercado Pago
+ * @returns Array de dispositivos Point registrados en tu cuenta
+ */
+export const fetchRealTerminals = async (): Promise<MercadoPagoDevice[]> => {
+  const endpoint = '/point/integration-api/devices';
+  
+  try {
+    console.log('🔍 [MercadoPago] Obteniendo terminales registradas...');
+    
+    const response = await apiRequest<MercadoPagoDevicesResponse>(endpoint, 'GET');
+    
+    console.log(`✅ [MercadoPago] ${response.devices?.length || 0} terminales encontradas`);
+    return response.devices || [];
+  } catch (error: any) {
+    console.error('❌ [MercadoPago] Error al obtener terminales:', error);
+    return [];
+  }
+};
+
+/**
+ * Obtiene las terminales reales formateadas como Terminal[]
+ * @param enabledConfig - Opcional: objeto con la configuración de terminales habilitadas
+ */
+export const getFormattedTerminals = async (enabledConfig?: Record<string, boolean>): Promise<Terminal[]> => {
+  const devices = await fetchRealTerminals();
+  
+  return devices.map((device) => ({
+    id: device.id,
+    name: `Terminal ${device.id.split('__')[1] || device.id}`, // Extraer parte legible del ID
+    location: device.operating_mode === 'PDV' ? 'Punto de Venta' : 'Standalone',
+    storeId: device.store_id,
+    posId: device.pos_id.toString(),
+    externalId: device.external_pos_id || `BAR-POS-${device.id}`,
+    enabled: enabledConfig ? (enabledConfig[device.id] !== false) : true // Por defecto habilitadas
+  }));
+};
+
+/**
+ * Obtiene solo las terminales habilitadas
+ */
+export const getEnabledTerminals = async (enabledConfig?: Record<string, boolean>): Promise<Terminal[]> => {
+  const allTerminals = await getFormattedTerminals(enabledConfig);
+  return allTerminals.filter(t => t.enabled !== false);
 };
 
 /**
@@ -149,10 +205,18 @@ const apiRequest = async <T>(
   const url = `${getBaseUrl()}${endpoint}`;
   
   const headers: HeadersInit = {
-    'Authorization': `Bearer ${CONFIG.accessToken}`,
     'Content-Type': 'application/json',
-    'X-Idempotency-Key': `${Date.now()}-${Math.random()}`, // Evita duplicados
   };
+
+  // Solo agregar Authorization en producción (cuando no usamos proxy)
+  if (!import.meta.env.DEV) {
+    headers['Authorization'] = `Bearer ${CONFIG.accessToken}`;
+  }
+  
+  // Agregar X-Idempotency-Key para POST/PUT/DELETE
+  if (method !== 'GET') {
+    headers['X-Idempotency-Key'] = `${Date.now()}-${Math.random()}`;
+  }
 
   const options: RequestInit = {
     method,
@@ -201,20 +265,21 @@ export const createPaymentIntent = async (
     throw new Error(`Terminal no encontrada: ${request.terminalId}`);
   }
 
+  // Validar monto mínimo de $5.00 MXN
+  if (request.amount < 5) {
+    throw new Error(`El monto mínimo para cobrar es $5.00 MXN (recibido: $${request.amount.toFixed(2)})`);
+  }
+
   console.log(`💳 [MercadoPago] Creando intención de pago en ${terminal.name}...`);
 
   // Endpoint para crear intención de pago en Point
-  // Documentación: https://www.mercadopago.com.mx/developers/es/docs/mp-point/integration-api/create-payment-intent
-  const endpoint = `/point/integration-api/payment-intents`;
+  // Documentación: https://www.mercadopago.com.mx/developers/es/reference/point_apis_mlm/_point_integration-api_devices_deviceid_payment-intents/post
+  const endpoint = `/point/integration-api/devices/${terminal.id}/payment-intents`;
 
+  // El payload solo debe tener amount y additional_info según la API de Mercado Pago
+  // IMPORTANTE: amount debe ser >= 500 (mínimo $5.00 MXN)
   const payload = {
-    amount: request.amount,
-    description: request.description || 'Pago desde Bar POS',
-    external_reference: request.externalReference,
-    payment: {
-      installments: 1,
-      type: 'credit_card', // o 'debit_card', 'qr_code', etc.
-    },
+    amount: Math.round(request.amount * 100), // Convertir a centavos (ej: 1.75 -> 175)
     additional_info: {
       external_reference: request.externalReference,
       print_on_terminal: true, // Imprimir ticket en la terminal
@@ -226,13 +291,11 @@ export const createPaymentIntent = async (
 
     return {
       id: response.id,
-      status: response.status,
-      amount: response.amount,
-      description: response.description,
-      externalReference: response.external_reference,
-      paymentId: response.payment?.id,
-      qrData: response.qr_data,
-      createdAt: response.created_at || new Date().toISOString(),
+      status: 'PENDING', // La intención de pago siempre inicia como PENDING
+      amount: response.amount / 100, // Convertir de centavos a pesos
+      description: request.description, // Guardar la descripción original
+      externalReference: response.additional_info?.external_reference || request.externalReference,
+      createdAt: new Date().toISOString(),
     };
   } catch (error: any) {
     console.error('❌ [MercadoPago] Error al crear intención de pago:', error);
@@ -255,13 +318,46 @@ export const getPaymentStatus = async (
 
   try {
     const response = await apiRequest<any>(endpoint, 'GET');
+    
+    // DEBUG: Mostrar toda la respuesta para ver qué campos tiene
+    console.log('🔍 [MercadoPago] Respuesta completa del payment intent:', JSON.stringify(response, null, 2));
+    
+    // La API devuelve el estado en response.state (no response.status)
+    // Posibles valores: OPEN, PROCESSING, FINISHED, CANCELED, ERROR
+    const apiState = response.state || 'OPEN';
+    
+    // Mapear el estado de la API a nuestro formato
+    let mappedStatus: PaymentStatusResponse['status'];
+    
+    if (apiState === 'OPEN') {
+      mappedStatus = 'PENDING';
+    } else if (apiState === 'PROCESSING') {
+      mappedStatus = 'PROCESSING';
+    } else if (apiState === 'FINISHED') {
+      // Si está FINISHED, revisar si hay payment y si fue aprobado
+      if (response.payment?.status === 'approved') {
+        mappedStatus = 'APPROVED';
+      } else if (response.payment?.status === 'rejected') {
+        mappedStatus = 'REJECTED';
+      } else {
+        mappedStatus = 'CANCELLED';
+      }
+    } else if (apiState === 'CANCELED' || apiState === 'CANCELLED') {
+      mappedStatus = 'CANCELLED';
+    } else if (apiState === 'ERROR') {
+      mappedStatus = 'REJECTED';
+    } else {
+      mappedStatus = 'PENDING';
+    }
+
+    console.log(`📊 [MercadoPago] Estado API: ${apiState} → Mapeado: ${mappedStatus}`);
 
     return {
       id: response.id,
-      status: response.status,
+      status: mappedStatus,
       paymentId: response.payment?.id,
       amount: response.amount,
-      statusDetail: response.status_detail,
+      statusDetail: response.payment?.status_detail || apiState,
     };
   } catch (error: any) {
     console.error('❌ [MercadoPago] Error al consultar estado:', error);
@@ -311,32 +407,43 @@ export const processPayment = async (
       throw new Error('No se recibió ID de intención de pago');
     }
 
-    // 2. Hacer polling del estado cada 2 segundos (máximo 60 segundos)
+    // 2. Hacer polling del estado cada 5 segundos (máximo 90 segundos)
     onStatusChange?.('processing', 'Esperando pago del cliente...');
     
-    const maxAttempts = 30; // 30 intentos x 2 segundos = 60 segundos
+    const maxAttempts = 18; // 18 intentos x 5 segundos = 90 segundos
     let attempts = 0;
     let finalStatus: PaymentStatusResponse | null = null;
 
     while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Esperar 2 segundos
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos
       attempts++;
 
-      const status = await getPaymentStatus(paymentIntent.id);
-      console.log(`🔄 [MercadoPago] Intento ${attempts}/${maxAttempts} - Estado: ${status.status}`);
+      try {
+        const status = await getPaymentStatus(paymentIntent.id);
+        console.log(`🔄 [MercadoPago] Intento ${attempts}/${maxAttempts} - Estado: ${status.status}`);
 
-      if (status.status === 'APPROVED') {
-        finalStatus = status;
-        onStatusChange?.('success', '¡Pago aprobado!');
-        break;
-      } else if (status.status === 'REJECTED' || status.status === 'CANCELLED') {
-        finalStatus = status;
-        onStatusChange?.('rejected', `Pago ${status.status === 'REJECTED' ? 'rechazado' : 'cancelado'}`);
-        break;
+        if (status.status === 'APPROVED') {
+          finalStatus = status;
+          onStatusChange?.('success', '¡Pago aprobado!');
+          break;
+        } else if (status.status === 'REJECTED' || status.status === 'CANCELLED') {
+          finalStatus = status;
+          onStatusChange?.('rejected', `Pago ${status.status === 'REJECTED' ? 'rechazado' : 'cancelado'}`);
+          break;
+        }
+      } catch (error: any) {
+        // Si hay error de rate limit, esperar más tiempo
+        if (error.message.includes('Too Many Requests')) {
+          console.log('⚠️ [MercadoPago] Rate limit alcanzado, esperando 10 segundos...');
+          await new Promise(resolve => setTimeout(resolve, 10000));
+        } else {
+          throw error; // Re-lanzar otros errores
+        }
       }
       
       // Continuar esperando si está PENDING o PROCESSING
-      onStatusChange?.('processing', `Esperando pago... (${60 - attempts * 2}s)`);
+      const timeLeft = (maxAttempts - attempts) * 5;
+      onStatusChange?.('processing', `Esperando pago... (${timeLeft}s)`);
     }
 
     // 3. Timeout si no se completa en 60 segundos

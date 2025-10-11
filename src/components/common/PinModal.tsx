@@ -21,6 +21,24 @@ const PinModal: React.FC<PinModalProps> = ({
 }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  // Detectar si es desktop (no móvil/tablet)
+  useEffect(() => {
+    const checkIfDesktop = () => {
+      // Verificar si es un dispositivo táctil
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      // Verificar el ancho de pantalla (desktop > 1024px)
+      const isWideScreen = window.innerWidth > 1024;
+      
+      setIsDesktop(!isTouchDevice && isWideScreen);
+    };
+
+    checkIfDesktop();
+    window.addEventListener('resize', checkIfDesktop);
+    
+    return () => window.removeEventListener('resize', checkIfDesktop);
+  }, []);
 
   const handleNumberClick = (num: string) => {
     if (pin.length < 4) {
@@ -67,6 +85,34 @@ const PinModal: React.FC<PinModalProps> = ({
     setError('');
     onClose();
   };
+
+  // Manejar entrada de teclado (solo desktop)
+  useEffect(() => {
+    if (!isOpen || !isDesktop) return;
+
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Prevenir el comportamiento por defecto solo para números y teclas específicas
+      if (/^[0-9]$/.test(event.key) || ['Backspace', 'Delete', 'Enter'].includes(event.key)) {
+        event.preventDefault();
+      }
+
+      // Números 0-9
+      if (/^[0-9]$/.test(event.key) && pin.length < 4 && !loading) {
+        handleNumberClick(event.key);
+      }
+      // Backspace o Delete
+      else if ((event.key === 'Backspace' || event.key === 'Delete') && !loading) {
+        handleBackspace();
+      }
+      // Enter para confirmar
+      else if (event.key === 'Enter' && pin.length >= 4 && !loading) {
+        handleSubmit(event as any);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [isOpen, isDesktop, pin, loading]);
 
   // Cerrar modal con tecla Escape
   useEffect(() => {
@@ -123,15 +169,26 @@ const PinModal: React.FC<PinModalProps> = ({
             <label className="block text-sm font-medium text-gray-300 mb-2">
               PIN de Autorización
             </label>
+            
+            {/* Indicador de entrada por teclado (solo desktop) */}
+            {isDesktop && (
+              <div className="flex items-center justify-center gap-2 mb-3 text-xs text-gray-400">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Puedes usar el teclado numérico</span>
+              </div>
+            )}
+            
             {/* PIN Display */}
             <div className="w-full px-4 py-4 bg-gray-900 border-2 border-gray-600 rounded-lg mb-4">
               <div className="flex justify-center gap-3">
                 {[0, 1, 2, 3].map((index) => (
                   <div
                     key={index}
-                    className={`w-12 h-12 rounded-lg flex items-center justify-center text-3xl font-bold ${
+                    className={`w-12 h-12 rounded-lg flex items-center justify-center text-3xl font-bold transition-all ${
                       pin.length > index
-                        ? 'bg-amber-500 text-gray-900'
+                        ? 'bg-amber-500 text-gray-900 scale-110'
                         : 'bg-gray-700 text-gray-500'
                     }`}
                   >

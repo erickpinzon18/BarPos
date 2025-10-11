@@ -25,12 +25,12 @@ export const printTicket80mm = (opts: PrintOptions) => {
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; width: 80mm; margin:0; padding:0; color: #111; }
         .ticket { padding: 6px; }
         .center { text-align:center; }
-        h1 { margin: 6px 0; font-size: 16px; }
-        .muted { color: #666; font-size: 11px; }
-        .small { font-size: 12px; }
+        h1 { margin: 6px 0; font-size: 24px; }
+        .muted { color: #666; font-size: 19px; }
+        .small { font-size: 20px; }
         .row { display:flex; justify-content:space-between; margin:6px 0; }
         .divider { border-top:1px dashed #ccc; margin:6px 0; }
-        .total { font-weight:700; font-size:16px; }
+        .total { font-weight:700; font-size:24px; }
       </style>
     </head>
     <body>

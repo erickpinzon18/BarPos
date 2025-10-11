@@ -258,6 +258,71 @@ export const saveConfig = async (payload: any, docId = 'general'): Promise<Fires
   }
 };
 
+// ========================================
+// TERMINAL CONFIGURATION MANAGEMENT
+// ========================================
+
+/**
+ * Obtiene la configuración de terminales habilitadas/deshabilitadas
+ * Retorna un objeto con los IDs de terminal como keys y el estado enabled como valor
+ */
+export const getTerminalsConfig = async (): Promise<FirestoreResponse<Record<string, boolean>>> => {
+  try {
+    const ref = doc(db, 'config', 'terminals');
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      return { success: true, data: {} };
+    }
+    const data = snap.data();
+    return { success: true, data: data.enabled || {} };
+  } catch (error) {
+    console.error('Error getting terminals config:', error);
+    return { success: false, error: 'Error al obtener configuración de terminales' };
+  }
+};
+
+/**
+ * Guarda el estado habilitado/deshabilitado de una terminal
+ */
+export const setTerminalEnabled = async (terminalId: string, enabled: boolean): Promise<FirestoreResponse<any>> => {
+  try {
+    const ref = doc(db, 'config', 'terminals');
+    const now = Timestamp.now();
+    
+    await setDoc(ref, {
+      enabled: {
+        [terminalId]: enabled
+      },
+      updatedAt: now
+    }, { merge: true });
+
+    return { success: true, data: { terminalId, enabled } };
+  } catch (error) {
+    console.error('Error setting terminal enabled:', error);
+    return { success: false, error: 'Error al actualizar estado de terminal' };
+  }
+};
+
+/**
+ * Actualiza múltiples terminales a la vez
+ */
+export const setMultipleTerminalsEnabled = async (terminals: Record<string, boolean>): Promise<FirestoreResponse<any>> => {
+  try {
+    const ref = doc(db, 'config', 'terminals');
+    const now = Timestamp.now();
+    
+    await setDoc(ref, {
+      enabled: terminals,
+      updatedAt: now
+    }, { merge: true });
+
+    return { success: true, data: terminals };
+  } catch (error) {
+    console.error('Error setting multiple terminals:', error);
+    return { success: false, error: 'Error al actualizar terminales' };
+  }
+};
+
 // Placeholder: disabling/enabling users requires Firebase Admin SDK (server-side).
 // Provide a thin client-side helper that will call a cloud function or other admin endpoint
 // once one is available. For now it returns an explanatory response so the UI can show a toast.

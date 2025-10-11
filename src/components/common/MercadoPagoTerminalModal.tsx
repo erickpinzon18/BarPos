@@ -1,6 +1,8 @@
 // src/components/common/MercadoPagoTerminalModal.tsx
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Loader, CreditCard } from 'lucide-react';
+import { getEnabledTerminals, processPayment } from '../../services/mercadoPagoService';
+import { getTerminalsConfig } from '../../services/firestoreService';
 
 interface MercadoPagoTerminalModalProps {
   isOpen: boolean;
@@ -12,13 +14,6 @@ interface MercadoPagoTerminalModalProps {
 }
 
 type PaymentStatus = 'select-terminal' | 'initial' | 'sending' | 'processing' | 'success' | 'rejected' | 'error' | 'confirm-close';
-
-// Terminales disponibles (esto podría venir de una API o configuración)
-const AVAILABLE_TERMINALS = [
-  { id: 'terminal-1', name: 'Terminal 1 - Caja Principal', location: 'Planta Baja' },
-  { id: 'terminal-2', name: 'Terminal 2 - Barra', location: 'Área de Bar' },
-  { id: 'terminal-3', name: 'Terminal 3 - Terraza', location: 'Segundo Piso' },
-];
 
 const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
   isOpen,
@@ -32,6 +27,30 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
   const [message, setMessage] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
+  const [availableTerminals, setAvailableTerminals] = useState<any[]>([]);
+  const [loadingTerminals, setLoadingTerminals] = useState(true);
+
+  // Cargar terminales habilitadas al abrir el modal
+  useEffect(() => {
+    const loadTerminals = async () => {
+      if (!isOpen) return;
+      
+      setLoadingTerminals(true);
+      try {
+        const configRes = await getTerminalsConfig();
+        const config = configRes.success ? configRes.data : {};
+        const terminals = await getEnabledTerminals(config || {});
+        setAvailableTerminals(terminals);
+      } catch (err) {
+        console.error('Error loading terminals:', err);
+        setAvailableTerminals([]);
+      } finally {
+        setLoadingTerminals(false);
+      }
+    };
+    
+    void loadTerminals();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -52,57 +71,101 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
       return; // Esperar a que el usuario confirme iniciar
     }
 
-    // Simular flujo de pago con Mercado Pago Terminal
-    const simulatePayment = async () => {
+    // Procesar pago real con Mercado Pago Terminal
+    const processRealPayment = async () => {
+      if (!selectedTerminal) {
+        console.error('❌ [MP Terminal] No hay terminal seleccionada');
+        setStatus('error');
+        setMessage('Error: No se seleccionó una terminal');
+        onError('No se seleccionó una terminal');
+        return;
+      }
+
       try {
-        // Fase 1: Enviando orden a la terminal (2 segundos)
-        setStatus('sending');
-        setMessage('Enviando orden a la terminal de Mercado Pago...');
-        console.log('🔵 [MP Terminal] Enviando orden a:', selectedTerminal, { orderId, amount });
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('� [MP Terminal] Iniciando pago real:', { 
+          terminalId: selectedTerminal, 
+          amount, 
+          orderId 
+        });
 
-        // Fase 2: Esperando pago en la terminal (10 segundos)
-        setStatus('processing');
-        setMessage('Esperando pago del cliente en la terminal...');
-        console.log('🟡 [MP Terminal] Terminal lista, esperando pago del cliente');
-        
-        // Countdown de 10 segundos
-        for (let i = 10; i > 0; i--) {
-          setCountdown(i);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+        // Usar la función processPayment del servicio que maneja todo el flujo
+        const result = await processPayment(
+          {
+            amount,
+            description: `Orden ${orderId.substring(0, 8)}`,
+            externalReference: orderId,
+            terminalId: selectedTerminal
+          },
+          (statusUpdate, messageUpdate) => {
+            console.log(`� [MP Terminal] Estado: ${statusUpdate} - ${messageUpdate}`);
+            
+            // Actualizar UI según el estado
+            if (statusUpdate === 'sending') {
+              setStatus('sending');
+              setMessage(messageUpdate);
+              setCountdown(0);
+            } else if (statusUpdate === 'processing') {
+              setStatus('processing');
+              setMessage(messageUpdate);
+              
+              // Extraer segundos del mensaje si existe
+              const match = messageUpdate.match(/\((\d+)s\)/);
+              if (match) {
+                setCountdown(parseInt(match[1]));
+              }
+            } else if (statusUpdate === 'success') {
+              setStatus('success');
+              setMessage(messageUpdate);
+              setCountdown(0);
+            } else if (statusUpdate === 'rejected') {
+              setStatus('rejected');
+              setMessage(messageUpdate);
+              setCountdown(0);
+            } else if (statusUpdate === 'error') {
+              setStatus('error');
+              setMessage(messageUpdate);
+              setCountdown(0);
+            }
+          }
+        );
 
-        // Simular resultado (80% éxito, 20% rechazo)
-        const isSuccess = Math.random() > 0.9;
-
-        if (isSuccess) {
-          // Fase 3a: Pago exitoso
+        // Procesar resultado final
+        if (result.status === 'APPROVED') {
+          console.log('✅ [MP Terminal] Pago aprobado - ID:', result.paymentId);
           setStatus('success');
           setMessage('¡Pago procesado exitosamente!');
           setCountdown(0);
-          console.log('✅ [MP Terminal] Pago aprobado');
-          
-          // NO cerrar automáticamente - esperar confirmación del usuario
-        } else {
-          // Fase 3b: Pago rechazado
-          setStatus('rejected');
-          setMessage('Pago rechazado. Intenta nuevamente o usa otro método.');
-          setCountdown(0);
+        } else if (result.status === 'REJECTED') {
           console.log('❌ [MP Terminal] Pago rechazado');
-          
-          // NO auto-cerrar - dejar que el usuario vea el mensaje y decida
+          setStatus('rejected');
+          setMessage(result.errorMessage || 'Pago rechazado. Intenta nuevamente o usa otro método.');
+          setCountdown(0);
+          onError(result.errorMessage || 'Pago rechazado');
+        } else if (result.status === 'CANCELLED') {
+          console.log('🚫 [MP Terminal] Pago cancelado');
+          setStatus('rejected');
+          setMessage('Pago cancelado por el cliente.');
+          setCountdown(0);
+          onError('Pago cancelado');
+        } else {
+          console.log('⚠️ [MP Terminal] Estado final inesperado:', result.status);
+          setStatus('error');
+          setMessage('Estado de pago inesperado. Verifica en Mercado Pago.');
+          setCountdown(0);
+          onError(`Estado inesperado: ${result.status}`);
         }
+
       } catch (error: any) {
-        console.error('❌ [MP Terminal] Error:', error);
+        console.error('❌ [MP Terminal] Error procesando pago:', error);
         setStatus('error');
-        setMessage('Error de conexión con la terminal. Intenta nuevamente.');
+        setMessage(error.message || 'Error de conexión con la terminal. Intenta nuevamente.');
         setCountdown(0);
         onError(error.message || 'Error desconocido');
       }
     };
 
     if (status === 'sending') {
-      simulatePayment();
+      processRealPayment();
     }
   }, [isOpen, status, orderId, amount, selectedTerminal, onError]);
 
@@ -182,7 +245,22 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
 
               {/* Lista de Terminales */}
               <div className="space-y-3">
-                {AVAILABLE_TERMINALS.map((terminal) => (
+                {loadingTerminals && (
+                  <div className="text-center py-8">
+                    <Loader className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-2" />
+                    <p className="text-gray-400 text-sm">Cargando terminales...</p>
+                  </div>
+                )}
+                
+                {!loadingTerminals && availableTerminals.length === 0 && (
+                  <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4">
+                    <p className="text-yellow-300 text-sm text-center">
+                      ⚠️ No hay terminales habilitadas. Por favor, habilita al menos una terminal en la configuración.
+                    </p>
+                  </div>
+                )}
+                
+                {!loadingTerminals && availableTerminals.map((terminal) => (
                   <button
                     key={terminal.id}
                     onClick={() => handleSelectTerminal(terminal.id)}
@@ -228,7 +306,7 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
               {/* Mostrar terminal seleccionada */}
               <div className="bg-purple-900/20 border border-purple-700 rounded-lg p-3">
                 <p className="text-xs text-purple-200">
-                  📡 <strong>Terminal seleccionada:</strong> {AVAILABLE_TERMINALS.find(t => t.id === selectedTerminal)?.name}
+                  📡 <strong>Terminal seleccionada:</strong> {availableTerminals.find(t => t.id === selectedTerminal)?.name}
                 </p>
               </div>
 

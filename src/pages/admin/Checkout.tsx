@@ -8,8 +8,10 @@ import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
 import MercadoPagoTerminalModal from '../../components/common/MercadoPagoTerminalModal';
 import { printTicket80mm } from '../../utils/printTicket';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AdminCheckout: React.FC = () => {
+  const { currentUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams<{ orderId?: string }>();
@@ -487,6 +489,13 @@ const AdminCheckout: React.FC = () => {
         onError={handleMPTerminalError}
         amount={total}
         orderId={order?.id || ''}
+        waiterName={currentUser?.displayName || order?.waiterName || 'Admin'}
+        userData={currentUser ? {
+          id: currentUser.id,
+          displayName: currentUser.displayName || 'Usuario',
+          email: currentUser.email || '',
+          role: currentUser.role || 'admin'
+        } : undefined}
       />
     </div>
   );

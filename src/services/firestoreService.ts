@@ -282,6 +282,47 @@ export const getTerminalsConfig = async (): Promise<FirestoreResponse<Record<str
 };
 
 /**
+ * Obtiene los nombres personalizados de terminales
+ * Retorna un objeto con los IDs de terminal como keys y el nombre personalizado como valor
+ */
+export const getTerminalsNames = async (): Promise<FirestoreResponse<Record<string, string>>> => {
+  try {
+    const ref = doc(db, 'config', 'terminals');
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      return { success: true, data: {} };
+    }
+    const data = snap.data();
+    return { success: true, data: data.names || {} };
+  } catch (error) {
+    console.error('Error getting terminals names:', error);
+    return { success: false, error: 'Error al obtener nombres de terminales' };
+  }
+};
+
+/**
+ * Guarda el nombre personalizado de una terminal
+ */
+export const setTerminalName = async (terminalId: string, name: string): Promise<FirestoreResponse<any>> => {
+  try {
+    const ref = doc(db, 'config', 'terminals');
+    const now = Timestamp.now();
+    
+    await setDoc(ref, {
+      names: {
+        [terminalId]: name
+      },
+      updatedAt: now
+    }, { merge: true });
+
+    return { success: true, data: { terminalId, name } };
+  } catch (error) {
+    console.error('Error setting terminal name:', error);
+    return { success: false, error: 'Error al actualizar nombre de terminal' };
+  }
+};
+
+/**
  * Guarda el estado habilitado/deshabilitado de una terminal
  */
 export const setTerminalEnabled = async (terminalId: string, enabled: boolean): Promise<FirestoreResponse<any>> => {
@@ -703,5 +744,167 @@ export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>>
   } catch (error) {
     console.error('Error getting daily stats:', error);
     return { success: false, error: 'Error al obtener estadísticas diarias' };
+  }
+};
+
+// ========================================
+// MERCADO PAGO PAYMENTS
+// ========================================
+
+/**
+ * Interfaz para los datos del usuario que hizo el pago
+ */
+export interface PaymentUserData {
+  id: string;
+  displayName: string;
+  email: string;
+  role: string;
+}
+
+/**
+ * Interfaz para el documento de pago completo en Firestore
+ */
+export interface PaymentDocument {
+  // Datos de la orden de Mercado Pago (respuesta completa de la API)
+  id: string;
+  type: string;
+  processing_mode: string;
+  external_reference: string;
+  description: string;
+  expiration_time?: string;
+  country_code: string;
+  user_id: string;
+  status: string;
+  status_detail: string;
+  currency: string;
+  created_date: string;
+  last_updated_date: string;
+  integration_data?: any;
+  transactions?: any;
+  config?: any;
+  
+  // Datos del usuario que hizo el cobro
+  userData: PaymentUserData;
+  
+  // Timestamps de Firestore
+  savedAt: any; // Timestamp de cuando se guardó en Firestore
+}
+
+/**
+ * Guarda un pago de Mercado Pago en Firestore
+ * 
+ * @param paymentResponse - Respuesta completa de la API de Mercado Pago
+ * @param userData - Datos del usuario que realizó el cobro
+ * @returns Promesa con el resultado de la operación
+ */
+export const savePayment = async (
+  paymentResponse: any,
+  userData: PaymentUserData
+): Promise<FirestoreResponse<PaymentDocument>> => {
+  try {
+    console.log('💾 [Firestore] Guardando pago en Firestore...');
+    console.log('💾 [Firestore] Payment ID:', paymentResponse.id);
+    console.log('💾 [Firestore] Usuario:', userData.displayName);
+    
+    const paymentDoc: PaymentDocument = {
+      // Toda la respuesta de Mercado Pago
+      ...paymentResponse,
+      
+      // Datos del usuario que hizo el cobro
+      userData: {
+        id: userData.id,
+        displayName: userData.displayName,
+        email: userData.email,
+        role: userData.role
+      },
+      
+      // Timestamp de guardado
+      savedAt: Timestamp.now()
+    };
+    
+    // Usar el ID de la orden de Mercado Pago como ID del documento
+    const paymentRef = doc(db, 'payments', paymentResponse.id);
+    
+    await setDoc(paymentRef, paymentDoc);
+    
+    console.log('✅ [Firestore] Pago guardado exitosamente');
+    console.log('✅ [Firestore] Document ID:', paymentResponse.id);
+    
+    return {
+      success: true,
+      data: paymentDoc
+    };
+  } catch (error: any) {
+    console.error('❌ [Firestore] Error al guardar pago:', error);
+    return {
+      success: false,
+      error: error.message || 'Error al guardar el pago'
+    };
+  }
+};
+
+/**
+ * Obtiene un pago por su ID
+ * 
+ * @param paymentId - ID del pago (ID de la orden de Mercado Pago)
+ * @returns Promesa con el documento del pago
+ */
+export const getPayment = async (
+  paymentId: string
+): Promise<FirestoreResponse<PaymentDocument>> => {
+  try {
+    const paymentRef = doc(db, 'payments', paymentId);
+    const paymentSnap = await getDoc(paymentRef);
+    
+    if (!paymentSnap.exists()) {
+      return {
+        success: false,
+        error: 'Pago no encontrado'
+      };
+    }
+    
+    return {
+      success: true,
+      data: paymentSnap.data() as PaymentDocument
+    };
+  } catch (error: any) {
+    console.error('❌ [Firestore] Error al obtener pago:', error);
+    return {
+      success: false,
+      error: error.message || 'Error al obtener el pago'
+    };
+  }
+};
+
+/**
+ * Obtiene todos los pagos de un usuario
+ * 
+ * @param userId - ID del usuario
+ * @returns Promesa con la lista de pagos
+ */
+export const getPaymentsByUser = async (
+  userId: string
+): Promise<FirestoreResponse<PaymentDocument[]>> => {
+  try {
+    const paymentsRef = collection(db, 'payments');
+    const q = query(
+      paymentsRef,
+      where('userData.id', '==', userId),
+      orderBy('created_date', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const payments = querySnapshot.docs.map(doc => doc.data() as PaymentDocument);
+    
+    return {
+      success: true,
+      data: payments
+    };
+  } catch (error: any) {
+    console.error('❌ [Firestore] Error al obtener pagos del usuario:', error);
+    return {
+      success: false,
+      error: error.message || 'Error al obtener pagos del usuario'
+    };
   }
 };

@@ -1,16 +1,26 @@
 // src/components/common/MercadoPagoTerminalModal.tsx
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Loader, CreditCard } from 'lucide-react';
-import { getEnabledTerminals, processPayment } from '../../services/mercadoPagoService';
-import { getTerminalsConfig } from '../../services/firestoreService';
+import { getEnabledTerminals } from '../../services/mercadoPagoOrdersService';
+import { processPayment } from '../../services/mercadoPagoOrdersService';
+import { getTerminalsConfig, getTerminalsNames } from '../../services/firestoreService';
 
 interface MercadoPagoTerminalModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (paymentData?: { referenceId?: string; paymentId?: string }) => void;
   onError: (error: string) => void;
   amount: number;
   orderId: string;
+  
+  // Datos opcionales para el external_reference y guardar en Firestore
+  waiterName?: string; // Nombre del mesero
+  userData?: { // Datos del usuario que hace el cobro
+    id: string;
+    displayName: string;
+    email: string;
+    role: string;
+  };
 }
 
 type PaymentStatus = 'select-terminal' | 'initial' | 'sending' | 'processing' | 'success' | 'rejected' | 'error' | 'confirm-close';
@@ -21,7 +31,9 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
   onSuccess,
   onError,
   amount,
-  orderId
+  orderId,
+  waiterName,
+  userData
 }) => {
   const [status, setStatus] = useState<PaymentStatus>('select-terminal');
   const [message, setMessage] = useState('');
@@ -29,6 +41,7 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
   const [selectedTerminal, setSelectedTerminal] = useState<string | null>(null);
   const [availableTerminals, setAvailableTerminals] = useState<any[]>([]);
   const [loadingTerminals, setLoadingTerminals] = useState(true);
+  const [paymentData, setPaymentData] = useState<{ referenceId?: string; paymentId?: string }>({});
 
   // Cargar terminales habilitadas al abrir el modal
   useEffect(() => {
@@ -39,7 +52,11 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
       try {
         const configRes = await getTerminalsConfig();
         const config = configRes.success ? configRes.data : {};
-        const terminals = await getEnabledTerminals(config || {});
+        
+        const namesRes = await getTerminalsNames();
+        const names = namesRes.success ? namesRes.data : {};
+        
+        const terminals = await getEnabledTerminals(config || {}, names || {});
         setAvailableTerminals(terminals);
       } catch (err) {
         console.error('Error loading terminals:', err);
@@ -92,9 +109,10 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
         const result = await processPayment(
           {
             amount,
-            description: `Orden ${orderId.substring(0, 8)}`,
-            externalReference: orderId,
-            terminalId: selectedTerminal
+            orderId: orderId, // ID de la orden (puede ser 'setting' o el ID real de la orden)
+            waiterName: waiterName, // Nombre del mesero (opcional)
+            terminalId: selectedTerminal,
+            userData: userData // Datos del usuario para guardar en Firestore (opcional)
           },
           (statusUpdate, messageUpdate) => {
             console.log(`� [MP Terminal] Estado: ${statusUpdate} - ${messageUpdate}`);
@@ -129,24 +147,43 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
           }
         );
 
-        // Procesar resultado final
-        if (result.status === 'APPROVED') {
+        // Procesar resultado final según la nueva API de órdenes
+        // La API puede devolver 'paid' o 'processed' para pagos exitosos
+        if (result.status === 'paid' || result.status === 'processed') {
           console.log('✅ [MP Terminal] Pago aprobado - ID:', result.paymentId);
+          console.log('✅ [MP Terminal] Status:', result.status);
+          console.log('✅ [MP Terminal] Payment Status:', result.paymentStatus);
+          console.log('🔢 [MP Terminal] Reference ID:', result.referenceId);
+          
+          // Guardar datos del pago para enviar en onSuccess
+          setPaymentData({
+            referenceId: result.referenceId,
+            paymentId: result.paymentId
+          });
+          
           setStatus('success');
           setMessage('¡Pago procesado exitosamente!');
           setCountdown(0);
-        } else if (result.status === 'REJECTED') {
-          console.log('❌ [MP Terminal] Pago rechazado');
+        } else if (result.status === 'failed') {
+          console.log('❌ [MP Terminal] Pago rechazado/fallido');
+          console.log('❌ [MP Terminal] Status Detail:', result.statusDetail);
+          console.log('🔢 [MP Terminal] Reference ID:', result.referenceId);
           setStatus('rejected');
-          setMessage(result.errorMessage || 'Pago rechazado. Intenta nuevamente o usa otro método.');
+          setMessage(result.statusDetail || result.errorMessage || 'Pago rechazado');
           setCountdown(0);
-          onError(result.errorMessage || 'Pago rechazado');
-        } else if (result.status === 'CANCELLED') {
+          onError(result.statusDetail || 'Pago rechazado');
+        } else if (result.status === 'canceled') {
           console.log('🚫 [MP Terminal] Pago cancelado');
           setStatus('rejected');
           setMessage('Pago cancelado por el cliente.');
           setCountdown(0);
           onError('Pago cancelado');
+        } else if (result.status === 'expired') {
+          console.log('⏱️ [MP Terminal] Orden expirada');
+          setStatus('error');
+          setMessage('Tiempo límite excedido. Intenta nuevamente.');
+          setCountdown(0);
+          onError('Orden expirada');
         } else {
           console.log('⚠️ [MP Terminal] Estado final inesperado:', result.status);
           setStatus('error');
@@ -204,7 +241,7 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
 
   // Función para finalizar y cerrar mesa
   const handleFinalizeClose = () => {
-    onSuccess();
+    onSuccess(paymentData);
   };
 
   return (
@@ -269,11 +306,16 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-white font-semibold group-hover:text-purple-300 transition-colors">
-                          {terminal.name}
+                          {terminal.customName || terminal.name}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
                           📍 {terminal.location}
                         </p>
+                        {terminal.customName && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            ID: {terminal.name}
+                          </p>
+                        )}
                       </div>
                       <div className="ml-3">
                         <svg className="w-6 h-6 text-gray-600 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -306,7 +348,7 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
               {/* Mostrar terminal seleccionada */}
               <div className="bg-purple-900/20 border border-purple-700 rounded-lg p-3">
                 <p className="text-xs text-purple-200">
-                  📡 <strong>Terminal seleccionada:</strong> {availableTerminals.find(t => t.id === selectedTerminal)?.name}
+                  📡 <strong>Terminal seleccionada:</strong> {availableTerminals.find(t => t.id === selectedTerminal)?.customName || availableTerminals.find(t => t.id === selectedTerminal)?.name}
                 </p>
               </div>
 

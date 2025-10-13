@@ -3,14 +3,17 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { getConfig, saveConfig, requestDisableUser, getUsers, addUserClient, getTerminalsConfig, setTerminalEnabled } from '../../services/firestoreService';
+import { getConfig, saveConfig, requestDisableUser, getUsers, addUserClient, getTerminalsConfig, setTerminalEnabled, getTerminalsNames, setTerminalName } from '../../services/firestoreService';
 import { auth } from '../../services/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import MercadoPagoTerminalModal from '../../components/common/MercadoPagoTerminalModal';
-import { getFormattedTerminals, CONFIG, type Terminal } from '../../services/mercadoPagoService';
+import EditTerminalNameModal from '../../components/common/EditTerminalNameModal';
+import { getFormattedTerminals, CONFIG, type Terminal } from '../../services/mercadoPagoOrdersService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Settings: React.FC = () => {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'info' | 'users' | 'roles' | 'terminal'>('info');
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
@@ -31,11 +34,15 @@ const Settings: React.FC = () => {
   const [showTerminalModal, setShowTerminalModal] = useState(false);
   const [testPaymentStatus, setTestPaymentStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testPaymentMessage, setTestPaymentMessage] = useState('');
+  const [testPaymentReferenceId, setTestPaymentReferenceId] = useState('');
   const [terminals, setTerminals] = useState<Terminal[]>([]);
   const [terminalsLoading, setTerminalsLoading] = useState(false);
   const [terminalsConfig, setTerminalsConfig] = useState<Record<string, boolean>>({});
-
-  console.log('CONFIG', terminalsConfig);
+  const [terminalsNames, setTerminalsNames] = useState<Record<string, string>>({});
+  
+  // Edit terminal name modal states
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [editingTerminal, setEditingTerminal] = useState<Terminal | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -93,11 +100,16 @@ const Settings: React.FC = () => {
         const configRes = await getTerminalsConfig();
         const config = configRes.success ? configRes.data : {};
         
+        // Cargar los nombres personalizados
+        const namesRes = await getTerminalsNames();
+        const names = namesRes.success ? namesRes.data : {};
+        
         if (!mounted) return;
         setTerminalsConfig(config || {});
+        setTerminalsNames(names || {});
         
-        // Luego cargar las terminales con su estado
-        const fetchedTerminals = await getFormattedTerminals(config || {});
+        // Luego cargar las terminales con su estado y nombres
+        const fetchedTerminals = await getFormattedTerminals(config || {}, names || {});
         if (!mounted) return;
         setTerminals(fetchedTerminals);
       } catch (err) {
@@ -130,6 +142,33 @@ const Settings: React.FC = () => {
       console.error('Error toggling terminal:', err);
       toast.error(err?.message || 'Error al actualizar terminal');
     }
+  };
+
+  // Función para cambiar el nombre de una terminal
+  const handleSaveTerminalName = async (terminalId: string, name: string) => {
+    try {
+      const res = await setTerminalName(terminalId, name);
+      if (!res.success) {
+        throw new Error(res.error || 'Error al actualizar nombre');
+      }
+      
+      // Actualizar estado local
+      setTerminalsNames(prev => ({ ...prev, [terminalId]: name }));
+      setTerminals(prev => prev.map(t => 
+        t.id === terminalId ? { ...t, customName: name } : t
+      ));
+      
+      toast.success('Nombre actualizado correctamente');
+    } catch (err: any) {
+      console.error('Error updating terminal name:', err);
+      toast.error(err?.message || 'Error al actualizar nombre');
+    }
+  };
+
+  // Función para abrir el modal de edición
+  const handleEditTerminalName = (terminal: Terminal) => {
+    setEditingTerminal(terminal);
+    setShowEditNameModal(true);
   };
 
   return (
@@ -358,9 +397,14 @@ const Settings: React.FC = () => {
                       try {
                         const configRes = await getTerminalsConfig();
                         const config = configRes.success ? configRes.data : {};
-                        setTerminalsConfig(config || {});
                         
-                        const fetchedTerminals = await getFormattedTerminals(config || {});
+                        const namesRes = await getTerminalsNames();
+                        const names = namesRes.success ? namesRes.data : {};
+                        
+                        setTerminalsConfig(config || {});
+                        setTerminalsNames(names || {});
+                        
+                        const fetchedTerminals = await getFormattedTerminals(config || {}, names || {});
                         setTerminals(fetchedTerminals);
                         toast.success(`${fetchedTerminals.length} terminales encontradas`);
                       } catch (err) {
@@ -395,14 +439,32 @@ const Settings: React.FC = () => {
                   <div className="space-y-3">
                     {terminals.map((terminal) => (
                       <div key={terminal.id} className={`bg-gray-800 rounded-lg p-4 border-2 transition-all ${terminal.enabled !== false ? 'border-green-700/50' : 'border-gray-700 opacity-60'}`}>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <p className="text-white font-semibold">{terminal.name}</p>
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              {/* Nombre personalizado o nombre por defecto */}
+                              <p className="text-white font-semibold text-lg">
+                                {terminal.customName || terminal.name}
+                              </p>
+                              <button
+                                onClick={() => handleEditTerminalName(terminal)}
+                                className="text-amber-400 hover:text-amber-300 transition-colors p-1 hover:bg-gray-700 rounded"
+                                title="Editar nombre"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </button>
                               <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${terminal.enabled !== false ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
                                 {terminal.enabled !== false ? '✓ Habilitada' : '✗ Deshabilitada'}
                               </span>
                             </div>
+                            {/* Mostrar nombre original si hay uno personalizado */}
+                            {terminal.customName && (
+                              <p className="text-xs text-gray-500 mb-2">
+                                Nombre original: {terminal.name}
+                              </p>
+                            )}
                             <p className="text-sm text-gray-400 mb-2">
                               📍 {terminal.location}
                             </p>
@@ -458,13 +520,39 @@ const Settings: React.FC = () => {
                   <div className="bg-green-900/20 border border-green-700 rounded-lg p-4 mb-4">
                     <p className="text-green-300 font-semibold">✅ {testPaymentMessage}</p>
                     <p className="text-sm text-gray-400 mt-1">La terminal está configurada correctamente.</p>
+                    
+                    {testPaymentReferenceId && (
+                      <div className="mt-4 p-4 bg-blue-900/30 border border-blue-600 rounded-lg">
+                        <p className="text-xs text-gray-400 mb-2">
+                          🏆 <strong>ID de Referencia para Certificación Mercado Pago:</strong>
+                        </p>
+                        <div className="bg-gray-900/50 rounded p-3 mb-2">
+                          <p className="font-mono text-xl text-blue-300 font-bold text-center tracking-wider">
+                            {testPaymentReferenceId}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                          📋 Ingresa este ID en tu cuenta de <strong>Mercado Pago Developers</strong> para 
+                          completar la certificación de tu integración API.
+                        </p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(testPaymentReferenceId);
+                            toast.success('ID copiado al portapapeles');
+                          }}
+                          className="mt-2 w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                          📋 Copiar ID al Portapapeles
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 
                 {testPaymentStatus === 'error' && (
                   <div className="bg-red-900/20 border border-red-700 rounded-lg p-4 mb-4">
                     <p className="text-red-300 font-semibold">❌ {testPaymentMessage}</p>
-                    <p className="text-sm text-gray-400 mt-1">Revisa tu configuración en el archivo .env</p>
+                    <p className="text-sm text-gray-400 mt-1">Vuelve a intentar el pago</p>
                   </div>
                 )}
 
@@ -545,10 +633,11 @@ const Settings: React.FC = () => {
               setTestPaymentMessage('Pago cancelado por el usuario');
             }
           }}
-          onSuccess={() => {
+          onSuccess={(paymentData) => {
             setShowTerminalModal(false);
             setTestPaymentStatus('success');
             setTestPaymentMessage('¡Pago de prueba exitoso! La terminal está funcionando correctamente.');
+            setTestPaymentReferenceId(paymentData?.referenceId || '');
             toast.success('¡Terminal configurada correctamente!');
           }}
           onError={(error) => {
@@ -558,7 +647,28 @@ const Settings: React.FC = () => {
             toast.error('Error en la prueba de pago');
           }}
           amount={5.00}
-          orderId={`test-payment-${Date.now()}`}
+          orderId="setting"
+          waiterName={currentUser?.displayName || 'Admin'}
+          userData={currentUser ? {
+            id: currentUser.id,
+            displayName: currentUser.displayName || 'Usuario',
+            email: currentUser.email || '',
+            role: currentUser.role || 'admin'
+          } : undefined}
+        />
+      )}
+
+      {/* Edit Terminal Name Modal */}
+      {showEditNameModal && editingTerminal && (
+        <EditTerminalNameModal
+          isOpen={showEditNameModal}
+          onClose={() => {
+            setShowEditNameModal(false);
+            setEditingTerminal(null);
+          }}
+          onSave={(name) => handleSaveTerminalName(editingTerminal.id, name)}
+          currentName={editingTerminal.customName || editingTerminal.name}
+          terminalId={editingTerminal.id}
         />
       )}
     </div>

@@ -9,8 +9,10 @@ import PinModal from '../../components/common/PinModal';
 import MercadoPagoTerminalModal from '../../components/common/MercadoPagoTerminalModal';
 import { printTicket80mm } from '../../utils/printTicket';
 import { ArrowLeft, Printer, Check } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const WaiterCheckout: React.FC = () => {
+  const { currentUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams<{ orderId?: string }>();
@@ -704,6 +706,13 @@ const WaiterCheckout: React.FC = () => {
         onError={handleMPTerminalError}
         amount={total}
         orderId={order?.id || ''}
+        waiterName={currentUser?.displayName || order?.waiterName || 'Mesero'}
+        userData={currentUser ? {
+          id: currentUser.id,
+          displayName: currentUser.displayName || 'Usuario',
+          email: currentUser.email || '',
+          role: currentUser.role || 'waiter'
+        } : undefined}
       />
     </div>
   );

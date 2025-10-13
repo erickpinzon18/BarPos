@@ -35,6 +35,8 @@ const Settings: React.FC = () => {
   const [terminalsLoading, setTerminalsLoading] = useState(false);
   const [terminalsConfig, setTerminalsConfig] = useState<Record<string, boolean>>({});
 
+  console.log('CONFIG', terminalsConfig);
+
   useEffect(() => {
     let mounted = true;
     const load = async () => {

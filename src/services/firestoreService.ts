@@ -908,3 +908,40 @@ export const getPaymentsByUser = async (
     };
   }
 };
+
+/**
+ * Obtiene todos los pagos de prueba (aquellos con orderId "setting")
+ * 
+ * @returns Promesa con la lista de pagos de prueba
+ */
+export const getTestPayments = async (): Promise<FirestoreResponse<PaymentDocument[]>> => {
+  try {
+    const paymentsRef = collection(db, 'payments');
+    const querySnapshot = await getDocs(paymentsRef);
+    
+    // Filtrar pagos que tienen "setting" en el external_reference
+    const testPayments = querySnapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as PaymentDocument & { id: string }))
+      .filter(payment => 
+        payment.external_reference && 
+        payment.external_reference.toLowerCase().includes('setting')
+      )
+      .sort((a, b) => {
+        // Ordenar por fecha de creación descendente
+        const dateA = a.created_date || '';
+        const dateB = b.created_date || '';
+        return dateB.localeCompare(dateA);
+      });
+    
+    return {
+      success: true,
+      data: testPayments
+    };
+  } catch (error: any) {
+    console.error('❌ [Firestore] Error al obtener pagos de prueba:', error);
+    return {
+      success: false,
+      error: error.message || 'Error al obtener pagos de prueba'
+    };
+  }
+};

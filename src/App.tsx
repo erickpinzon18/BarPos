@@ -20,6 +20,7 @@ import Settings from './pages/admin/Settings';
 import AdminTickets from './pages/admin/Tickets';
 import ManageProducts from './pages/admin/ManageProducts';
 import DailySummary from './pages/admin/DailySummary';
+import TerminalPayments from './pages/admin/TerminalPayments';
 
 // Waiter Pages
 import WaiterHome from './pages/waiter/Home';
@@ -49,6 +50,7 @@ function App() {
           <Route path="kanban/cocina" element={<AdminKanban />} />
           <Route path="kanban/barra" element={<AdminKanban />} />
           <Route path="tickets" element={<AdminTickets />} />
+          <Route path="pagos-terminal" element={<TerminalPayments />} />
           <Route path="manage-products" element={<ManageProducts />} />
           <Route path="checkout/:orderId" element={<AdminCheckout />} />
           <Route path="order/:tableId" element={<AdminOrderDetails />} />

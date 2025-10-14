@@ -30,6 +30,7 @@ export interface Terminal {
   externalId: string; // ID externo para tu aplicación
   enabled?: boolean; // Si la terminal está habilitada para usar en el sistema
   customName?: string; // Nombre personalizado por el usuario
+  operatingMode?: 'PDV' | 'STANDALONE'; // Modo de operación actual de la terminal
 }
 
 // Respuesta de la API de dispositivos
@@ -177,6 +178,38 @@ export const fetchRealTerminals = async (): Promise<MercadoPagoDevice[]> => {
 };
 
 /**
+ * Cambia el modo de operación de una terminal
+ * @param deviceId - ID de la terminal
+ * @param mode - Modo de operación: 'PDV' (recibe órdenes desde API) o 'STANDALONE' (solo pagos manuales)
+ * @returns true si el cambio fue exitoso
+ */
+export const setTerminalOperatingMode = async (
+  deviceId: string,
+  mode: 'PDV' | 'STANDALONE'
+): Promise<{ success: boolean; error?: string }> => {
+  const endpoint = `/point/integration-api/devices/${deviceId}`;
+  
+  try {
+    console.log(`🔄 [MercadoPago] Cambiando terminal ${deviceId} a modo ${mode}...`);
+    
+    const response = await apiRequest<{ id: string; operating_mode: string }>(
+      endpoint,
+      'PATCH' as any, // TypeScript fix
+      { operating_mode: mode }
+    );
+    
+    console.log(`✅ [MercadoPago] Terminal ${deviceId} ahora en modo ${response.operating_mode}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error(`❌ [MercadoPago] Error al cambiar modo de terminal ${deviceId}:`, error);
+    return { 
+      success: false, 
+      error: error?.message || 'Error al cambiar modo de operación'
+    };
+  }
+};
+
+/**
  * Obtiene las terminales reales formateadas como Terminal[]
  * @param enabledConfig - Opcional: objeto con la configuración de terminales habilitadas
  * @param namesConfig - Opcional: objeto con nombres personalizados de terminales
@@ -195,7 +228,8 @@ export const getFormattedTerminals = async (
     posId: device.pos_id.toString(),
     externalId: device.external_pos_id || `BAR-POS-${device.id}`,
     enabled: enabledConfig ? (enabledConfig[device.id] !== false) : true, // Por defecto habilitadas
-    customName: namesConfig?.[device.id] // Nombre personalizado si existe
+    customName: namesConfig?.[device.id], // Nombre personalizado si existe
+    operatingMode: device.operating_mode // Modo de operación actual desde la API
   }));
 };
 
@@ -219,7 +253,7 @@ export const getEnabledTerminals = async (
  */
 const apiRequest = async <T>(
   endpoint: string,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
   body?: any
 ): Promise<T> => {
   const url = `${getBaseUrl()}${endpoint}`;
@@ -233,7 +267,7 @@ const apiRequest = async <T>(
     headers['Authorization'] = `Bearer ${CONFIG.accessToken}`;
   }
   
-  // Agregar X-Idempotency-Key para POST/PUT/DELETE
+  // Agregar X-Idempotency-Key para POST/PUT/PATCH/DELETE
   if (method !== 'GET') {
     headers['X-Idempotency-Key'] = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
   }

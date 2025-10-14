@@ -30,6 +30,7 @@ Sistema de Punto de Venta (POS) moderno y completo para bares y restaurantes, co
 - **Múltiples Roles**: Admin, Mesero, Cocina y Barra con permisos específicos
 - **Sistema de Pagos**: Soporte para efectivo, tarjeta y transferencia
 - **Integración Mercado Pago**: Pagos con terminal Point (múltiples terminales)
+- **Gestión de Sucursales y Cajas**: CRUD completo de stores y POS para certificación MP
 - **Kanban de Cocina**: Tablero visual para seguimiento de pedidos (Pendiente → Listo → Entregado)
 - **Gestión de Propinas**: Cálculo automático por porcentaje o monto fijo
 - **División de Cuenta**: Cálculo por persona para cuentas compartidas
@@ -513,6 +514,10 @@ VITE_MERCADOPAGO_ACCESS_TOKEN=APP-[tu-token-produccion]
    VITE_MERCADOPAGO_USER_ID=123456789
    VITE_MERCADOPAGO_ENV=sandbox
    ```
+4. **Gestión de Sucursales y Cajas**
+   - Ver documentación completa en [`MERCADOPAGO_STORES_POS.md`](./MERCADOPAGO_STORES_POS.md)
+   - Accede a la gestión desde: **Settings → Sucursales y Cajas**
+   - Requerido para certificación de Mercado Pago Point
 
 ## 📝 Roadmap
 

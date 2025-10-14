@@ -3,18 +3,22 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { getConfig, saveConfig, requestDisableUser, getUsers, addUserClient, getTerminalsConfig, setTerminalEnabled, getTerminalsNames, setTerminalName } from '../../services/firestoreService';
+import { getConfig, saveConfig, requestDisableUser, getUsers, addUserClient, getTerminalsConfig, setTerminalEnabled, getTerminalsNames, setTerminalName, getTestPayments } from '../../services/firestoreService';
 import { auth } from '../../services/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import MercadoPagoTerminalModal from '../../components/common/MercadoPagoTerminalModal';
 import EditTerminalNameModal from '../../components/common/EditTerminalNameModal';
-import { getFormattedTerminals, CONFIG, type Terminal } from '../../services/mercadoPagoOrdersService';
+import StoreModal from '../../components/common/StoreModal';
+import POSModal from '../../components/common/POSModal';
+import { getFormattedTerminals, CONFIG, type Terminal, setTerminalOperatingMode } from '../../services/mercadoPagoOrdersService';
+import { getStoresWithPOS, deleteStore, deletePOS, canDeleteStore, type Store, type POS, type Device, getMCCCategoryName, getDevicesByPOS } from '../../services/mercadoPagoStoresService';
 import { useAuth } from '../../contexts/AuthContext';
+import type { PaymentDocument } from '../../services/firestoreService';
 
 const Settings: React.FC = () => {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'info' | 'users' | 'roles' | 'terminal'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'users' | 'roles' | 'terminal' | 'stores'>('info');
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [address, setAddress] = useState<string>('');
@@ -43,6 +47,18 @@ const Settings: React.FC = () => {
   // Edit terminal name modal states
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [editingTerminal, setEditingTerminal] = useState<Terminal | null>(null);
+
+  // Test payments history
+  const [testPayments, setTestPayments] = useState<(PaymentDocument & { id: string })[]>([]);
+  const [loadingTestPayments, setLoadingTestPayments] = useState(false);
+
+  // Stores and POS states
+  const [stores, setStores] = useState<any[]>([]);
+  const [storesLoading, setStoresLoading] = useState(false);
+  const [showStoreModal, setShowStoreModal] = useState(false);
+  const [showPOSModal, setShowPOSModal] = useState(false);
+  const [editingStore, setEditingStore] = useState<any | null>(null);
+  const [editingPOS, setEditingPOS] = useState<any | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -126,18 +142,34 @@ const Settings: React.FC = () => {
   // Función para habilitar/deshabilitar una terminal
   const handleToggleTerminal = async (terminalId: string, enabled: boolean) => {
     try {
-      const res = await setTerminalEnabled(terminalId, enabled);
-      if (!res.success) {
-        throw new Error(res.error || 'Error al actualizar terminal');
+      // 1. Cambiar el modo de operación en Mercado Pago
+      const mode = enabled ? 'PDV' : 'STANDALONE';
+      console.log(`🔄 Cambiando terminal ${terminalId} a modo ${mode}...`);
+      
+      const modeResult = await setTerminalOperatingMode(terminalId, mode);
+      if (!modeResult.success) {
+        throw new Error(modeResult.error || 'Error al cambiar modo de operación');
       }
       
-      // Actualizar estado local
+      console.log(`✅ Terminal ${terminalId} ahora está en modo ${mode}`);
+      
+      // 2. Actualizar el estado en Firestore
+      const res = await setTerminalEnabled(terminalId, enabled);
+      if (!res.success) {
+        throw new Error(res.error || 'Error al actualizar terminal en Firestore');
+      }
+      
+      // 3. Actualizar estado local
       setTerminalsConfig(prev => ({ ...prev, [terminalId]: enabled }));
       setTerminals(prev => prev.map(t => 
-        t.id === terminalId ? { ...t, enabled } : t
+        t.id === terminalId ? { ...t, enabled, operatingMode: mode } : t
       ));
       
-      toast.success(`Terminal ${enabled ? 'habilitada' : 'deshabilitada'}`);
+      toast.success(
+        enabled 
+          ? `Terminal habilitada en modo PDV (recibe órdenes desde API)` 
+          : `Terminal deshabilitada en modo STANDALONE (solo pagos manuales)`
+      );
     } catch (err: any) {
       console.error('Error toggling terminal:', err);
       toast.error(err?.message || 'Error al actualizar terminal');
@@ -171,6 +203,150 @@ const Settings: React.FC = () => {
     setShowEditNameModal(true);
   };
 
+  // Cargar historial de pagos de prueba cuando se abre la pestaña terminal
+  useEffect(() => {
+    let mounted = true;
+    const loadTestPayments = async () => {
+      if (activeTab !== 'terminal') return;
+      
+      setLoadingTestPayments(true);
+      try {
+        const result = await getTestPayments();
+        if (!mounted) return;
+        
+        if (result.success && result.data) {
+          setTestPayments(result.data as (PaymentDocument & { id: string })[]);
+        }
+      } catch (err) {
+        console.error('Error loading test payments:', err);
+      } finally {
+        if (mounted) setLoadingTestPayments(false);
+      }
+    };
+    
+    void loadTestPayments();
+    return () => { mounted = false; };
+  }, [activeTab]);
+
+  // Cargar sucursales y cajas cuando se abre la pestaña stores
+  useEffect(() => {
+    if (activeTab === 'stores') {
+      refreshStores();
+    }
+  }, [activeTab]);
+
+  // Función para refrescar sucursales
+  const refreshStores = async () => {
+    setStoresLoading(true);
+    try {
+      console.log('🔄 Cargando sucursales y dispositivos...');
+      const result = await getStoresWithPOS();
+      
+      if (result.success && result.data) {
+        console.log(`✅ ${result.data.length} sucursales encontradas`);
+        
+        // Para cada store, cargar devices de cada POS
+        const storesWithDevices = await Promise.all(
+          result.data.map(async (store) => {
+            console.log(`📦 Procesando store: ${store.name} (${store.pos.length} cajas)`);
+            
+            const posWithDevices = await Promise.all(
+              store.pos.map(async (pos: POS) => {
+                console.log(`  🔍 Buscando devices para POS: ${pos.name} (${pos.id})`);
+                const devicesResult = await getDevicesByPOS(pos.id);
+                
+                const devices = devicesResult.success && devicesResult.data 
+                  ? devicesResult.data.data.terminals 
+                  : [];
+                
+                console.log(`    ${devices.length > 0 ? '✅' : '⚠️'} ${devices.length} devices encontrados para ${pos.name}`);
+                if (devices.length > 0) {
+                  console.log(`    Devices:`, devices);
+                }
+                
+                return {
+                  ...pos,
+                  devices,
+                };
+              })
+            );
+            
+            return {
+              ...store,
+              pos: posWithDevices,
+            };
+          })
+        );
+        
+        console.log('✅ Todas las sucursales con devices cargadas:', storesWithDevices);
+        setStores(storesWithDevices);
+        
+        const totalDevices = storesWithDevices.reduce((sum, store) => 
+          sum + store.pos.reduce((posSum: number, pos: any) => 
+            posSum + (pos.devices?.length || 0), 0
+          ), 0
+        );
+        
+        toast.success(`${storesWithDevices.length} sucursales y ${totalDevices} terminales encontradas`);
+      } else {
+        console.error('❌ Error al cargar sucursales:', result.error);
+        toast.error(result.error || 'Error al cargar sucursales');
+      }
+    } catch (err) {
+      console.error('❌ Exception al cargar sucursales:', err);
+      toast.error('Error al cargar sucursales');
+    } finally {
+      setStoresLoading(false);
+    }
+  };
+
+  // Función para eliminar sucursal
+  const handleDeleteStore = async (storeId: string, storeName: string) => {
+    // Verificar si se puede eliminar
+    const canDelete = await canDeleteStore(storeId);
+    if (!canDelete.canDelete) {
+      toast.error(canDelete.reason || 'No se puede eliminar esta sucursal');
+      return;
+    }
+
+    if (!confirm(`¿Estás seguro de eliminar la sucursal "${storeName}"?`)) {
+      return;
+    }
+
+    try {
+      const result = await deleteStore(storeId);
+      if (!result.success) {
+        throw new Error(result.error || 'Error al eliminar sucursal');
+      }
+
+      toast.success('✅ Sucursal eliminada correctamente');
+      await refreshStores();
+    } catch (error: any) {
+      console.error('Error al eliminar sucursal:', error);
+      toast.error(error?.message || 'Error al eliminar sucursal');
+    }
+  };
+
+  // Función para eliminar caja
+  const handleDeletePOS = async (posId: string, posName: string) => {
+    if (!confirm(`¿Estás seguro de eliminar la caja "${posName}"?`)) {
+      return;
+    }
+
+    try {
+      const result = await deletePOS(posId);
+      if (!result.success) {
+        throw new Error(result.error || 'Error al eliminar caja');
+      }
+
+      toast.success('✅ Caja eliminada correctamente');
+      await refreshStores();
+    } catch (error: any) {
+      console.error('Error al eliminar caja:', error);
+      toast.error(error?.message || 'Error al eliminar caja');
+    }
+  };
+
   return (
     <div className="p-4 md:p-8">
       <header className="mb-8">
@@ -185,6 +361,9 @@ const Settings: React.FC = () => {
           </button>
           <button onClick={() => setActiveTab('users')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'users' ? 'border-b-2 border-amber-400 text-amber-400' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
             Gestión de Usuarios
+          </button>
+          <button onClick={() => setActiveTab('stores')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'stores' ? 'border-b-2 border-amber-400 text-amber-400' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
+            Sucursales y Cajas
           </button>
           <button onClick={() => setActiveTab('terminal')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'terminal' ? 'border-b-2 border-amber-400 text-amber-400' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
             Configurar Terminal
@@ -437,8 +616,12 @@ const Settings: React.FC = () => {
 
                 {!terminalsLoading && terminals.length > 0 && (
                   <div className="space-y-3">
-                    {terminals.map((terminal) => (
-                      <div key={terminal.id} className={`bg-gray-800 rounded-lg p-4 border-2 transition-all ${terminal.enabled !== false ? 'border-green-700/50' : 'border-gray-700 opacity-60'}`}>
+                    {terminals.map((terminal) => {
+                      // El estado real es el modo de operación de la API
+                      const isInPDVMode = terminal.operatingMode === 'PDV';
+                      
+                      return (
+                      <div key={terminal.id} className={`bg-gray-800 rounded-lg p-4 border-2 transition-all ${isInPDVMode ? 'border-green-700/50' : 'border-gray-700 opacity-60'}`}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -455,8 +638,12 @@ const Settings: React.FC = () => {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                 </svg>
                               </button>
-                              <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${terminal.enabled !== false ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                                {terminal.enabled !== false ? '✓ Habilitada' : '✗ Deshabilitada'}
+                              <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${isInPDVMode ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                {isInPDVMode ? '✓ Habilitada' : '✗ Deshabilitada'}
+                              </span>
+                              {/* Indicador de Modo de Operación REAL desde la API */}
+                              <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${isInPDVMode ? 'bg-blue-500/20 text-blue-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                                {isInPDVMode ? '📡 PDV' : '🔒 STANDALONE'}
                               </span>
                             </div>
                             {/* Mostrar nombre original si hay uno personalizado */}
@@ -468,6 +655,13 @@ const Settings: React.FC = () => {
                             <p className="text-sm text-gray-400 mb-2">
                               📍 {terminal.location}
                             </p>
+                            {/* Descripción del modo REAL */}
+                            <p className="text-xs text-gray-500 mb-2 italic">
+                              {isInPDVMode 
+                                ? '📡 Modo PDV: Recibe órdenes desde la API (integración)'
+                                : '🔒 Modo STANDALONE: Solo acepta pagos manuales en la terminal'
+                              }
+                            </p>
                             <div className="mt-2 space-y-1">
                               <p className="text-xs text-gray-500">
                                 <span className="text-gray-400">Device ID:</span> <span className="text-green-400 font-mono">{terminal.id}</span>
@@ -478,27 +672,31 @@ const Settings: React.FC = () => {
                               <p className="text-xs text-gray-500">
                                 <span className="text-gray-400">POS ID:</span> <span className="text-green-400 font-mono">{terminal.posId}</span>
                               </p>
+                              <p className="text-xs text-gray-500">
+                                <span className="text-gray-400">Modo actual:</span> <span className={`font-mono font-semibold ${isInPDVMode ? 'text-blue-400' : 'text-yellow-400'}`}>{terminal.operatingMode || 'Desconocido'}</span>
+                              </p>
                             </div>
                           </div>
                           
-                          {/* Toggle Switch */}
+                          {/* Toggle Switch - sincronizado con el modo REAL */}
                           <div className="ml-4 flex flex-col items-center gap-2">
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={terminal.enabled !== false}
+                                checked={isInPDVMode}
                                 onChange={(e) => handleToggleTerminal(terminal.id, e.target.checked)}
                                 className="sr-only peer"
                               />
                               <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                             </label>
                             <span className="text-xs text-gray-400">
-                              {terminal.enabled !== false ? 'Activa' : 'Inactiva'}
+                              {isInPDVMode ? 'PDV' : 'STANDALONE'}
                             </span>
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -583,20 +781,528 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
+              {/* Historial de Pagos de Prueba */}
+              <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-amber-400">📜 Historial de Pagos de Prueba</h3>
+                  <button
+                    onClick={async () => {
+                      setLoadingTestPayments(true);
+                      try {
+                        const result = await getTestPayments();
+                        if (result.success && result.data) {
+                          setTestPayments(result.data as (PaymentDocument & { id: string })[]);
+                          toast.success(`${result.data.length} pagos encontrados`);
+                        }
+                      } catch (err) {
+                        toast.error('Error al cargar pagos');
+                      } finally {
+                        setLoadingTestPayments(false);
+                      }
+                    }}
+                    disabled={loadingTestPayments}
+                    className="text-sm px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-60"
+                  >
+                    {loadingTestPayments ? '🔄 Cargando...' : '🔄 Actualizar'}
+                  </button>
+                </div>
+
+                {loadingTestPayments && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">Cargando historial...</p>
+                  </div>
+                )}
+
+                {!loadingTestPayments && testPayments.length === 0 && (
+                  <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-center">
+                    <p className="text-gray-400 text-sm">
+                      No hay pagos de prueba registrados. Realiza un cobro de prueba para ver el historial aquí.
+                    </p>
+                  </div>
+                )}
+
+                {!loadingTestPayments && testPayments.length > 0 && (
+                  <div className="space-y-3">
+                    {testPayments.map((payment) => {
+                      const isSuccess = payment.status === 'processed' || payment.status === 'paid';
+                      const isFailed = payment.status === 'failed' || payment.status === 'canceled';
+                      const createdDate = payment.created_date ? new Date(payment.created_date) : null;
+                      
+                      return (
+                        <div
+                          key={payment.id}
+                          className={`bg-gray-800 rounded-lg p-4 border-2 transition-all ${
+                            isSuccess
+                              ? 'border-green-700/50'
+                              : isFailed
+                              ? 'border-red-700/50'
+                              : 'border-yellow-700/50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-2xl">
+                                  {isSuccess ? '✅' : isFailed ? '❌' : '⏳'}
+                                </span>
+                                <div>
+                                  <p className="text-white font-semibold">
+                                    Prueba de Pago - ${payment.transactions?.payments?.[0]?.amount || '5.00'}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    {createdDate ? createdDate.toLocaleString('es-MX', {
+                                      dateStyle: 'medium',
+                                      timeStyle: 'short'
+                                    }) : 'Fecha no disponible'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1 text-sm">
+                                <p className="text-gray-400">
+                                  <span className="text-gray-500">Estado:</span>{' '}
+                                  <span className={`font-semibold ${
+                                    isSuccess ? 'text-green-400' : isFailed ? 'text-red-400' : 'text-yellow-400'
+                                  }`}>
+                                    {payment.status === 'processed' ? 'Procesado ✓' :
+                                     payment.status === 'paid' ? 'Pagado ✓' :
+                                     payment.status === 'failed' ? 'Fallido' :
+                                     payment.status === 'canceled' ? 'Cancelado' :
+                                     payment.status}
+                                  </span>
+                                </p>
+                                
+                                <p className="text-gray-400">
+                                  <span className="text-gray-500">Usuario:</span>{' '}
+                                  <span className="text-white">{payment.userData?.displayName || 'N/A'}</span>
+                                </p>
+
+                                {payment.transactions?.payments?.[0]?.reference_id && (
+                                  <p className="text-gray-400">
+                                    <span className="text-gray-500">Reference ID:</span>{' '}
+                                    <span className="text-green-400 font-mono text-xs">
+                                      {payment.transactions.payments[0].reference_id}
+                                    </span>
+                                  </p>
+                                )}
+
+                                <p className="text-gray-400">
+                                  <span className="text-gray-500">Order ID:</span>{' '}
+                                  <span className="text-blue-400 font-mono text-xs">{payment.id}</span>
+                                </p>
+
+                                {payment.external_reference && (
+                                  <p className="text-gray-400">
+                                    <span className="text-gray-500">Referencia:</span>{' '}
+                                    <span className="text-purple-400 text-xs">{payment.external_reference}</span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Botón para repetir prueba */}
+                            <div className="ml-4">
+                              <button
+                                onClick={() => {
+                                  setTestPaymentStatus('testing');
+                                  setShowTerminalModal(true);
+                                }}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors font-medium"
+                                title="Repetir prueba de pago"
+                              >
+                                🔄 Repetir
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Instrucciones */}
               <div className="mt-6 bg-amber-900/20 border border-amber-700 rounded-lg p-4">
-                <h4 className="text-amber-300 font-semibold mb-2">📝 Instrucciones de Configuración</h4>
+                <h4 className="text-amber-300 font-semibold mb-2">📝 Configuración Rápida de Mercado Pago Point</h4>
                 <ol className="text-sm text-gray-300 space-y-2 list-decimal list-inside">
-                  <li>Obtén tus credenciales de Mercado Pago desde el <a href="https://www.mercadopago.com.mx/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">panel de desarrolladores</a></li>
-                  <li>Configura las variables de entorno en el archivo <code className="bg-gray-800 px-2 py-1 rounded">.env</code></li>
-                  <li>Obtén los Store ID y POS ID de tus terminales desde <a href="https://www.mercadopago.com.mx/point" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Mercado Pago Point</a></li>
-                  <li>Actualiza los IDs en <code className="bg-gray-800 px-2 py-1 rounded">src/services/mercadoPagoService.ts</code></li>
-                  <li>Realiza un cobro de prueba para verificar la configuración</li>
+                  <li>
+                    <strong>Obtén credenciales:</strong> Accede al <a href="https://www.mercadopago.com.mx/developers/panel/app" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Panel de Desarrolladores</a> y copia tu <code className="bg-gray-800 px-1 rounded">Access Token</code> y <code className="bg-gray-800 px-1 rounded">User ID</code>
+                  </li>
+                  <li>
+                    <strong>Configura variables de entorno:</strong> Crea el archivo <code className="bg-gray-800 px-1 rounded">.env</code> en la raíz del proyecto:
+                    <pre className="bg-gray-900 p-2 rounded mt-1 text-xs overflow-x-auto">
+{`VITE_MERCADOPAGO_ACCESS_TOKEN=APP_USR-tu-access-token
+VITE_MERCADOPAGO_USER_ID=tu-user-id`}
+                    </pre>
+                  </li>
+                  <li>
+                    <strong>Gestiona terminales:</strong> Las terminales aparecerán automáticamente al cargar esta página. Usa el botón <span className="text-blue-400">🔄 Actualizar</span> para refrescar la lista
+                  </li>
+                  <li>
+                    <strong>Configura modos de operación:</strong>
+                    <ul className="ml-6 mt-1 space-y-1 list-disc text-xs">
+                      <li><span className="text-green-400 font-semibold">PDV (Habilitada)</span>: Terminal recibe órdenes desde la API - Integración automática con el sistema</li>
+                      <li><span className="text-yellow-400 font-semibold">STANDALONE (Deshabilitada)</span>: Terminal solo acepta pagos manuales - Sin integración</li>
+                      <li>💡 El modo se actualiza automáticamente al activar/desactivar el toggle de cada terminal</li>
+                    </ul>
+                  </li>
+                  <li>
+                    <strong>Prueba la configuración:</strong> Realiza un cobro de prueba de $5.00 MXN para verificar que todo funciona correctamente
+                  </li>
                 </ol>
+                <div className="mt-3 p-3 bg-blue-900/20 border border-blue-700 rounded">
+                  <p className="text-xs text-blue-200">
+                    💡 <strong>Tip:</strong> Las terminales pueden cambiar de modo desde la terminal física. Usa el botón de actualizar para sincronizar el estado real.
+                  </p>
+                </div>
                 <p className="text-xs text-gray-400 mt-3">
-                  💡 Para más información, consulta el archivo <code className="bg-gray-800 px-1 rounded">MERCADOPAGO_SETUP.md</code> en la raíz del proyecto.
+                  � Para más detalles técnicos, consulta <code className="bg-gray-800 px-1 rounded">MERCADO_PAGO_TERMINAL_USAGE.md</code> en la raíz del proyecto.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'stores' && (
+          <div className="tab-content space-y-6">
+            {/* Header con botones */}
+            <div className="bg-gray-800 rounded-2xl border border-gray-700 p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">🏪 Gestión de Sucursales y Cajas</h2>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Administra tus sucursales y cajas para Mercado Pago Point
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={refreshStores}
+                    disabled={storesLoading}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm disabled:opacity-60 flex items-center gap-2"
+                  >
+                    {storesLoading ? '🔄 Cargando...' : '🔄 Actualizar'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingStore(null);
+                      setShowStoreModal(true);
+                    }}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm flex items-center gap-2"
+                  >
+                    ➕ Nueva Sucursal
+                  </button>
+                </div>
+              </div>
+
+              {/* Info importante */}
+              <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4 mb-6">
+                <p className="text-sm text-amber-200">
+                  ⚠️ <strong>Requerimiento de certificación:</strong> Mercado Pago requiere que gestiones 
+                  sucursales y cajas mediante API para completar la certificación de tu integración.
+                </p>
+              </div>
+
+              {/* Estado de configuración */}
+              <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                <h3 className="text-lg font-semibold text-amber-400 mb-3">📊 Estado Actual</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-400 mb-1">Total Sucursales</p>
+                    <p className="text-2xl font-bold text-white">{stores.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400 mb-1">Total Cajas</p>
+                    <p className="text-2xl font-bold text-white">
+                      {stores.reduce((sum, store) => sum + store.pos.length, 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400 mb-1">User ID</p>
+                    <p className="text-sm font-mono text-green-400">{CONFIG.userId || 'No configurado'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de sucursales */}
+            {storesLoading && (
+              <div className="bg-gray-800 rounded-2xl border border-gray-700 p-12 text-center">
+                <p className="text-gray-400">🔄 Cargando sucursales...</p>
+              </div>
+            )}
+
+            {!storesLoading && stores.length === 0 && (
+              <div className="bg-gray-800 rounded-2xl border border-gray-700 p-12 text-center">
+                <div className="mb-4 text-6xl">🏪</div>
+                <h3 className="text-xl font-bold text-white mb-2">No hay sucursales</h3>
+                <p className="text-gray-400 mb-6">
+                  Crea tu primera sucursal para comenzar a gestionar tus puntos de venta
+                </p>
+                <button
+                  onClick={() => {
+                    setEditingStore(null);
+                    setShowStoreModal(true);
+                  }}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold inline-flex items-center gap-2"
+                >
+                  ➕ Crear Primera Sucursal
+                </button>
+              </div>
+            )}
+
+            {!storesLoading && stores.length > 0 && (
+              <div className="space-y-6">
+                {stores.map((store: Store & { pos: POS[] }) => (
+                  <div
+                    key={store.id}
+                    className="bg-gray-800 rounded-2xl border-2 border-gray-700 overflow-hidden hover:border-amber-600 transition-all"
+                  >
+                    {/* Header de la sucursal */}
+                    <div className="bg-gradient-to-r from-amber-900/30 to-gray-800 p-6 border-b border-gray-700">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-3xl">🏪</span>
+                            <h3 className="text-2xl font-bold text-white">{store.name}</h3>
+                          </div>
+                          <div className="space-y-1 text-sm">
+                            <p className="text-gray-300">
+                              📍 {store.location.address_line}
+                            </p>
+                            {store.location.reference && (
+                              <p className="text-gray-400 italic">
+                                📝 {store.location.reference}
+                              </p>
+                            )}
+                            <p className="text-gray-500">
+                              <span className="text-gray-400">ID:</span> <span className="font-mono text-xs">{store.id}</span>
+                            </p>
+                            {store.external_id && (
+                              <p className="text-gray-500">
+                                <span className="text-gray-400">ID Externo:</span> <span className="font-mono text-xs">{store.external_id}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingStore(store);
+                              setShowStoreModal(true);
+                            }}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStore(store.id, store.name)}
+                            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+                          >
+                            🗑️ Eliminar
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Horarios (resumido) */}
+                      {store.business_hours && (
+                        <div className="mt-4 pt-4 border-t border-gray-700">
+                          <p className="text-sm text-gray-400 mb-2">🕐 Horarios de atención:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(store.business_hours).map(([day, hours]) => {
+                              if (!hours || hours.length === 0) return null;
+                              const dayNames: Record<string, string> = {
+                                monday: 'Lun',
+                                tuesday: 'Mar',
+                                wednesday: 'Mié',
+                                thursday: 'Jue',
+                                friday: 'Vie',
+                                saturday: 'Sáb',
+                                sunday: 'Dom',
+                              };
+                              return (
+                                <span
+                                  key={day}
+                                  className="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs"
+                                >
+                                  {dayNames[day]}: {hours[0].open}-{hours[0].close}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cajas de la sucursal */}
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-amber-400 flex items-center gap-2">
+                          💰 Cajas ({store.pos.length})
+                        </h4>
+                        <button
+                          onClick={() => {
+                            setEditingPOS(null);
+                            setEditingStore(store); // Para pasar el storeId preseleccionado
+                            setShowPOSModal(true);
+                          }}
+                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+                        >
+                          ➕ Nueva Caja
+                        </button>
+                      </div>
+
+                      {store.pos.length === 0 ? (
+                        <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-6 text-center">
+                          <p className="text-gray-400 text-sm">
+                            Esta sucursal no tiene cajas. Crea una para comenzar a operar.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {store.pos.map((pos: POS) => (
+                            <div
+                              key={pos.id}
+                              className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 hover:border-amber-600 transition-all"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <h5 className="text-white font-semibold flex items-center gap-2">
+                                    💳 {pos.name}
+                                  </h5>
+                                  <p className="text-xs text-gray-500 font-mono mt-1">
+                                    ID: {pos.id}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">Categoría:</span>
+                                  <span className="text-gray-300">
+                                    {pos.category ? getMCCCategoryName(pos.category) : '⚠️ No configurado'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">MCC:</span>
+                                  <span className={`font-mono text-xs ${pos.category ? 'text-gray-300' : 'text-yellow-400'}`}>
+                                    {pos.category || '⚠️ Sin MCC'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">Monto fijo:</span>
+                                  <span className={pos.fixed_amount ? 'text-green-400' : 'text-gray-500'}>
+                                    {pos.fixed_amount ? '✓ Sí' : '✗ No'}
+                                  </span>
+                                </div>
+                                {pos.external_id && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-gray-400">ID Ext:</span>
+                                    <span className="text-gray-300 font-mono text-xs">{pos.external_id}</span>
+                                  </div>
+                                )}
+                                
+                                {/* Mostrar Terminales/Devices */}
+                                {(() => {
+                                  const devices = (pos as any).devices;
+                                  console.log(`🖥️ Renderizando devices para ${pos.name}:`, devices);
+                                  
+                                  if (!devices || devices.length === 0) {
+                                    return (
+                                      <div className="mt-3 pt-3 border-t border-gray-700">
+                                        <p className="text-gray-500 text-xs italic">
+                                          📱 Sin terminales asociadas
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  return (
+                                    <div className="mt-3 pt-3 border-t border-gray-700">
+                                      <p className="text-amber-400 text-xs font-semibold mb-2">
+                                        📱 Terminales ({devices.length})
+                                      </p>
+                                      <div className="space-y-1">
+                                        {devices.map((device: Device) => (
+                                          <div key={device.id} className="flex items-center justify-between text-xs bg-gray-800/50 p-2 rounded">
+                                            <span className="text-gray-300 font-mono truncate flex-1">
+                                              {device.id}
+                                            </span>
+                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ml-2 ${
+                                              device.operating_mode === 'PDV' 
+                                                ? 'bg-blue-900/50 text-blue-300' 
+                                                : 'bg-purple-900/50 text-purple-300'
+                                            }`}>
+                                              {device.operating_mode}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+
+                              <div className="mt-4 pt-4 border-t border-gray-700 flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingPOS(pos);
+                                    setEditingStore(store);
+                                    setShowPOSModal(true);
+                                  }}
+                                  className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
+                                >
+                                  ✏️ Editar
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePOS(pos.id, pos.name)}
+                                  className="flex-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium"
+                                >
+                                  🗑️ Eliminar
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Información adicional */}
+            <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-6">
+              <h4 className="text-blue-300 font-semibold mb-3">ℹ️ Información Importante</h4>
+              <ul className="space-y-2 text-sm text-blue-200">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-0.5">•</span>
+                  <span>
+                    <strong>Jerarquía:</strong> Usuario → Sucursal → Caja → Terminal física
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-0.5">•</span>
+                  <span>
+                    <strong>No puedes eliminar</strong> una sucursal que tenga cajas asociadas. 
+                    Elimina primero las cajas.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-0.5">•</span>
+                  <span>
+                    <strong>No puedes cambiar</strong> la sucursal de una caja existente. 
+                    Debes crear una nueva caja en la otra sucursal.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 mt-0.5">•</span>
+                  <span>
+                    <strong>Las terminales físicas</strong> se asocian a las cajas mediante el panel de 
+                    Mercado Pago o la API de dispositivos.
+                  </span>
+                </li>
+              </ul>
             </div>
           </div>
         )}
@@ -669,6 +1375,44 @@ const Settings: React.FC = () => {
           onSave={(name) => handleSaveTerminalName(editingTerminal.id, name)}
           currentName={editingTerminal.customName || editingTerminal.name}
           terminalId={editingTerminal.id}
+        />
+      )}
+
+      {/* Store Modal (Create/Edit) */}
+      {showStoreModal && (
+        <StoreModal
+          isOpen={showStoreModal}
+          onClose={() => {
+            setShowStoreModal(false);
+            setEditingStore(null);
+          }}
+          onSuccess={() => {
+            setShowStoreModal(false);
+            setEditingStore(null);
+            refreshStores();
+          }}
+          store={editingStore}
+        />
+      )}
+
+      {/* POS Modal (Create/Edit) */}
+      {showPOSModal && (
+        <POSModal
+          isOpen={showPOSModal}
+          onClose={() => {
+            setShowPOSModal(false);
+            setEditingPOS(null);
+            setEditingStore(null);
+          }}
+          onSuccess={() => {
+            setShowPOSModal(false);
+            setEditingPOS(null);
+            setEditingStore(null);
+            refreshStores();
+          }}
+          pos={editingPOS}
+          stores={stores}
+          preselectedStoreId={editingStore?.id}
         />
       )}
     </div>

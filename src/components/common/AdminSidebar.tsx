@@ -14,6 +14,7 @@ import {
     UserCircle,
     ClipboardCheck,
     Calculator,
+    CreditCard,
 } from "lucide-react";
 
 // Estilos para los enlaces de navegación, cambia el color si está activo
@@ -109,6 +110,10 @@ export const AdminSidebar: React.FC = () => {
                     <NavLink to="/admin/tickets" className={navLinkClass}>
                         <Receipt size={20} />
                         <span>Tickets</span>
+                    </NavLink>
+                    <NavLink to="/admin/pagos-terminal" className={navLinkClass}>
+                        <CreditCard size={20} />
+                        <span>Pagos Terminal</span>
                     </NavLink>
                     <NavLink to="/admin/cierre" className={navLinkClass}>
                         <Calculator size={20} />

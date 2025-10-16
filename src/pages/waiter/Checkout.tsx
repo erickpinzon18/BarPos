@@ -10,6 +10,8 @@ import MercadoPagoTerminalModal from '../../components/common/MercadoPagoTermina
 import { printTicket80mm } from '../../utils/printTicket';
 import { ArrowLeft, Printer, Check } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import { QRCodeSVG } from 'qrcode.react';
 
 const WaiterCheckout: React.FC = () => {
   const { currentUser } = useAuth();
@@ -53,6 +55,23 @@ const WaiterCheckout: React.FC = () => {
   const [showTicket, setShowTicket] = useState<boolean>(true); // Mobile: toggle ticket view
   const [splitBetween, setSplitBetween] = useState<number>(1); // Número de personas para dividir la cuenta
   const [showMPTerminalModal, setShowMPTerminalModal] = useState(false);
+
+  // Función para copiar link del ticket digital
+  const handleShareTicket = async () => {
+    if (!order) return;
+    
+    const ticketUrl = `${window.location.origin}/ticket/${order.id}`;
+    
+    try {
+      await navigator.clipboard.writeText(ticketUrl);
+      toast.success('🔗 Link del ticket copiado', {
+        duration: 3000,
+      });
+    } catch (err) {
+      console.error('Error al copiar link:', err);
+      toast.error('No se pudo copiar el link');
+    }
+  };
 
   // Load business config (name, address, phone) from Firestore to show on tickets
   React.useEffect(() => {
@@ -644,6 +663,31 @@ const WaiterCheckout: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Código QR para Compartir Ticket Digital */}
+            <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-700">
+              <h3 className="font-semibold text-white mb-3 text-center">📱 Ticket Digital</h3>
+              <p className="text-sm text-gray-400 text-center mb-4">
+                Escanea el código QR para ver el ticket
+              </p>
+              <div className="flex justify-center mb-4">
+                <div className="bg-white p-4 rounded-xl">
+                  <QRCodeSVG 
+                    value={`${window.location.origin}/ticket/${order.id}`}
+                    size={200}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
+              </div>
+              <button 
+                disabled={closing} 
+                onClick={handleShareTicket} 
+                className={`w-full ${closing ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'} font-semibold py-2 px-4 rounded-lg transition text-sm`}
+              >
+                📋 Copiar Link
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -651,20 +695,20 @@ const WaiterCheckout: React.FC = () => {
       {/* Fixed Bottom Action Buttons - Mobile Optimized */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 shadow-lg z-20">
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <button 
               disabled={closing} 
               onClick={handlePrint} 
-              className={`flex items-center justify-center gap-2 ${closing ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-600 text-white hover:bg-gray-700'} font-bold py-4 rounded-lg transition`}
+              className={`flex items-center justify-center gap-1 ${closing ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-600 text-white hover:bg-gray-700'} font-semibold py-3 px-2 rounded-lg transition text-sm`}
             >
-              <Printer className="w-5 h-5" />
-              Imprimir
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">Imprimir</span>
             </button>
             
             <button 
               disabled={closing || isReadOnly} 
               onClick={handleFinalize} 
-              className={`flex items-center justify-center gap-2 ${isReadOnly ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : closing ? 'bg-green-600 text-white' : 'bg-green-500 text-white hover:bg-green-600'} font-bold py-4 rounded-lg transition`}
+              className={`flex items-center justify-center gap-1 ${isReadOnly ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : closing ? 'bg-green-600 text-white' : 'bg-green-500 text-white hover:bg-green-600'} font-semibold py-3 px-2 rounded-lg transition text-sm`}
             >
               {closing ? (
                 <>

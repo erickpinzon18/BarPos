@@ -30,12 +30,18 @@ import WaiterCheckout from './pages/waiter/Checkout';
 // Kitchen Pages
 import KitchenKanban from './pages/kitchen/Kanban';
 
+// Public Pages
+import CustomerTicket from './pages/public/CustomerTicket';
+
 function App() {
   return (
     <Routes>
       {/* Unified Login - Default route */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
+      
+      {/* Public Routes - No authentication required */}
+      <Route path="/ticket/:orderId" element={<CustomerTicket />} />
       
       {/* Legacy login routes - redirect to unified login */}
       <Route path="/admin/login" element={<Navigate to="/login" replace />} />

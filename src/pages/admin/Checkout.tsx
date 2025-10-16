@@ -9,6 +9,8 @@ import PinModal from '../../components/common/PinModal';
 import MercadoPagoTerminalModal from '../../components/common/MercadoPagoTerminalModal';
 import { printTicket80mm } from '../../utils/printTicket';
 import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import { QRCodeSVG } from 'qrcode.react';
 
 const AdminCheckout: React.FC = () => {
   const { currentUser } = useAuth();
@@ -52,6 +54,24 @@ const AdminCheckout: React.FC = () => {
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
   const [config, setConfig] = useState<any | null>(null);
   const [showMPTerminalModal, setShowMPTerminalModal] = useState(false);
+  
+  // Función para copiar link del ticket digital
+  const handleShareTicket = async () => {
+    if (!order) return;
+    
+    const ticketUrl = `${window.location.origin}/ticket/${order.id}`;
+    
+    try {
+      await navigator.clipboard.writeText(ticketUrl);
+      toast.success('🔗 Link del ticket copiado al portapapeles', {
+        duration: 3000,
+      });
+    } catch (err) {
+      console.error('Error al copiar link:', err);
+      toast.error('No se pudo copiar el link');
+    }
+  };
+  
   // Load business config (name, address, phone) from Firestore to show on tickets
   React.useEffect(() => {
     let mounted = true;
@@ -466,8 +486,46 @@ const AdminCheckout: React.FC = () => {
 
           <div className="flex flex-col space-y-3">
             {/* Imprimir debe permanecer disponible incluso en modo solo-lectura; solo deshabilitamos mientras cerramos */}
-            <button disabled={closing} onClick={handlePrint} className={`w-full ${closing ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-600 text-white hover:bg-gray-700'} font-bold py-3 px-4 rounded-lg transition`}>Imprimir Pase de Salida</button>
-            <button disabled={closing || isReadOnly} onClick={handleFinalize} className={`w-full ${isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-amber-500 text-gray-900 hover:bg-amber-600'} font-bold py-3 px-4 rounded-lg transition`}>{closing ? 'Cerrando...' : 'Finalizar y Cerrar Mesa'}</button>
+            <button 
+              disabled={closing} 
+              onClick={handlePrint} 
+              className={`w-full ${closing ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-600 text-white hover:bg-gray-700'} font-bold py-3 px-4 rounded-lg transition`}
+            >
+              🖨️ Imprimir Pase de Salida
+            </button>
+            
+            {/* Código QR para Compartir Ticket Digital */}
+            <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+              <h3 className="font-semibold text-white mb-3 text-center">📱 Ticket Digital</h3>
+              <p className="text-sm text-gray-400 text-center mb-4">
+                Escanea el código QR para ver el ticket
+              </p>
+              <div className="flex justify-center mb-4">
+                <div className="bg-white p-4 rounded-xl">
+                  <QRCodeSVG 
+                    value={`${window.location.origin}/ticket/${order.id}`}
+                    size={200}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
+              </div>
+              <button 
+                disabled={closing} 
+                onClick={handleShareTicket} 
+                className={`w-full ${closing ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'} font-semibold py-2 px-4 rounded-lg transition text-sm`}
+              >
+                � Copiar Link
+              </button>
+            </div>
+            
+            <button 
+              disabled={closing || isReadOnly} 
+              onClick={handleFinalize} 
+              className={`w-full ${isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-amber-500 text-gray-900 hover:bg-amber-600'} font-bold py-3 px-4 rounded-lg transition`}
+            >
+              {closing ? 'Cerrando...' : 'Finalizar y Cerrar Mesa'}
+            </button>
           </div>
         </div>
       </div>

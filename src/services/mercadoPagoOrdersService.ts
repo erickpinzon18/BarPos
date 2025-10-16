@@ -7,7 +7,7 @@
  * Los logs están preparados para después guardar en Firebase/Firestore.
  */
 
-import { savePayment, type PaymentUserData } from './firestoreService';
+import { savePayment } from './firestoreService';
 
 // ========================================
 // TIPOS Y INTERFACES

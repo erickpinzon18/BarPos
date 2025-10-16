@@ -44,6 +44,7 @@ const Settings: React.FC = () => {
   const [terminalsConfig, setTerminalsConfig] = useState<Record<string, boolean>>({});
   const [terminalsNames, setTerminalsNames] = useState<Record<string, string>>({});
   
+  console.log(terminalsConfig, terminalsNames);
   // Edit terminal name modal states
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [editingTerminal, setEditingTerminal] = useState<Terminal | null>(null);

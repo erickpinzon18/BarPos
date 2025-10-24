@@ -43,7 +43,7 @@ export const useProducts = (availableOnly: boolean = true) => {
           });
         });
 
-        // console.log('🛍️ Products loaded:', productsData.length);
+        // // console.log('🛍️ Products loaded:', productsData.length);
         setProducts(productsData);
         setLoading(false);
         setError(null);

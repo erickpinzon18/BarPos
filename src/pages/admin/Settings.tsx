@@ -44,7 +44,7 @@ const Settings: React.FC = () => {
   const [terminalsConfig, setTerminalsConfig] = useState<Record<string, boolean>>({});
   const [terminalsNames, setTerminalsNames] = useState<Record<string, string>>({});
   
-  console.log(terminalsConfig, terminalsNames);
+  // console.log(terminalsConfig, terminalsNames);
   // Edit terminal name modal states
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [editingTerminal, setEditingTerminal] = useState<Terminal | null>(null);
@@ -145,14 +145,14 @@ const Settings: React.FC = () => {
     try {
       // 1. Cambiar el modo de operación en Mercado Pago
       const mode = enabled ? 'PDV' : 'STANDALONE';
-      console.log(`🔄 Cambiando terminal ${terminalId} a modo ${mode}...`);
+      // console.log(`🔄 Cambiando terminal ${terminalId} a modo ${mode}...`);
       
       const modeResult = await setTerminalOperatingMode(terminalId, mode);
       if (!modeResult.success) {
         throw new Error(modeResult.error || 'Error al cambiar modo de operación');
       }
       
-      console.log(`✅ Terminal ${terminalId} ahora está en modo ${mode}`);
+      // console.log(`✅ Terminal ${terminalId} ahora está en modo ${mode}`);
       
       // 2. Actualizar el estado en Firestore
       const res = await setTerminalEnabled(terminalId, enabled);
@@ -240,29 +240,29 @@ const Settings: React.FC = () => {
   const refreshStores = async () => {
     setStoresLoading(true);
     try {
-      console.log('🔄 Cargando sucursales y dispositivos...');
+      // console.log('🔄 Cargando sucursales y dispositivos...');
       const result = await getStoresWithPOS();
       
       if (result.success && result.data) {
-        console.log(`✅ ${result.data.length} sucursales encontradas`);
+        // console.log(`✅ ${result.data.length} sucursales encontradas`);
         
         // Para cada store, cargar devices de cada POS
         const storesWithDevices = await Promise.all(
           result.data.map(async (store) => {
-            console.log(`📦 Procesando store: ${store.name} (${store.pos.length} cajas)`);
+            // console.log(`📦 Procesando store: ${store.name} (${store.pos.length} cajas)`);
             
             const posWithDevices = await Promise.all(
               store.pos.map(async (pos: POS) => {
-                console.log(`  🔍 Buscando devices para POS: ${pos.name} (${pos.id})`);
+                // console.log(`  🔍 Buscando devices para POS: ${pos.name} (${pos.id})`);
                 const devicesResult = await getDevicesByPOS(pos.id);
                 
                 const devices = devicesResult.success && devicesResult.data 
                   ? devicesResult.data.data.terminals 
                   : [];
                 
-                console.log(`    ${devices.length > 0 ? '✅' : '⚠️'} ${devices.length} devices encontrados para ${pos.name}`);
+                // console.log(`    ${devices.length > 0 ? '✅' : '⚠️'} ${devices.length} devices encontrados para ${pos.name}`);
                 if (devices.length > 0) {
-                  console.log(`    Devices:`, devices);
+                  // console.log(`    Devices:`, devices);
                 }
                 
                 return {
@@ -279,7 +279,7 @@ const Settings: React.FC = () => {
           })
         );
         
-        console.log('✅ Todas las sucursales con devices cargadas:', storesWithDevices);
+        // console.log('✅ Todas las sucursales con devices cargadas:', storesWithDevices);
         setStores(storesWithDevices);
         
         const totalDevices = storesWithDevices.reduce((sum, store) => 
@@ -448,7 +448,7 @@ const Settings: React.FC = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={async () => {
                             try {
-                                console.log('u', u.email);
+                                // console.log('u', u.email);
                               await sendPasswordResetEmail(auth, u.email);
                               toast.success(`Enlace enviado a ${u.email}`);
                             } catch (err: any) {
@@ -1206,7 +1206,7 @@ VITE_MERCADOPAGO_USER_ID=tu-user-id`}
                                 {/* Mostrar Terminales/Devices */}
                                 {(() => {
                                   const devices = (pos as any).devices;
-                                  console.log(`🖥️ Renderizando devices para ${pos.name}:`, devices);
+                                  // console.log(`🖥️ Renderizando devices para ${pos.name}:`, devices);
                                   
                                   if (!devices || devices.length === 0) {
                                     return (

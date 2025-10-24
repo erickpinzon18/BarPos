@@ -181,7 +181,7 @@ const AdminCheckout: React.FC = () => {
 
   // Handlers for Mercado Pago Terminal
   const handleMPTerminalSuccess = async () => {
-    console.log('✅ [Checkout] Pago con MP Terminal exitoso');
+    // console.log('✅ [Checkout] Pago con MP Terminal exitoso');
     setShowMPTerminalModal(false);
     
     // Finalizar sin pedir PIN porque MP ya validó el pago
@@ -216,7 +216,7 @@ const AdminCheckout: React.FC = () => {
   };
 
   const handleMPTerminalClose = () => {
-    console.log('🔴 [Checkout] Usuario cerró modal de MP Terminal');
+    // console.log('🔴 [Checkout] Usuario cerró modal de MP Terminal');
     setShowMPTerminalModal(false);
   };
 

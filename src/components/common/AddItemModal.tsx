@@ -52,7 +52,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
     
     try {
       await onAddItem(selectedProduct.id, quantity);
-      console.log('✅ Producto agregado:', selectedProduct.name, 'x', quantity);
+      // console.log('✅ Producto agregado:', selectedProduct.name, 'x', quantity);
     } catch (error) {
       console.error('Error adding item:', error);
       throw error;

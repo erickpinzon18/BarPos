@@ -42,13 +42,13 @@ const POSModal: React.FC<POSModalProps> = ({
   // Cargar datos si es edición
   useEffect(() => {
     if (pos) {
-      console.log('📝 Editando POS:', pos);
-      console.log('  - Nombre:', pos.name);
-      console.log('  - Category (original):', pos.category);
-      console.log('  - Store ID:', pos.store_id);
-      console.log('  - Fixed amount:', pos.fixed_amount);
-      console.log('  - External ID:', pos.external_id);
-      console.log('  - External Store ID:', pos.external_store_id);
+      // console.log('📝 Editando POS:', pos);
+      // console.log('  - Nombre:', pos.name);
+      // console.log('  - Category (original):', pos.category);
+      // console.log('  - Store ID:', pos.store_id);
+      // console.log('  - Fixed amount:', pos.fixed_amount);
+      // console.log('  - External ID:', pos.external_id);
+      // console.log('  - External Store ID:', pos.external_store_id);
       
       setName(pos.name || '');
       setStoreId(pos.store_id || '');
@@ -57,10 +57,10 @@ const POSModal: React.FC<POSModalProps> = ({
       setExternalId(pos.external_id || '');
       setExternalStoreId(pos.external_store_id || '');
       
-      console.log('  - Category (estado):', pos.category || MCC_CATEGORIES.GASTRONOMY);
+      // console.log('  - Category (estado):', pos.category || MCC_CATEGORIES.GASTRONOMY);
     } else {
-      console.log('➕ Creando nuevo POS');
-      console.log('  - Sucursal preseleccionada:', preselectedStoreId);
+      // console.log('➕ Creando nuevo POS');
+      // console.log('  - Sucursal preseleccionada:', preselectedStoreId);
       
       // Resetear formulario
       setName('');
@@ -245,16 +245,16 @@ const POSModal: React.FC<POSModalProps> = ({
                   Categoría MCC *
                 </label>
                 {(() => {
-                  console.log('🏷️ Renderizando select MCC');
-                  console.log('  - Valor actual de category:', category);
-                  console.log('  - MCC_CATEGORIES:', MCC_CATEGORIES);
+                  // console.log('🏷️ Renderizando select MCC');
+                  // console.log('  - Valor actual de category:', category);
+                  // console.log('  - MCC_CATEGORIES:', MCC_CATEGORIES);
                   return null;
                 })()}
                 <select
                   value={category}
                   onChange={(e) => {
                     const newValue = parseInt(e.target.value);
-                    console.log('🔄 Cambiando MCC de', category, 'a', newValue);
+                    // console.log('🔄 Cambiando MCC de', category, 'a', newValue);
                     setCategory(newValue);
                   }}
                   className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-amber-500 focus:border-amber-500"

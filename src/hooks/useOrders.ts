@@ -70,7 +70,7 @@ export const useOrders = (status?: 'activo' | 'pagado' | 'cancelado') => {
           });
         });
 
-        // console.log('📋 Orders loaded:', ordersData);
+        // // console.log('📋 Orders loaded:', ordersData);
         setOrders(ordersData);
         setLoading(false);
         setError(null);

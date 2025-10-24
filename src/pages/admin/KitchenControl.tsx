@@ -52,7 +52,7 @@ const KitchenControl: React.FC = () => {
   const handleStatusChange = async (orderId: string, itemId: string, newStatus: OrderItemStatus) => {
     try {
       await updateItemStatus(orderId, itemId, newStatus);
-      console.log('✅ Estado actualizado exitosamente');
+      // console.log('✅ Estado actualizado exitosamente');
     } catch (error) {
       console.error('❌ Error actualizando estado:', error);
     }

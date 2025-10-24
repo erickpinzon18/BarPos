@@ -8,7 +8,7 @@ import type { CreateData, Product } from './types';
  */
 export const createSampleProducts = async () => {
   try {
-    console.log('🔄 Creando productos de ejemplo...');
+    // console.log('🔄 Creando productos de ejemplo...');
 
     const sampleProducts: CreateData<Product>[] = [
       // Bebidas
@@ -139,10 +139,10 @@ export const createSampleProducts = async () => {
         ...product
       });
 
-      console.log(`✅ Producto creado: ${product.name}`);
+      // console.log(`✅ Producto creado: ${product.name}`);
     }
 
-    console.log(`✅ ${createdProducts.length} productos creados exitosamente`);
+    // console.log(`✅ ${createdProducts.length} productos creados exitosamente`);
     return createdProducts;
 
   } catch (error) {

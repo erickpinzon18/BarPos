@@ -99,11 +99,11 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
       }
 
       try {
-        console.log('� [MP Terminal] Iniciando pago real:', { 
-          terminalId: selectedTerminal, 
-          amount, 
-          orderId 
-        });
+        // console.log('� [MP Terminal] Iniciando pago real:', { 
+        //   terminalId: selectedTerminal, 
+        //   amount, 
+        //   orderId 
+        // });
 
         // Usar la función processPayment del servicio que maneja todo el flujo
         const result = await processPayment(
@@ -115,7 +115,7 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
             userData: userData // Datos del usuario para guardar en Firestore (opcional)
           },
           (statusUpdate, messageUpdate) => {
-            console.log(`� [MP Terminal] Estado: ${statusUpdate} - ${messageUpdate}`);
+            // console.log(`� [MP Terminal] Estado: ${statusUpdate} - ${messageUpdate}`);
             
             // Actualizar UI según el estado
             if (statusUpdate === 'sending') {
@@ -150,10 +150,10 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
         // Procesar resultado final según la nueva API de órdenes
         // La API puede devolver 'paid' o 'processed' para pagos exitosos
         if (result.status === 'paid' || result.status === 'processed') {
-          console.log('✅ [MP Terminal] Pago aprobado - ID:', result.paymentId);
-          console.log('✅ [MP Terminal] Status:', result.status);
-          console.log('✅ [MP Terminal] Payment Status:', result.paymentStatus);
-          console.log('🔢 [MP Terminal] Reference ID:', result.referenceId);
+          // console.log('✅ [MP Terminal] Pago aprobado - ID:', result.paymentId);
+          // console.log('✅ [MP Terminal] Status:', result.status);
+          // console.log('✅ [MP Terminal] Payment Status:', result.paymentStatus);
+          // console.log('🔢 [MP Terminal] Reference ID:', result.referenceId);
           
           // Guardar datos del pago para enviar en onSuccess
           setPaymentData({
@@ -165,27 +165,27 @@ const MercadoPagoTerminalModal: React.FC<MercadoPagoTerminalModalProps> = ({
           setMessage('¡Pago procesado exitosamente!');
           setCountdown(0);
         } else if (result.status === 'failed') {
-          console.log('❌ [MP Terminal] Pago rechazado/fallido');
-          console.log('❌ [MP Terminal] Status Detail:', result.statusDetail);
-          console.log('🔢 [MP Terminal] Reference ID:', result.referenceId);
+          // console.log('❌ [MP Terminal] Pago rechazado/fallido');
+          // console.log('❌ [MP Terminal] Status Detail:', result.statusDetail);
+          // console.log('🔢 [MP Terminal] Reference ID:', result.referenceId);
           setStatus('rejected');
           setMessage(result.statusDetail || result.errorMessage || 'Pago rechazado');
           setCountdown(0);
           onError(result.statusDetail || 'Pago rechazado');
         } else if (result.status === 'canceled') {
-          console.log('🚫 [MP Terminal] Pago cancelado');
+          // console.log('🚫 [MP Terminal] Pago cancelado');
           setStatus('rejected');
           setMessage('Pago cancelado por el cliente.');
           setCountdown(0);
           onError('Pago cancelado');
         } else if (result.status === 'expired') {
-          console.log('⏱️ [MP Terminal] Orden expirada');
+          // console.log('⏱️ [MP Terminal] Orden expirada');
           setStatus('error');
           setMessage('Tiempo límite excedido. Intenta nuevamente.');
           setCountdown(0);
           onError('Orden expirada');
         } else {
-          console.log('⚠️ [MP Terminal] Estado final inesperado:', result.status);
+          // console.log('⚠️ [MP Terminal] Estado final inesperado:', result.status);
           setStatus('error');
           setMessage('Estado de pago inesperado. Verifica en Mercado Pago.');
           setCountdown(0);

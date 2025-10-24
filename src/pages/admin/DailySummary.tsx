@@ -193,8 +193,8 @@ const DailySummary: React.FC = () => {
       summary.waiterStats = Array.from(waiterStatsMap.values()).sort((a, b) => b.totalSales - a.totalSales);
       summary.totalBarShare = totalBarShare;
 
-      console.log('Summary waiterStats:', summary.waiterStats); // Debug
-      console.log('Total Bar Share:', totalBarShare); // Debug
+      // console.log('Summary waiterStats:', summary.waiterStats); // Debug
+      // console.log('Total Bar Share:', totalBarShare); // Debug
       setSummary(summary);
     } catch (error) {
       console.error('Error loading shift data:', error);

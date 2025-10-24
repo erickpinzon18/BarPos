@@ -55,7 +55,7 @@ const KitchenLogin: React.FC = () => {
                 user.displayName || user.email || "Usuario"
             );
 
-            console.log("Logged in user:", user.role);   
+            // console.log("Logged in user:", user.role);   
 
             // Redirigir según el rol
             if (user.role === "kitchen") {

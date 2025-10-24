@@ -802,9 +802,9 @@ export const savePayment = async (
   userData: PaymentUserData
 ): Promise<FirestoreResponse<PaymentDocument>> => {
   try {
-    console.log('💾 [Firestore] Guardando pago en Firestore...');
-    console.log('💾 [Firestore] Payment ID:', paymentResponse.id);
-    console.log('💾 [Firestore] Usuario:', userData.displayName);
+    // console.log('💾 [Firestore] Guardando pago en Firestore...');
+    // console.log('💾 [Firestore] Payment ID:', paymentResponse.id);
+    // console.log('💾 [Firestore] Usuario:', userData.displayName);
     
     const paymentDoc: PaymentDocument = {
       // Toda la respuesta de Mercado Pago
@@ -827,8 +827,8 @@ export const savePayment = async (
     
     await setDoc(paymentRef, paymentDoc);
     
-    console.log('✅ [Firestore] Pago guardado exitosamente');
-    console.log('✅ [Firestore] Document ID:', paymentResponse.id);
+    // console.log('✅ [Firestore] Pago guardado exitosamente');
+    // console.log('✅ [Firestore] Document ID:', paymentResponse.id);
     
     return {
       success: true,

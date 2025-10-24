@@ -15,13 +15,13 @@ const CONFIG = {
 };
 
 // Log de configuración al cargar el módulo
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-console.log('⚙️ Mercado Pago Stores Service - Configuration');
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-console.log('👤 User ID:', CONFIG.userId || '❌ NOT CONFIGURED');
-console.log('🔑 Access Token:', CONFIG.accessToken ? `${CONFIG.accessToken.substring(0, 20)}... (${CONFIG.accessToken.length} chars)` : '❌ NOT CONFIGURED');
-console.log('🌐 API Base:', API_BASE);
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+// console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+// console.log('⚙️ Mercado Pago Stores Service - Configuration');
+// console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+// console.log('👤 User ID:', CONFIG.userId || '❌ NOT CONFIGURED');
+// console.log('🔑 Access Token:', CONFIG.accessToken ? `${CONFIG.accessToken.substring(0, 20)}... (${CONFIG.accessToken.length} chars)` : '❌ NOT CONFIGURED');
+// console.log('🌐 API Base:', API_BASE);
+// console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
 // ==================== TIPOS ====================
 
@@ -184,29 +184,29 @@ async function apiRequest<T>(
 
     const fullUrl = `${API_BASE}${endpoint}`;
     
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔵 Mercado Pago API Request');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🌐 Full URL:', fullUrl);
-    console.log('📍 Endpoint:', endpoint);
-    console.log('🔧 Method:', method);
-    console.log('🔑 Authorization:', CONFIG.accessToken ? `Bearer ${CONFIG.accessToken.substring(0, 20)}...` : '❌ NO TOKEN');
-    console.log('👤 User ID:', CONFIG.userId || '❌ NO USER ID');
-    console.log('📋 Headers:', JSON.stringify(headers, null, 2));
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('🔵 Mercado Pago API Request');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('🌐 Full URL:', fullUrl);
+    // console.log('📍 Endpoint:', endpoint);
+    // console.log('🔧 Method:', method);
+    // console.log('🔑 Authorization:', CONFIG.accessToken ? `Bearer ${CONFIG.accessToken.substring(0, 20)}...` : '❌ NO TOKEN');
+    // console.log('👤 User ID:', CONFIG.userId || '❌ NO USER ID');
+    // console.log('📋 Headers:', JSON.stringify(headers, null, 2));
     if (body) {
-      console.log('📤 Body:', JSON.stringify(body, null, 2));
+      // console.log('📤 Body:', JSON.stringify(body, null, 2));
     }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     const response = await fetch(fullUrl, options);
     
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`${response.ok ? '✅' : '❌'} Response Status: ${response.status} ${response.statusText}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log(`${response.ok ? '✅' : '❌'} Response Status: ${response.status} ${response.statusText}`);
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     const data = await response.json();
-    console.log('📥 Response Data:', JSON.stringify(data, null, 2));
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('📥 Response Data:', JSON.stringify(data, null, 2));
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     if (!response.ok) {
       console.error('❌ Request Failed');
@@ -216,7 +216,7 @@ async function apiRequest<T>(
       if (data.causes) {
         console.error('Causes:', data.causes);
       }
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
       // Crear un error con la información de validación
       const error: any = new Error(data.message || data.error || `HTTP ${response.status}: ${response.statusText}`);
@@ -233,17 +233,17 @@ async function apiRequest<T>(
       };
     }
 
-    console.log('✅ Request Successful');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('✅ Request Successful');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     return { success: true, data };
   } catch (error: any) {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.error('💥 Exception in API Request');
     console.error('Error:', error);
     console.error('Message:', error?.message);
     console.error('Stack:', error?.stack);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     return {
       success: false,
@@ -259,7 +259,7 @@ async function apiRequest<T>(
  * curl -X GET 'https://api.mercadopago.com/stores/31410148'
  */
 export async function getStore(storeId: string): Promise<{ success: boolean; data?: Store; error?: string }> {
-  console.log('🔍 getStore() called with ID:', storeId);
+  // console.log('🔍 getStore() called with ID:', storeId);
   return apiRequest<Store>(`/stores/${storeId}`, 'GET');
 }
 
@@ -281,8 +281,8 @@ export async function searchStores(
 ): Promise<{ success: boolean; data?: StoresSearchResponse; error?: string }> {
   const { offset = 0, limit = 50, external_id } = params || {};
   
-  console.log('🔍 searchStores() called');
-  console.log('📊 Parameters:', { offset, limit, external_id, userId: CONFIG.userId });
+  // console.log('🔍 searchStores() called');
+  // console.log('📊 Parameters:', { offset, limit, external_id, userId: CONFIG.userId });
   
   // Validar configuración
   if (!CONFIG.userId || CONFIG.userId === 'YOUR-USER-ID') {
@@ -320,8 +320,8 @@ export async function searchStores(
 export async function createStore(
   payload: CreateStorePayload
 ): Promise<{ success: boolean; data?: Store; error?: string }> {
-  console.log('➕ createStore() called');
-  console.log('📤 Payload:', payload);
+  // console.log('➕ createStore() called');
+  // console.log('📤 Payload:', payload);
   
   if (!CONFIG.userId) {
     return {
@@ -342,8 +342,8 @@ export async function updateStore(
   storeId: string,
   payload: UpdateStorePayload
 ): Promise<{ success: boolean; data?: Store; error?: string }> {
-  console.log('✏️ updateStore() called with ID:', storeId);
-  console.log('📤 Payload:', payload);
+  // console.log('✏️ updateStore() called with ID:', storeId);
+  // console.log('📤 Payload:', payload);
   
   if (!CONFIG.userId) {
     return {
@@ -365,7 +365,7 @@ export async function updateStore(
 export async function deleteStore(
   storeId: string
 ): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
-  console.log('🗑️ deleteStore() called with ID:', storeId);
+  // console.log('🗑️ deleteStore() called with ID:', storeId);
   
   if (!CONFIG.userId) {
     return {
@@ -385,7 +385,7 @@ export async function deleteStore(
  * curl -X GET 'https://api.mercadopago.com/pos/1988157'
  */
 export async function getPOS(posId: string): Promise<{ success: boolean; data?: POS; error?: string }> {
-  console.log('🔍 getPOS() called with ID:', posId);
+  // console.log('🔍 getPOS() called with ID:', posId);
   return apiRequest<POS>(`/pos/${posId}`, 'GET');
 }
 
@@ -409,8 +409,8 @@ export async function searchPOS(
 ): Promise<{ success: boolean; data?: POSSearchResponse; error?: string }> {
   const { store_id, external_id, offset = 0, limit = 50 } = params || {};
   
-  console.log('🔍 searchPOS() called');
-  console.log('📊 Parameters:', { store_id, external_id, offset, limit });
+  // console.log('🔍 searchPOS() called');
+  // console.log('📊 Parameters:', { store_id, external_id, offset, limit });
   
   // Construir query string
   const queryParams = new URLSearchParams();
@@ -432,8 +432,8 @@ export async function searchPOS(
 export async function createPOS(
   payload: CreatePOSPayload
 ): Promise<{ success: boolean; data?: POS; error?: string }> {
-  console.log('➕ createPOS() called');
-  console.log('📤 Payload:', payload);
+  // console.log('➕ createPOS() called');
+  // console.log('📤 Payload:', payload);
   
   return apiRequest<POS>('/pos', 'POST', payload);
 }
@@ -448,8 +448,8 @@ export async function updatePOS(
   posId: string,
   payload: UpdatePOSPayload
 ): Promise<{ success: boolean; data?: POS; error?: string }> {
-  console.log('✏️ updatePOS() called with ID:', posId);
-  console.log('📤 Payload:', payload);
+  // console.log('✏️ updatePOS() called with ID:', posId);
+  // console.log('📤 Payload:', payload);
   
   return apiRequest<POS>(`/pos/${posId}`, 'PUT', payload);
 }
@@ -461,7 +461,7 @@ export async function updatePOS(
 export async function deletePOS(
   posId: string
 ): Promise<{ success: boolean; data?: { id: string; status: string }; error?: string }> {
-  console.log('🗑️ deletePOS() called with ID:', posId);
+  // console.log('🗑️ deletePOS() called with ID:', posId);
   
   return apiRequest<{ id: string; status: string }>(`/pos/${posId}`, 'DELETE');
 }
@@ -479,7 +479,7 @@ export async function deletePOS(
 export async function getDevicesByPOS(
   posId: string
 ): Promise<{ success: boolean; data?: DevicesSearchResponse; error?: string }> {
-  console.log('📱 getDevicesByPOS() called for POS ID:', posId);
+  // console.log('📱 getDevicesByPOS() called for POS ID:', posId);
   
   return apiRequest<DevicesSearchResponse>(`/terminals/v1/list?pos_id=${posId}&limit=50`, 'GET');
 }
@@ -494,7 +494,7 @@ export async function getPOSWithDevices(
   data?: Array<POS & { devices: Device[] }>;
   error?: string;
 }> {
-  console.log('🏪📱 getPOSWithDevices() - Starting to fetch POS and Devices');
+  // console.log('🏪📱 getPOSWithDevices() - Starting to fetch POS and Devices');
   
   try {
     // Paso 1: Obtener todos los POS (filtrados por store si se especifica)
@@ -508,7 +508,7 @@ export async function getPOSWithDevices(
     }
     
     const posList = posResult.data.results;
-    console.log(`✅ Found ${posList.length} POS`);
+    // console.log(`✅ Found ${posList.length} POS`);
     
     // Paso 2: Para cada POS, obtener sus devices
     const posWithDevices = await Promise.all(
@@ -524,7 +524,7 @@ export async function getPOSWithDevices(
       })
     );
     
-    console.log(`✅ Loaded devices for all ${posWithDevices.length} POS`);
+    // console.log(`✅ Loaded devices for all ${posWithDevices.length} POS`);
     
     return {
       success: true,
@@ -549,13 +549,13 @@ export async function getStoresWithPOS(): Promise<{
   data?: Array<Store & { pos: POS[] }>;
   error?: string;
 }> {
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🏪 getStoresWithPOS() - Starting to fetch stores and POS');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  // console.log('🏪 getStoresWithPOS() - Starting to fetch stores and POS');
+  // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
   try {
     // 1. Obtener todas las sucursales
-    console.log('📍 Step 1: Fetching stores...');
+    // console.log('📍 Step 1: Fetching stores...');
     const storesResult = await searchStores();
     
     if (!storesResult.success || !storesResult.data) {
@@ -564,10 +564,10 @@ export async function getStoresWithPOS(): Promise<{
     }
 
     const stores = storesResult.data.results;
-    console.log(`✅ Found ${stores.length} stores`);
+    // console.log(`✅ Found ${stores.length} stores`);
 
     // 2. Obtener todas las cajas
-    console.log('📍 Step 2: Fetching POS...');
+    // console.log('📍 Step 2: Fetching POS...');
     const posResult = await searchPOS();
     
     if (!posResult.success || !posResult.data) {
@@ -576,27 +576,27 @@ export async function getStoresWithPOS(): Promise<{
     }
 
     const allPOS = posResult.data.results;
-    console.log(`✅ Found ${allPOS.length} POS`);
+    // console.log(`✅ Found ${allPOS.length} POS`);
 
     // 3. Asociar cajas a sus sucursales
-    console.log('📍 Step 3: Associating POS to stores...');
+    // console.log('📍 Step 3: Associating POS to stores...');
     const storesWithPOS = stores.map((store) => {
       const storePOS = allPOS.filter((pos) => pos.store_id === store.id);
-      console.log(`  Store "${store.name}" (${store.id}) has ${storePOS.length} POS`);
+      // console.log(`  Store "${store.name}" (${store.id}) has ${storePOS.length} POS`);
       return {
         ...store,
         pos: storePOS,
       };
     });
 
-    console.log('✅ Successfully associated all POS to stores');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('✅ Successfully associated all POS to stores');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     return { success: true, data: storesWithPOS };
   } catch (error: any) {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.error('💥 Exception in getStoresWithPOS:', error);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     return {
       success: false,

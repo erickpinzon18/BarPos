@@ -130,13 +130,10 @@ const TERMINALS: Terminal[] = [
 ];
 
 const getBaseUrl = () => {
-  // En desarrollo, usar el proxy de Vite para evitar problemas de CORS
-  if (import.meta.env.DEV) {
-    return '/api/mercadopago';
-  }
-  
-  // En producción, necesitarás un backend que haga las peticiones
-  return 'https://api.mercadopago.com';
+  // Siempre usar /api/mercadopago
+  // En desarrollo: Vite proxy (vite.config.ts)
+  // En producción: Firebase Function (firebase.json rewrite)
+  return '/api/mercadopago';
 };
 
 // ========================================
@@ -165,11 +162,11 @@ export const fetchRealTerminals = async (): Promise<MercadoPagoDevice[]> => {
   const endpoint = '/point/integration-api/devices';
   
   try {
-    console.log('🔍 [MercadoPago] Obteniendo terminales registradas...');
+    // console.log('🔍 [MercadoPago] Obteniendo terminales registradas...');
     
     const response = await apiRequest<MercadoPagoDevicesResponse>(endpoint, 'GET');
     
-    console.log(`✅ [MercadoPago] ${response.devices?.length || 0} terminales encontradas`);
+    // console.log(`✅ [MercadoPago] ${response.devices?.length || 0} terminales encontradas`);
     return response.devices || [];
   } catch (error: any) {
     console.error('❌ [MercadoPago] Error al obtener terminales:', error);
@@ -190,7 +187,7 @@ export const setTerminalOperatingMode = async (
   const endpoint = `/point/integration-api/devices/${deviceId}`;
   
   try {
-    console.log(`🔄 [MercadoPago] Cambiando terminal ${deviceId} a modo ${mode}...`);
+    // console.log(`🔄 [MercadoPago] Cambiando terminal ${deviceId} a modo ${mode}...`);
     
     const response = await apiRequest<{ id: string; operating_mode: string }>(
       endpoint,
@@ -198,7 +195,7 @@ export const setTerminalOperatingMode = async (
       { operating_mode: mode }
     );
     
-    console.log(`✅ [MercadoPago] Terminal ${deviceId} ahora en modo ${response.operating_mode}`);
+    // console.log(`✅ [MercadoPago] Terminal ${deviceId} ahora en modo ${response.operating_mode}`);
     return { success: true };
   } catch (error: any) {
     console.error(`❌ [MercadoPago] Error al cambiar modo de terminal ${deviceId}:`, error);
@@ -282,7 +279,7 @@ const apiRequest = async <T>(
   }
 
   try {
-    console.log(`🌐 [MercadoPago Orders API] ${method} ${endpoint}`, body || '');
+    // console.log(`🌐 [MercadoPago Orders API] ${method} ${endpoint}`, body || '');
     
     const response = await fetch(url, options);
     const data = await response.json();
@@ -292,7 +289,7 @@ const apiRequest = async <T>(
       throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
     }
 
-    console.log('✅ [MercadoPago Orders API] Response:', data);
+    // console.log('✅ [MercadoPago Orders API] Response:', data);
     return data;
   } catch (error: any) {
     console.error('❌ [MercadoPago Orders API] Request failed:', error);
@@ -384,40 +381,40 @@ export const createPaymentOrder = async (
   };
 
   try {
-    console.log(`📤 [MercadoPago Orders API] Enviando payload:`, JSON.stringify(payload, null, 2));
+    // console.log(`📤 [MercadoPago Orders API] Enviando payload:`, JSON.stringify(payload, null, 2));
 
     const response = await apiRequest<any>(endpoint, 'POST', payload);
 
     // 🔍 LOG COMPLETO DE LA RESPUESTA
-    console.log(`✅ [MercadoPago Orders API] ✅✅✅ ORDEN CREADA EXITOSAMENTE ✅✅✅`);
-    console.log(`📋 [MercadoPago Orders API] 📋 RESPUESTA COMPLETA:`, JSON.stringify(response, null, 2));
-    console.log(`🆔 [MercadoPago Orders API] Order ID: ${response.id}`);
-    console.log(`📊 [MercadoPago Orders API] Status: ${response.status}`);
-    console.log(`📊 [MercadoPago Orders API] Status Detail: ${response.status_detail}`);
-    console.log(`💰 [MercadoPago Orders API] Amount: ${response.transactions?.payments?.[0]?.amount}`);
-    console.log(`🔗 [MercadoPago Orders API] External Reference: ${response.external_reference}`);
-    console.log(`🏪 [MercadoPago Orders API] Terminal ID: ${response.config?.point?.terminal_id}`);
+    // console.log(`✅ [MercadoPago Orders API] ✅✅✅ ORDEN CREADA EXITOSAMENTE ✅✅✅`);
+    // console.log(`📋 [MercadoPago Orders API] 📋 RESPUESTA COMPLETA:`, JSON.stringify(response, null, 2));
+    // console.log(`🆔 [MercadoPago Orders API] Order ID: ${response.id}`);
+    // console.log(`📊 [MercadoPago Orders API] Status: ${response.status}`);
+    // console.log(`📊 [MercadoPago Orders API] Status Detail: ${response.status_detail}`);
+    // console.log(`💰 [MercadoPago Orders API] Amount: ${response.transactions?.payments?.[0]?.amount}`);
+    // console.log(`🔗 [MercadoPago Orders API] External Reference: ${response.external_reference}`);
+    // console.log(`🏪 [MercadoPago Orders API] Terminal ID: ${response.config?.point?.terminal_id}`);
     
     // Extraer payment ID si existe
     const paymentId = response.transactions?.payments?.[0]?.id;
     const paymentStatus = response.transactions?.payments?.[0]?.status;
     
     if (paymentId) {
-      console.log(`💳 [MercadoPago Orders API] Payment ID: ${paymentId}`);
-      console.log(`💳 [MercadoPago Orders API] Payment Status: ${paymentStatus}`);
+      // console.log(`💳 [MercadoPago Orders API] Payment ID: ${paymentId}`);
+      // console.log(`💳 [MercadoPago Orders API] Payment Status: ${paymentStatus}`);
     }
 
     // ========================================
     // GUARDAR EN FIRESTORE
     // ========================================
     if (request.userData) {
-      console.log(`💾 [MercadoPago Orders API] 💾 GUARDANDO EN FIRESTORE 💾`);
+      // console.log(`💾 [MercadoPago Orders API] 💾 GUARDANDO EN FIRESTORE 💾`);
       
       try {
         const saveResult = await savePayment(response, request.userData);
         
         if (saveResult.success) {
-          console.log(`✅ [MercadoPago Orders API] ✅ Pago guardado en Firestore correctamente`);
+          // console.log(`✅ [MercadoPago Orders API] ✅ Pago guardado en Firestore correctamente`);
         } else {
           console.error(`⚠️ [MercadoPago Orders API] Error al guardar en Firestore:`, saveResult.error);
         }
@@ -425,7 +422,7 @@ export const createPaymentOrder = async (
         console.error(`❌ [MercadoPago Orders API] Error al guardar en Firestore:`, error);
       }
     } else {
-      console.log(`⚠️ [MercadoPago Orders API] No se guardará en Firestore (no hay userData)`);
+      // console.log(`⚠️ [MercadoPago Orders API] No se guardará en Firestore (no hay userData)`);
     }
 
     return {
@@ -463,7 +460,7 @@ export const createPaymentOrder = async (
 export const getOrderStatus = async (
   orderId: string
 ): Promise<PaymentStatusResponse> => {
-  console.log(`🔍 [MercadoPago Orders API] 🔍 CONSULTANDO ESTADO DE ORDEN: ${orderId}`);
+  // console.log(`🔍 [MercadoPago Orders API] 🔍 CONSULTANDO ESTADO DE ORDEN: ${orderId}`);
 
   const endpoint = `/v1/orders/${orderId}`;
 
@@ -471,12 +468,12 @@ export const getOrderStatus = async (
     const response = await apiRequest<any>(endpoint, 'GET');
     
     // 🔍 LOG COMPLETO DE LA RESPUESTA
-    console.log(`✅ [MercadoPago Orders API] ✅ ESTADO OBTENIDO ✅`);
-    console.log(`📋 [MercadoPago Orders API] 📋 RESPUESTA COMPLETA:`, JSON.stringify(response, null, 2));
-    console.log(`🆔 [MercadoPago Orders API] Order ID: ${response.id}`);
-    console.log(`📊 [MercadoPago Orders API] Status: ${response.status}`);
-    console.log(`📊 [MercadoPago Orders API] Status Detail: ${response.status_detail}`);
-    console.log(`💰 [MercadoPago Orders API] Amount: ${response.transactions?.payments?.[0]?.amount}`);
+    // console.log(`✅ [MercadoPago Orders API] ✅ ESTADO OBTENIDO ✅`);
+    // console.log(`📋 [MercadoPago Orders API] 📋 RESPUESTA COMPLETA:`, JSON.stringify(response, null, 2));
+    // console.log(`🆔 [MercadoPago Orders API] Order ID: ${response.id}`);
+    // console.log(`📊 [MercadoPago Orders API] Status: ${response.status}`);
+    // console.log(`📊 [MercadoPago Orders API] Status Detail: ${response.status_detail}`);
+    // console.log(`💰 [MercadoPago Orders API] Amount: ${response.transactions?.payments?.[0]?.amount}`);
     
     // Extraer payment info
     const paymentId = response.transactions?.payments?.[0]?.id;
@@ -485,10 +482,10 @@ export const getOrderStatus = async (
     const referenceId = response.transactions?.payments?.[0]?.reference_id;
     
     if (paymentId) {
-      console.log(`💳 [MercadoPago Orders API] Payment ID: ${paymentId}`);
-      console.log(`💳 [MercadoPago Orders API] Payment Status: ${paymentStatus}`);
-      console.log(`💳 [MercadoPago Orders API] Payment Status Detail: ${paymentStatusDetail}`);
-      console.log(`🔢 [MercadoPago Orders API] Reference ID: ${referenceId}`);
+      // console.log(`💳 [MercadoPago Orders API] Payment ID: ${paymentId}`);
+      // console.log(`💳 [MercadoPago Orders API] Payment Status: ${paymentStatus}`);
+      // console.log(`💳 [MercadoPago Orders API] Payment Status Detail: ${paymentStatusDetail}`);
+      // console.log(`🔢 [MercadoPago Orders API] Reference ID: ${referenceId}`);
     }
 
     // TODO: Aquí se actualizará en BD después
@@ -534,7 +531,7 @@ export const getOrderStatus = async (
 export const cancelPaymentOrder = async (
   orderId: string
 ): Promise<void> => {
-  console.log(`🚫 [MercadoPago Orders API] 🚫 CANCELANDO ORDEN: ${orderId}`);
+  // console.log(`🚫 [MercadoPago Orders API] 🚫 CANCELANDO ORDEN: ${orderId}`);
 
   const endpoint = `/v1/orders/${orderId}/cancel`;
 
@@ -542,11 +539,11 @@ export const cancelPaymentOrder = async (
     const response = await apiRequest<any>(endpoint, 'POST');
     
     // 🔍 LOG COMPLETO DE LA RESPUESTA
-    console.log(`✅ [MercadoPago Orders API] ✅ ORDEN CANCELADA ✅`);
-    console.log(`📋 [MercadoPago Orders API] 📋 RESPUESTA COMPLETA:`, JSON.stringify(response, null, 2));
-    console.log(`🆔 [MercadoPago Orders API] Order ID: ${response.id}`);
-    console.log(`📊 [MercadoPago Orders API] Status: ${response.status}`);
-    console.log(`📊 [MercadoPago Orders API] Status Detail: ${response.status_detail}`);
+    // console.log(`✅ [MercadoPago Orders API] ✅ ORDEN CANCELADA ✅`);
+    // console.log(`📋 [MercadoPago Orders API] 📋 RESPUESTA COMPLETA:`, JSON.stringify(response, null, 2));
+    // console.log(`🆔 [MercadoPago Orders API] Order ID: ${response.id}`);
+    // console.log(`📊 [MercadoPago Orders API] Status: ${response.status}`);
+    // console.log(`📊 [MercadoPago Orders API] Status Detail: ${response.status_detail}`);
 
     // TODO: Aquí se actualizará en BD después
     console.log(`💾 [MercadoPago Orders API] 💾 TODO: ACTUALIZAR EN BD 💾`);
@@ -579,7 +576,7 @@ export const processPayment = async (
   onStatusChange?: (status: string, message: string) => void
 ): Promise<PaymentOrderResponse> => {
   try {
-    console.log(`🚀 [MercadoPago Orders API] 🚀🚀🚀 INICIANDO PROCESO DE PAGO 🚀🚀🚀`);
+    // console.log(`🚀 [MercadoPago Orders API] 🚀🚀🚀 INICIANDO PROCESO DE PAGO 🚀🚀🚀`);
     
     // 1. Crear orden de pago
     onStatusChange?.('sending', 'Enviando orden a la terminal...');
@@ -589,7 +586,7 @@ export const processPayment = async (
       throw new Error('No se obtuvo ID de la orden');
     }
 
-    console.log(`✅ [MercadoPago Orders API] Orden creada: ${order.id}`);
+    // console.log(`✅ [MercadoPago Orders API] Orden creada: ${order.id}`);
 
     // 2. Hacer polling del estado cada 5 segundos (máximo 90 segundos)
     onStatusChange?.('processing', 'Esperando pago del cliente en la terminal...');
@@ -600,7 +597,7 @@ export const processPayment = async (
 
     while (attempts < maxAttempts) {
       attempts++;
-      console.log(`🔄 [MercadoPago Orders API] Polling intento ${attempts}/${maxAttempts}`);
+      // console.log(`🔄 [MercadoPago Orders API] Polling intento ${attempts}/${maxAttempts}`);
       
       await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos
 
@@ -608,7 +605,7 @@ export const processPayment = async (
         const status = await getOrderStatus(order.id);
         finalStatus = status;
 
-        console.log(`📊 [MercadoPago Orders API] Estado actual: ${status.status} (${status.statusDetail})`);
+        // console.log(`📊 [MercadoPago Orders API] Estado actual: ${status.status} (${status.statusDetail})`);
         
         // Actualizar UI con countdown
         const remainingSeconds = (maxAttempts - attempts) * 5;
@@ -617,25 +614,25 @@ export const processPayment = async (
         // Verificar si el pago fue aprobado, rechazado o cancelado
         // La API puede devolver 'processed' o 'paid' para pagos exitosos
         if (status.status === 'paid' || status.status === 'processed') {
-          console.log(`✅ [MercadoPago Orders API] ✅✅✅ PAGO APROBADO ✅✅✅`);
-          console.log(`💳 [MercadoPago Orders API] Payment Status: ${status.paymentStatus}`);
-          console.log(`💳 [MercadoPago Orders API] Status Detail: ${status.paymentStatusDetail}`);
-          console.log(`🔢 [MercadoPago Orders API] Reference ID: ${status.referenceId}`);
+          // console.log(`✅ [MercadoPago Orders API] ✅✅✅ PAGO APROBADO ✅✅✅`);
+          // console.log(`💳 [MercadoPago Orders API] Payment Status: ${status.paymentStatus}`);
+          // console.log(`💳 [MercadoPago Orders API] Status Detail: ${status.paymentStatusDetail}`);
+          // console.log(`🔢 [MercadoPago Orders API] Reference ID: ${status.referenceId}`);
           onStatusChange?.('success', '¡Pago procesado exitosamente!');
           break;
         } else if (status.status === 'failed') {
-          console.log(`❌ [MercadoPago Orders API] ❌❌❌ PAGO RECHAZADO/FALLIDO ❌❌❌`);
-          console.log(`💳 [MercadoPago Orders API] Payment Status: ${status.paymentStatus}`);
-          console.log(`💳 [MercadoPago Orders API] Status Detail: ${status.paymentStatusDetail}`);
-          console.log(`🔢 [MercadoPago Orders API] Reference ID: ${status.referenceId}`);
+          // console.log(`❌ [MercadoPago Orders API] ❌❌❌ PAGO RECHAZADO/FALLIDO ❌❌❌`);
+          // console.log(`💳 [MercadoPago Orders API] Payment Status: ${status.paymentStatus}`);
+          // console.log(`💳 [MercadoPago Orders API] Status Detail: ${status.paymentStatusDetail}`);
+          // console.log(`🔢 [MercadoPago Orders API] Reference ID: ${status.referenceId}`);
           onStatusChange?.('rejected', status.statusDetail || 'Pago rechazado');
           break;
         } else if (status.status === 'canceled') {
-          console.log(`❌ [MercadoPago Orders API] Pago cancelado`);
+          // console.log(`❌ [MercadoPago Orders API] Pago cancelado`);
           onStatusChange?.('rejected', 'Pago cancelado');
           break;
         } else if (status.status === 'expired') {
-          console.log(`❌ [MercadoPago Orders API] Orden expirada`);
+          // console.log(`❌ [MercadoPago Orders API] Orden expirada`);
           onStatusChange?.('error', 'Tiempo límite excedido');
           break;
         }
@@ -644,7 +641,7 @@ export const processPayment = async (
         
         // Si es rate limit (429), esperar 10 segundos extra
         if (error.message?.includes('Too Many Requests') || error.message?.includes('429')) {
-          console.log(`⏳ [MercadoPago Orders API] Rate limit - esperando 10s extra...`);
+          // console.log(`⏳ [MercadoPago Orders API] Rate limit - esperando 10s extra...`);
           await new Promise(resolve => setTimeout(resolve, 10000));
         }
       }
@@ -652,7 +649,7 @@ export const processPayment = async (
 
     // 3. Retornar resultado final
     if (!finalStatus || (finalStatus.status !== 'paid' && finalStatus.status !== 'processed' && finalStatus.status !== 'failed' && finalStatus.status !== 'canceled' && finalStatus.status !== 'expired')) {
-      console.log(`⏱️ [MercadoPago Orders API] Timeout - no se obtuvo respuesta del cliente`);
+      // console.log(`⏱️ [MercadoPago Orders API] Timeout - no se obtuvo respuesta del cliente`);
       onStatusChange?.('error', 'Tiempo límite excedido. Verifica el estado en Mercado Pago.');
       throw new Error('Timeout: No se recibió confirmación del pago');
     }
@@ -661,13 +658,13 @@ export const processPayment = async (
     // ACTUALIZAR EN FIRESTORE CON ESTADO FINAL
     // ========================================
     if (request.userData && finalStatus.rawResponse) {
-      console.log(`💾 [MercadoPago Orders API] 💾 ACTUALIZANDO ESTADO FINAL EN FIRESTORE 💾`);
+      // console.log(`💾 [MercadoPago Orders API] 💾 ACTUALIZANDO ESTADO FINAL EN FIRESTORE 💾`);
       
       try {
         const saveResult = await savePayment(finalStatus.rawResponse, request.userData);
         
         if (saveResult.success) {
-          console.log(`✅ [MercadoPago Orders API] ✅ Estado final guardado en Firestore correctamente`);
+          // console.log(`✅ [MercadoPago Orders API] ✅ Estado final guardado en Firestore correctamente`);
         } else {
           console.error(`⚠️ [MercadoPago Orders API] Error al actualizar en Firestore:`, saveResult.error);
         }

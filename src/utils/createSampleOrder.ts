@@ -8,13 +8,13 @@ import type { CreateData, Order, OrderItem } from './types';
  */
 export const createSampleOrder = async (tableId: string, tableNumber: number) => {
   try {
-    console.log('🔄 Creando orden de ejemplo para mesa', tableNumber);
+    // console.log('🔄 Creando orden de ejemplo para mesa', tableNumber);
 
     // Fechas realistas: Orden empezó a las 9:00 PM (hace 1h 45min)
     const now = new Date(); // 10:45 PM del 27 sep 2025
     const orderStartTime = new Date(now.getTime() - (1 * 60 + 45) * 60 * 1000); // 9:00 PM
     
-    console.log('⏰ Fechas calculadas:', {
+    // console.log('⏰ Fechas calculadas:', {
       ahora: now.toLocaleString(),
       inicioOrden: orderStartTime.toLocaleString(),
       tiempoTranscurrido: '1h 45min'
@@ -74,7 +74,7 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
       };
     });
 
-    console.log('📋 Items con fechas:', itemsWithTimestamps.map((item) => ({
+    // console.log('📋 Items con fechas:', itemsWithTimestamps.map((item) => ({
       name: item.productName,
       createdAt: item.createdAt.toDate().toLocaleString(),
       status: item.status
@@ -100,7 +100,7 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
       updatedAt: Timestamp.now()
     });
 
-    console.log('✅ Orden creada con ID:', orderRef.id);
+    // console.log('✅ Orden creada con ID:', orderRef.id);
 
     // Actualizar la mesa para marcarla como ocupada
     await updateDoc(doc(db, 'tables', tableId), {
@@ -111,7 +111,7 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
       updatedAt: Timestamp.now()
     });
 
-    console.log('✅ Mesa actualizada a ocupada');
+    // console.log('✅ Mesa actualizada a ocupada');
 
     return {
       orderId: orderRef.id,

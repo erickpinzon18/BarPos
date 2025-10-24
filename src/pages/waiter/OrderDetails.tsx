@@ -80,7 +80,7 @@ const WaiterOrderDetails: React.FC = () => {
             // Eliminar item
             await deleteOrderItem(order.id, itemToDelete, authorizedUser);
 
-            console.log('✅ Item eliminado exitosamente');
+            // console.log('✅ Item eliminado exitosamente');
             setShowPinModal(false);
             setItemToDelete(null);
         } catch (error: any) {
@@ -117,7 +117,7 @@ const WaiterOrderDetails: React.FC = () => {
                 quantity
             );
 
-            console.log('✅ Item agregado exitosamente');
+            // console.log('✅ Item agregado exitosamente');
         } catch (error: any) {
             console.error('❌ Error agregando item:', error);
             throw error;
@@ -156,7 +156,7 @@ const WaiterOrderDetails: React.FC = () => {
                 quantity
             );
 
-            console.log('✅ Item adicional agregado:', selectedItemForMore.productName, 'x', quantity);
+            // console.log('✅ Item adicional agregado:', selectedItemForMore.productName, 'x', quantity);
             setShowQuantityModal(false);
             setSelectedItemForMore(null);
         } catch (error: any) {

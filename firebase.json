@@ -8,9 +8,17 @@
     ],
     "rewrites": [
       {
+        "source": "/api/mercadopago/**",
+        "function": "mercadopagoProxy"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
   }
 }

@@ -7,7 +7,7 @@ import { db } from '../services/firebase';
  */
 export const addPinsToUsers = async () => {
   try {
-    console.log('🔄 Agregando PINs a usuarios...');
+    // console.log('🔄 Agregando PINs a usuarios...');
 
     // Obtener todos los usuarios
     const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -41,13 +41,13 @@ export const addPinsToUsers = async () => {
       
       updates.push(updatePromise);
       
-      console.log(`📌 Usuario ${userData.email} (${userData.role}) -> PIN: ${pin}`);
+      // console.log(`📌 Usuario ${userData.email} (${userData.role}) -> PIN: ${pin}`);
     }
     
     // Ejecutar todas las actualizaciones
     await Promise.all(updates);
     
-    console.log('✅ PINs agregados exitosamente a todos los usuarios');
+    // console.log('✅ PINs agregados exitosamente a todos los usuarios');
     
     return {
       success: true,

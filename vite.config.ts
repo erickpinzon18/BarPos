@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
             proxy.on('proxyReq', (proxyReq, _req, _res) => {
               // Agregar el token de autorización desde el env
               const token = env.VITE_MERCADOPAGO_ACCESS_TOKEN;
-              // console.log('🔑 [Proxy] Setting Authorization token:', token ? `${token.substring(0, 20)}...` : 'NOT FOUND');
+              // // console.log('🔑 [Proxy] Setting Authorization token:', token ? `${token.substring(0, 20)}...` : 'NOT FOUND');
               if (token) {
                 proxyReq.setHeader('Authorization', `Bearer ${token}`);
               } else {

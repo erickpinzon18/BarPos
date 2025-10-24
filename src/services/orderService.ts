@@ -8,7 +8,7 @@ import type { Order, OrderItem, User, OrderItemStatus, CreateData } from '../uti
  */
 export const verifyUserPin = async (pin: string): Promise<User> => {
   try {
-    console.log('🔍 Verificando PIN:', pin);
+    // console.log('🔍 Verificando PIN:', pin);
     
     // Buscar usuario por PIN
     const usersQuery = query(
@@ -63,7 +63,7 @@ export const deleteOrderItem = async (
   authorizedUser: User
 ): Promise<void> => {
   try {
-    console.log('🗑️ Eliminando item:', { orderId, itemId, authorizedBy: authorizedUser.displayName });
+    // console.log('🗑️ Eliminando item:', { orderId, itemId, authorizedBy: authorizedUser.displayName });
 
     // Obtener la orden actual
     const orderRef = doc(db, 'orders', orderId);
@@ -95,7 +95,7 @@ export const deleteOrderItem = async (
       updatedAt: Timestamp.now()
     });
 
-    console.log('✅ Item eliminado exitosamente');
+    // console.log('✅ Item eliminado exitosamente');
   } catch (error) {
     console.error('❌ Error eliminando item:', error);
     throw error;
@@ -114,7 +114,7 @@ export const addItemToOrder = async (
   quantity: number
 ): Promise<void> => {
   try {
-    console.log('➕ Agregando item a orden:', { orderId, productId, productName, quantity });
+    // console.log('➕ Agregando item a orden:', { orderId, productId, productName, quantity });
 
     // Obtener la orden actual
     const orderRef = doc(db, 'orders', orderId);
@@ -148,7 +148,7 @@ export const addItemToOrder = async (
       updatedAt: Timestamp.now()
     });
 
-    console.log('✅ Item agregado exitosamente');
+    // console.log('✅ Item agregado exitosamente');
   } catch (error) {
     console.error('❌ Error agregando item:', error);
     throw error;
@@ -164,7 +164,7 @@ export const updateItemStatus = async (
   newStatus: OrderItemStatus
 ): Promise<void> => {
   try {
-    console.log('🔄 Actualizando estado de item:', { orderId, itemId, newStatus });
+    // console.log('🔄 Actualizando estado de item:', { orderId, itemId, newStatus });
 
     // Obtener la orden actual
     const orderRef = doc(db, 'orders', orderId);
@@ -194,7 +194,7 @@ export const updateItemStatus = async (
       updatedAt: Timestamp.now()
     });
 
-    console.log('✅ Estado de item actualizado exitosamente');
+    // console.log('✅ Estado de item actualizado exitosamente');
   } catch (error) {
     console.error('❌ Error actualizando estado de item:', error);
     throw error;
@@ -211,7 +211,7 @@ export const createEmptyOrder = async (
   waiterName: string
 ): Promise<string> => {
   try {
-    console.log('📝 Creando orden vacía para mesa', tableNumber, 'asignada a:', waiterName, `(ID: ${waiterId})`);
+    // console.log('📝 Creando orden vacía para mesa', tableNumber, 'asignada a:', waiterName, `(ID: ${waiterId})`);
 
     // Crear orden vacía
     const orderData: CreateData<Order> = {
@@ -230,7 +230,7 @@ export const createEmptyOrder = async (
       updatedAt: Timestamp.now()
     });
 
-    console.log('✅ Orden vacía creada con ID:', orderRef.id);
+    // console.log('✅ Orden vacía creada con ID:', orderRef.id);
 
     // Actualizar la mesa para marcarla como ocupada
     await updateDoc(doc(db, 'tables', tableId), {
@@ -241,7 +241,7 @@ export const createEmptyOrder = async (
       updatedAt: Timestamp.now()
     });
 
-    console.log('✅ Mesa actualizada a ocupada');
+    // console.log('✅ Mesa actualizada a ocupada');
 
     return orderRef.id;
 
@@ -260,7 +260,7 @@ export const restoreOrderItem = async (
   authorizedUser: User
 ): Promise<void> => {
   try {
-    console.log('🔄 Restaurando item:', { orderId, itemId, authorizedBy: authorizedUser.displayName });
+    // console.log('🔄 Restaurando item:', { orderId, itemId, authorizedBy: authorizedUser.displayName });
 
     // Obtener la orden actual
     const orderRef = doc(db, 'orders', orderId);
@@ -287,7 +287,7 @@ export const restoreOrderItem = async (
       updatedAt: Timestamp.now()
     });
 
-    console.log('✅ Item restaurado exitosamente');
+    // console.log('✅ Item restaurado exitosamente');
   } catch (error) {
     console.error('❌ Error restaurando item:', error);
     throw error;

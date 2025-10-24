@@ -23,7 +23,7 @@ const AdminKanban: React.FC = () => {
   
   // Enable sound with user interaction
   const enableSound = () => {
-    console.log('🔊 Habilitando notificaciones sonoras...');
+    // console.log('🔊 Habilitando notificaciones sonoras...');
     // Play a test sound to unlock audio
     playNotificationSound();
     setSoundEnabled(true);
@@ -118,10 +118,10 @@ const AdminKanban: React.FC = () => {
     if (currentPendingCount > prevPendingCountRef.current) {
       // New pending items detected!
       if (soundEnabled) {
-        console.log('🔔 Nuevo pedido detectado, reproduciendo sonido...');
+        // console.log('🔔 Nuevo pedido detectado, reproduciendo sonido...');
         playNotificationSound();
       } else {
-        console.log('🔕 Nuevo pedido detectado pero sonido deshabilitado');
+        // console.log('🔕 Nuevo pedido detectado pero sonido deshabilitado');
       }
     }
 

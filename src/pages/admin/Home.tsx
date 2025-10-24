@@ -19,7 +19,7 @@ const AdminHome: React.FC = () => {
   const error = tablesError || ordersError;
 
   // Log para ver todas las mesas y órdenes que llegan
-  // console.log('🏠 AdminHome - Estado actual:', {
+  // // console.log('🏠 AdminHome - Estado actual:', {
   //   currentUser: currentUser ? {
   //     id: currentUser.id,
   //     email: currentUser.email,
@@ -65,7 +65,7 @@ const AdminHome: React.FC = () => {
 
   const handleTableClick = async (table: Table) => {
     if (table.status === 'libre') {
-      console.log('Abrir mesa:', table.id);
+      // console.log('Abrir mesa:', table.id);
       try {
         // Verificar que hay usuario autenticado
         if (!currentUser) {
@@ -79,7 +79,7 @@ const AdminHome: React.FC = () => {
           currentUser.id, 
           currentUser.displayName || currentUser.email
         );
-        console.log('✅ Mesa abierta con orden vacía:', table.number, 'por:', currentUser.displayName);
+        // console.log('✅ Mesa abierta con orden vacía:', table.number, 'por:', currentUser.displayName);
         
         // Navegar directamente a los detalles para agregar productos
         navigate(`/admin/order/${table.id}`);
@@ -87,7 +87,7 @@ const AdminHome: React.FC = () => {
         console.error('❌ Error abriendo mesa:', error);
       }
     } else {
-      console.log('Ver detalles de mesa:', table.id);
+      // console.log('Ver detalles de mesa:', table.id);
       // Buscar la orden activa para esta mesa
       const currentOrder = orders.find(order => order.tableId === table.id);
       if (currentOrder) {
@@ -107,7 +107,7 @@ const AdminHome: React.FC = () => {
     const isBar = table.number === 0;
     
     // Logs para debugging
-    // console.log('🔍 Renderizando tarjeta para mesa:', {
+    // // console.log('🔍 Renderizando tarjeta para mesa:', {
     //   id: table.id,
     //   number: table.number,
     //   status: table.status,
@@ -143,7 +143,7 @@ const AdminHome: React.FC = () => {
     const timeMinutes = currentOrder ? 
       Math.floor((new Date().getTime() - currentOrder.createdAt.getTime()) / (1000 * 60)) : 0;
     
-    // console.log('📊 Datos REALES de BD para mesa', table.number, ':', {
+    // // console.log('📊 Datos REALES de BD para mesa', table.number, ':', {
     //   itemCount: `${itemCount} items totales`,
     //   itemTypes: currentOrder ? currentOrder.items.filter(item => !item.isDeleted).length : 0,
     //   timeMinutes,
@@ -167,7 +167,7 @@ const AdminHome: React.FC = () => {
     
     const handleViewOrder = (e: React.MouseEvent) => {
       e.stopPropagation();
-      // console.log('Ver pedido de mesa:', table.id);
+      // // console.log('Ver pedido de mesa:', table.id);
       if (currentOrder) {
         navigate(`/admin/order/${table.id}`);
       }
@@ -175,7 +175,7 @@ const AdminHome: React.FC = () => {
 
     const handleCheckout = (e: React.MouseEvent) => {
       e.stopPropagation();
-      // console.log('Cobrar mesa:', table.id);
+      // // console.log('Cobrar mesa:', table.id);
       if (currentOrder) {
         navigate(`/admin/checkout/${currentOrder.id}`);
       }

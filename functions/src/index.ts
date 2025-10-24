@@ -18,24 +18,40 @@ export const mercadopagoProxy = functions.https.onRequest((req, res) => {
       return;
     }
 
-    // console.log('✅ Access token encontrado');
-    // console.log('📝 Request:', req.method, req.path);
+    console.log('✅ Access token encontrado');
+    console.log('📝 Request:', req.method, req.path);
 
     // Extraer el path de la URL
     const path = req.path.replace('/api/mercadopago', '');
     const url = `https://api.mercadopago.com${path}`;
 
     try {
+      // Copiar headers del request original (excepto host)
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      };
+
+      // Copiar headers importantes del request original
+      if (req.headers['x-idempotency-key']) {
+        headers['X-Idempotency-Key'] = req.headers['x-idempotency-key'] as string;
+      }
+      if (req.headers['x-request-id']) {
+        headers['X-Request-Id'] = req.headers['x-request-id'] as string;
+      }
+
+      console.log('📤 Headers enviados:', Object.keys(headers));
+
       const response = await fetch(url, {
         method: req.method,
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
       });
 
       const data = await response.json();
+      
+      console.log('📥 Response status:', response.status);
+      
       res.status(response.status).json(data);
     } catch (error) {
       console.error('Error en proxy Mercado Pago:', error);

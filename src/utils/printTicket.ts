@@ -25,12 +25,12 @@ export const printTicket80mm = (opts: PrintOptions) => {
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; width: 80mm; margin:0; padding:0; color: #111; }
         .ticket { padding: 6px; }
         .center { text-align:center; }
-        h1 { margin: 6px 0; font-size: 24px; }
-        .muted { color: #666; font-size: 19px; }
+        h1 { margin: 6px 0; font-size: 30px; }
+        .muted { color: #000; font-size: 20px; }
         .small { font-size: 20px; }
-        .row { display:flex; justify-content:space-between; margin:6px 0; }
-        .divider { border-top:1px dashed #ccc; margin:6px 0; }
-        .total { font-weight:700; font-size:24px; }
+        .row { display:flex; justify-content:space-between; margin:6px 0; font-size: 24px; }
+        .divider { border-top:1px dashed #000; margin:6px 0; }
+        .total { font-weight:700; font-size:30px; }
       </style>
     </head>
     <body>
@@ -149,7 +149,7 @@ export const printTicket58mm = (opts: PrintOptions) => {
       <title>Pase de Salida</title>
       <style>
         @page { size: 58mm auto; margin: 2mm; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; width: 58mm; margin:0; padding:0; color: #111; font-size: 10px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; width: 58mm; margin:0; padding:0; color: #111; font-size: 18px; }
         .ticket { padding: 4px; }
         .center { text-align:center; }
         h1 { margin: 4px 0; font-size: 13px; font-weight: 700; }

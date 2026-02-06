@@ -1,8 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
-import { db } from '../../services/firebase';
-import type { Order } from '../../utils/types';
-import { Calendar, DollarSign, Package, Users, TrendingUp, Clock } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "../../services/firebase";
+import type { Order } from "../../utils/types";
+import {
+  Calendar,
+  DollarSign,
+  Package,
+  Users,
+  TrendingUp,
+  Clock,
+} from "lucide-react";
+
+interface WaiterStats {
+  waiterName: string;
+  waiterId: string;
+  totalSales: number;
+  totalOrders: number;
+  totalTips: number;
+  waiterShare: number; // 66% para el mesero
+  barShare: number; // 34% para barra
+}
 
 interface ShiftSummary {
   totalSales: number;
@@ -17,6 +40,8 @@ interface ShiftSummary {
   };
   averageOrderValue: number;
   averageTipPercent: number;
+  waiterStats: WaiterStats[];
+  totalBarShare: number;
 }
 
 const DailySummary: React.FC = () => {
@@ -24,21 +49,21 @@ const DailySummary: React.FC = () => {
   const getCurrentShiftDate = () => {
     const now = new Date();
     const currentHour = now.getHours();
-    
+
     // Si son entre las 12 AM y las 3 AM, el turno empezó ayer
     if (currentHour >= 0 && currentHour < 3) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       return yesterday;
     }
-    
+
     // Si son entre las 3 AM y las 5 PM, el turno de ayer ya terminó, mostrar el de anteayer
     if (currentHour >= 3 && currentHour < 17) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       return yesterday;
     }
-    
+
     // Si son después de las 5 PM, el turno actual empezó hoy
     return now;
   };
@@ -66,10 +91,10 @@ const DailySummary: React.FC = () => {
 
       // Query para obtener órdenes pagadas en el rango del turno
       const q = query(
-        collection(db, 'orders'),
-        where('status', '==', 'pagado'),
-        where('completedAt', '>=', Timestamp.fromDate(shiftStart)),
-        where('completedAt', '<=', Timestamp.fromDate(shiftEnd))
+        collection(db, "orders"),
+        where("status", "==", "pagado"),
+        where("completedAt", ">=", Timestamp.fromDate(shiftStart)),
+        where("completedAt", "<=", Timestamp.fromDate(shiftEnd))
       );
 
       const snapshot = await getDocs(q);
@@ -100,10 +125,13 @@ const DailySummary: React.FC = () => {
         },
         averageOrderValue: 0,
         averageTipPercent: 0,
+        waiterStats: [],
+        totalBarShare: 0,
       };
 
       let totalTipPercent = 0;
       let ordersWithTip = 0;
+      const waiterStatsMap = new Map<string, WaiterStats>();
 
       ordersData.forEach((order) => {
         const subtotal = order.subtotal ?? 0;
@@ -115,12 +143,16 @@ const DailySummary: React.FC = () => {
         summary.totalTips += tip;
 
         // Contar items activos
-        const activeItems = (order.items || []).filter(i => !i.isDeleted);
-        summary.totalItems += activeItems.reduce((sum, item) => sum + (item.quantity ?? 1), 0);
+        const activeItems = (order.items || []).filter((i) => !i.isDeleted);
+        summary.totalItems += activeItems.reduce(
+          (sum, item) => sum + (item.quantity ?? 1),
+          0
+        );
 
         // Contar por método de pago
         if (order.paymentMethod) {
-          const method = order.paymentMethod as keyof typeof summary.paymentMethods;
+          const method =
+            order.paymentMethod as keyof typeof summary.paymentMethods;
           if (summary.paymentMethods[method] !== undefined) {
             summary.paymentMethods[method] += total;
           }
@@ -132,14 +164,51 @@ const DailySummary: React.FC = () => {
           totalTipPercent += tipPercent;
           ordersWithTip++;
         }
+
+        // Estadísticas por mesero
+        const waiterId = order.waiterId || "unknown";
+        const waiterName = order.waiterName || "Desconocido";
+
+        if (!waiterStatsMap.has(waiterId)) {
+          waiterStatsMap.set(waiterId, {
+            waiterId,
+            waiterName,
+            totalSales: 0,
+            totalOrders: 0,
+            totalTips: 0,
+            waiterShare: 0,
+            barShare: 0,
+          });
+        }
+
+        const waiterStats = waiterStatsMap.get(waiterId)!;
+        waiterStats.totalSales += total;
+        waiterStats.totalOrders += 1;
+        waiterStats.totalTips += tip;
       });
 
-      summary.averageOrderValue = summary.totalOrders > 0 ? summary.totalSales / summary.totalOrders : 0;
-      summary.averageTipPercent = ordersWithTip > 0 ? (totalTipPercent / ordersWithTip) * 100 : 0;
+      // Calcular promedios y distribución de propinas
+      summary.averageOrderValue =
+        summary.totalOrders > 0 ? summary.totalSales / summary.totalOrders : 0;
+      summary.averageTipPercent =
+        ordersWithTip > 0 ? (totalTipPercent / ordersWithTip) * 100 : 0;
+
+      // Calcular 66%/34% distribución por mesero
+      let totalBarShare = 0;
+      waiterStatsMap.forEach((stats) => {
+        stats.waiterShare = stats.totalTips * 0.66;
+        stats.barShare = stats.totalTips * 0.34;
+        totalBarShare += stats.barShare;
+      });
+
+      summary.waiterStats = Array.from(waiterStatsMap.values())
+        .filter((s) => s.totalSales > 0)
+        .sort((a, b) => b.totalSales - a.totalSales);
+      summary.totalBarShare = totalBarShare;
 
       setSummary(summary);
     } catch (error) {
-      console.error('Error loading shift data:', error);
+      console.error("Error loading shift data:", error);
     } finally {
       setLoading(false);
     }
@@ -170,20 +239,32 @@ const DailySummary: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex items-center gap-2">
             <Calendar className="text-amber-400" size={20} />
-            <label className="text-sm font-semibold text-white">Seleccionar turno:</label>
+            <label className="text-sm font-semibold text-white">
+              Seleccionar turno:
+            </label>
           </div>
           <input
             type="date"
-            value={selectedDate.toISOString().split('T')[0]}
-            onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
+            value={selectedDate.toISOString().split("T")[0]}
+            onChange={(e) =>
+              setSelectedDate(new Date(e.target.value + "T12:00:00"))
+            }
             className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-amber-400 focus:outline-none"
           />
           <div className="flex items-center gap-2 text-sm text-gray-300">
             <Clock size={16} />
             <span>
-              {shiftStart.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} 5:00 PM
-              {' → '}
-              {shiftEnd.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} 3:00 AM
+              {shiftStart.toLocaleDateString("es-ES", {
+                day: "numeric",
+                month: "short",
+              })}{" "}
+              5:00 PM
+              {" → "}
+              {shiftEnd.toLocaleDateString("es-ES", {
+                day: "numeric",
+                month: "short",
+              })}{" "}
+              3:00 AM
             </span>
           </div>
         </div>
@@ -202,9 +283,13 @@ const DailySummary: React.FC = () => {
             <div className="bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/30 rounded-xl p-5">
               <div className="flex items-center justify-between mb-2">
                 <DollarSign className="text-green-400" size={24} />
-                <span className="text-xs font-semibold text-green-400 bg-green-500/20 px-2 py-1 rounded">TOTAL</span>
+                <span className="text-xs font-semibold text-green-400 bg-green-500/20 px-2 py-1 rounded">
+                  TOTAL
+                </span>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">{formatCurrency(summary.totalSales)}</p>
+              <p className="text-3xl font-bold text-white mb-1">
+                {formatCurrency(summary.totalSales)}
+              </p>
               <p className="text-sm text-gray-400">Ventas totales</p>
             </div>
 
@@ -212,9 +297,13 @@ const DailySummary: React.FC = () => {
             <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/30 rounded-xl p-5">
               <div className="flex items-center justify-between mb-2">
                 <Package className="text-blue-400" size={24} />
-                <span className="text-xs font-semibold text-blue-400 bg-blue-500/20 px-2 py-1 rounded">ÓRDENES</span>
+                <span className="text-xs font-semibold text-blue-400 bg-blue-500/20 px-2 py-1 rounded">
+                  ÓRDENES
+                </span>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">{summary.totalOrders}</p>
+              <p className="text-3xl font-bold text-white mb-1">
+                {summary.totalOrders}
+              </p>
               <p className="text-sm text-gray-400">Tickets procesados</p>
             </div>
 
@@ -222,9 +311,13 @@ const DailySummary: React.FC = () => {
             <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/30 rounded-xl p-5">
               <div className="flex items-center justify-between mb-2">
                 <Users className="text-purple-400" size={24} />
-                <span className="text-xs font-semibold text-purple-400 bg-purple-500/20 px-2 py-1 rounded">ITEMS</span>
+                <span className="text-xs font-semibold text-purple-400 bg-purple-500/20 px-2 py-1 rounded">
+                  ITEMS
+                </span>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">{summary.totalItems}</p>
+              <p className="text-3xl font-bold text-white mb-1">
+                {summary.totalItems}
+              </p>
               <p className="text-sm text-gray-400">Productos vendidos</p>
             </div>
 
@@ -232,9 +325,13 @@ const DailySummary: React.FC = () => {
             <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-xl p-5">
               <div className="flex items-center justify-between mb-2">
                 <TrendingUp className="text-amber-400" size={24} />
-                <span className="text-xs font-semibold text-amber-400 bg-amber-500/20 px-2 py-1 rounded">PROPINAS</span>
+                <span className="text-xs font-semibold text-amber-400 bg-amber-500/20 px-2 py-1 rounded">
+                  PROPINAS
+                </span>
               </div>
-              <p className="text-3xl font-bold text-white mb-1">{formatCurrency(summary.totalTips)}</p>
+              <p className="text-3xl font-bold text-white mb-1">
+                {formatCurrency(summary.totalTips)}
+              </p>
               <p className="text-sm text-gray-400">Para repartir</p>
             </div>
           </div>
@@ -250,15 +347,23 @@ const DailySummary: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
                   <span className="text-gray-300 font-medium">💵 Efectivo</span>
-                  <span className="text-white font-bold">{formatCurrency(summary.paymentMethods.efectivo)}</span>
+                  <span className="text-white font-bold">
+                    {formatCurrency(summary.paymentMethods.efectivo)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
                   <span className="text-gray-300 font-medium">💳 Tarjeta</span>
-                  <span className="text-white font-bold">{formatCurrency(summary.paymentMethods.tarjeta)}</span>
+                  <span className="text-white font-bold">
+                    {formatCurrency(summary.paymentMethods.tarjeta)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                  <span className="text-gray-300 font-medium">📱 Transferencia</span>
-                  <span className="text-white font-bold">{formatCurrency(summary.paymentMethods.transferencia)}</span>
+                  <span className="text-gray-300 font-medium">
+                    📱 Transferencia
+                  </span>
+                  <span className="text-white font-bold">
+                    {formatCurrency(summary.paymentMethods.transferencia)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -271,36 +376,175 @@ const DailySummary: React.FC = () => {
               </h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                  <span className="text-gray-300 font-medium">Subtotal (sin propina)</span>
-                  <span className="text-white font-bold">{formatCurrency(summary.totalSubtotal)}</span>
+                  <span className="text-gray-300 font-medium">
+                    Subtotal (sin propina)
+                  </span>
+                  <span className="text-white font-bold">
+                    {formatCurrency(summary.totalSubtotal)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                  <span className="text-gray-300 font-medium">Ticket promedio</span>
-                  <span className="text-white font-bold">{formatCurrency(summary.averageOrderValue)}</span>
+                  <span className="text-gray-300 font-medium">
+                    Ticket promedio
+                  </span>
+                  <span className="text-white font-bold">
+                    {formatCurrency(summary.averageOrderValue)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                  <span className="text-gray-300 font-medium">Propina promedio</span>
-                  <span className="text-white font-bold">{formatPercent(summary.averageTipPercent)}</span>
+                  <span className="text-gray-300 font-medium">
+                    Propina promedio
+                  </span>
+                  <span className="text-white font-bold">
+                    {formatPercent(summary.averageTipPercent)}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Corte de Propinas por Mesero */}
+          {summary.waiterStats && summary.waiterStats.length > 0 && (
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
+              <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
+                <Users className="text-amber-400" size={20} />
+                Corte de Propinas por Mesero
+              </h3>
+              <div className="space-y-3">
+                {summary.waiterStats.map((waiter, index) => (
+                  <div
+                    key={waiter.waiterId}
+                    className="bg-gradient-to-r from-green-500/10 to-green-600/5 border border-green-500/30 rounded-lg p-4"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-500/20 text-green-400 w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                          #{index + 1}
+                        </div>
+                        <div>
+                          <p className="text-white font-bold text-lg">
+                            {waiter.waiterName}
+                          </p>
+                          <p className="text-gray-400 text-sm">
+                            {waiter.totalOrders} órdenes •{" "}
+                            {formatCurrency(waiter.totalSales)} vendidos
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-green-400">
+                          {formatCurrency(waiter.waiterShare)}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          para mesero (66%)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-green-500/20">
+                      <div className="bg-green-900/20 rounded-lg p-3 text-center border border-green-500/20">
+                        <p className="text-gray-400 text-xs mb-1">
+                          💰 Propina Total
+                        </p>
+                        <p className="text-white font-bold text-lg">
+                          {formatCurrency(waiter.totalTips)}
+                        </p>
+                      </div>
+                      <div className="bg-purple-900/20 rounded-lg p-3 text-center border border-purple-500/20">
+                        <p className="text-gray-400 text-xs mb-1">
+                          🍺 Para Barra (34%)
+                        </p>
+                        <p className="text-purple-400 font-bold text-lg">
+                          {formatCurrency(waiter.barShare)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Resumen de distribución */}
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Totales de Meseros */}
+                  <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="text-green-400" size={20} />
+                      <h4 className="text-green-400 font-bold">
+                        Total Meseros
+                      </h4>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">
+                          Meseros activos:
+                        </span>
+                        <span className="text-white font-bold">
+                          {summary.waiterStats.length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">
+                          Total para meseros (66%):
+                        </span>
+                        <span className="text-green-400 font-bold text-xl">
+                          {formatCurrency(summary.totalTips * 0.66)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Total de Barra */}
+                  <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="text-purple-400" size={20} />
+                      <h4 className="text-purple-400 font-bold">Total Barra</h4>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">
+                          Suma de 34% de todos:
+                        </span>
+                        <span className="text-purple-400 font-bold text-xl">
+                          {formatCurrency(summary.totalBarShare)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500">Total propinas:</span>
+                        <span className="text-gray-400">
+                          {formatCurrency(summary.totalTips)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Resumen Final */}
           <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-500/30 rounded-xl p-6">
-            <h3 className="text-2xl font-bold mb-4 text-amber-400 text-center">💰 Resumen del Turno</h3>
+            <h3 className="text-2xl font-bold mb-4 text-amber-400 text-center">
+              💰 Resumen del Turno
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
               <div>
                 <p className="text-gray-400 text-sm mb-1">Total Vendido</p>
-                <p className="text-3xl font-bold text-white">{formatCurrency(summary.totalSales)}</p>
+                <p className="text-3xl font-bold text-white">
+                  {formatCurrency(summary.totalSales)}
+                </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Propinas Totales</p>
-                <p className="text-3xl font-bold text-amber-400">{formatCurrency(summary.totalTips)}</p>
+                <p className="text-3xl font-bold text-amber-400">
+                  {formatCurrency(summary.totalTips)}
+                </p>
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Total de Tickets</p>
-                <p className="text-3xl font-bold text-blue-400">{summary.totalOrders}</p>
+                <p className="text-3xl font-bold text-blue-400">
+                  {summary.totalOrders}
+                </p>
               </div>
             </div>
           </div>
@@ -309,9 +553,12 @@ const DailySummary: React.FC = () => {
           {summary.totalOrders === 0 && (
             <div className="text-center py-8 mt-6 bg-gray-800/50 rounded-xl border border-gray-700">
               <Package className="mx-auto text-gray-600 mb-3" size={48} />
-              <p className="text-gray-400 text-lg">No hay ventas registradas en este turno</p>
+              <p className="text-gray-400 text-lg">
+                No hay ventas registradas en este turno
+              </p>
               <p className="text-gray-500 text-sm mt-2">
-                Turno: {shiftStart.toLocaleDateString('es-ES')} 5:00 PM - {shiftEnd.toLocaleDateString('es-ES')} 3:00 AM
+                Turno: {shiftStart.toLocaleDateString("es-ES")} 5:00 PM -{" "}
+                {shiftEnd.toLocaleDateString("es-ES")} 3:00 AM
               </p>
             </div>
           )}

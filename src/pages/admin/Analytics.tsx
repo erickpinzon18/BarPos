@@ -58,6 +58,9 @@ const Analytics: React.FC = () => {
   // Category filter
   const [selectedCategory, setSelectedCategory] = useState<string>("Todos");
 
+  // Pagination
+  const [displayCount, setDisplayCount] = useState(100);
+
   // Get date range based on filter type
   const getDateRange = (): { start: Date; end: Date } => {
     const now = new Date();
@@ -215,6 +218,52 @@ const Analytics: React.FC = () => {
       items: bottles,
     };
   }, [salesData]);
+
+  // Products grouped by category
+  const productsByCategory = useMemo(() => {
+    const grouped = new Map<
+      CategoryKey,
+      Map<string, { name: string; quantity: number; total: number }>
+    >();
+
+    filteredData.forEach((record) => {
+      if (!grouped.has(record.category)) {
+        grouped.set(record.category, new Map());
+      }
+      const categoryProducts = grouped.get(record.category)!;
+
+      if (!categoryProducts.has(record.productName)) {
+        categoryProducts.set(record.productName, {
+          name: record.productName,
+          quantity: 0,
+          total: 0,
+        });
+      }
+
+      const product = categoryProducts.get(record.productName)!;
+      product.quantity += record.quantity;
+      product.total += record.total;
+    });
+
+    // Convert to array sorted by category and then by quantity
+    const result: {
+      category: CategoryKey;
+      products: { name: string; quantity: number; total: number }[];
+    }[] = [];
+
+    CATEGORIES.forEach((cat) => {
+      if (grouped.has(cat.key)) {
+        const products = Array.from(grouped.get(cat.key)!.values()).sort(
+          (a, b) => b.quantity - a.quantity
+        );
+        if (products.length > 0) {
+          result.push({ category: cat.key, products });
+        }
+      }
+    });
+
+    return result;
+  }, [filteredData]);
 
   // Format helpers
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
@@ -465,6 +514,87 @@ const Analytics: React.FC = () => {
             </div>
           </div>
 
+          {/* Products by Category */}
+          {productsByCategory.length > 0 && (
+            <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-6 mb-6">
+              <h3 className="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">
+                <Package className="text-blue-400" size={20} />
+                📊 Productos Vendidos por Categoría
+              </h3>
+              <div className="space-y-4">
+                {productsByCategory.map((catGroup) => {
+                  const catInfo = CATEGORIES.find(
+                    (c) => c.key === catGroup.category
+                  );
+                  const totalUnits = catGroup.products.reduce(
+                    (sum, p) => sum + p.quantity,
+                    0
+                  );
+                  const totalSales = catGroup.products.reduce(
+                    (sum, p) => sum + p.total,
+                    0
+                  );
+
+                  return (
+                    <div
+                      key={catGroup.category}
+                      className="bg-gray-800/80 rounded-xl p-4 border border-gray-700"
+                    >
+                      {/* Category Header */}
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-700">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">
+                            {catInfo?.icon || "📦"}
+                          </span>
+                          <div>
+                            <h4 className="text-lg font-bold text-white">
+                              {catGroup.category}
+                            </h4>
+                            <p className="text-gray-400 text-sm">
+                              {totalUnits} unidades •{" "}
+                              {formatCurrency(totalSales)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-2xl font-bold text-blue-400">
+                            {catGroup.products.length}
+                          </span>
+                          <p className="text-gray-400 text-xs">productos</p>
+                        </div>
+                      </div>
+
+                      {/* Products Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                        {catGroup.products.map((product) => (
+                          <div
+                            key={product.name}
+                            className="bg-gray-700/50 hover:bg-gray-700 rounded-lg p-3 transition-colors border border-gray-600/50"
+                          >
+                            <div className="flex items-start justify-between gap-1">
+                              <p
+                                className="text-white font-medium text-sm truncate flex-1"
+                                title={product.name}
+                              >
+                                {product.name}
+                              </p>
+                              <span className="bg-amber-500/20 text-amber-400 font-bold text-sm px-2 py-0.5 rounded-full whitespace-nowrap">
+                                ×{product.quantity}
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-xs mt-1">
+                              {formatCurrency(product.total)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Sales Table */}
           <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
             <div className="p-4 border-b border-gray-700">
@@ -519,7 +649,7 @@ const Analytics: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.slice(0, 100).map((record, idx) => {
+                    filteredData.slice(0, displayCount).map((record, idx) => {
                       const catInfo = CATEGORIES.find(
                         (c) => c.key === record.category
                       );
@@ -561,9 +691,14 @@ const Analytics: React.FC = () => {
                   )}
                 </tbody>
               </table>
-              {filteredData.length > 100 && (
-                <div className="p-4 text-center text-gray-400 text-sm border-t border-gray-700">
-                  Mostrando 100 de {filteredData.length} registros
+              {filteredData.length > displayCount && (
+                <div className="p-4 text-center border-t border-gray-700">
+                  <button
+                    onClick={() => setDisplayCount((prev) => prev + 100)}
+                    className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-lg transition-colors"
+                  >
+                    Cargar más ({filteredData.length - displayCount} restantes)
+                  </button>
                 </div>
               )}
             </div>

@@ -24,7 +24,8 @@ interface WaiterStats {
   totalOrders: number;
   totalTips: number;
   waiterShare: number; // 66% para el mesero
-  barShare: number; // 34% para barra
+  barShare: number; // 20% para barra
+  cashierShare: number; // 14% para caja
 }
 
 interface ShiftSummary {
@@ -42,6 +43,7 @@ interface ShiftSummary {
   averageTipPercent: number;
   waiterStats: WaiterStats[];
   totalBarShare: number;
+  totalCashierShare: number;
 }
 
 const DailySummary: React.FC = () => {
@@ -127,6 +129,7 @@ const DailySummary: React.FC = () => {
         averageTipPercent: 0,
         waiterStats: [],
         totalBarShare: 0,
+        totalCashierShare: 0,
       };
 
       let totalTipPercent = 0;
@@ -178,6 +181,7 @@ const DailySummary: React.FC = () => {
             totalTips: 0,
             waiterShare: 0,
             barShare: 0,
+            cashierShare: 0,
           });
         }
 
@@ -193,18 +197,22 @@ const DailySummary: React.FC = () => {
       summary.averageTipPercent =
         ordersWithTip > 0 ? (totalTipPercent / ordersWithTip) * 100 : 0;
 
-      // Calcular 66%/34% distribución por mesero
+      // Calcular 66%/20%/14% distribución por mesero
       let totalBarShare = 0;
+      let totalCashierShare = 0;
       waiterStatsMap.forEach((stats) => {
         stats.waiterShare = stats.totalTips * 0.66;
-        stats.barShare = stats.totalTips * 0.34;
+        stats.barShare = stats.totalTips * 0.20;
+        stats.cashierShare = stats.totalTips * 0.14;
         totalBarShare += stats.barShare;
+        totalCashierShare += stats.cashierShare;
       });
 
       summary.waiterStats = Array.from(waiterStatsMap.values())
         .filter((s) => s.totalSales > 0)
         .sort((a, b) => b.totalSales - a.totalSales);
       summary.totalBarShare = totalBarShare;
+      summary.totalCashierShare = totalCashierShare;
 
       setSummary(summary);
     } catch (error) {
@@ -441,7 +449,7 @@ const DailySummary: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-green-500/20">
+                    <div className="grid grid-cols-3 gap-3 pt-3 border-t border-green-500/20">
                       <div className="bg-green-900/20 rounded-lg p-3 text-center border border-green-500/20">
                         <p className="text-gray-400 text-xs mb-1">
                           💰 Propina Total
@@ -452,10 +460,18 @@ const DailySummary: React.FC = () => {
                       </div>
                       <div className="bg-purple-900/20 rounded-lg p-3 text-center border border-purple-500/20">
                         <p className="text-gray-400 text-xs mb-1">
-                          🍺 Para Barra (34%)
+                          🍺 Para Barra (20%)
                         </p>
                         <p className="text-purple-400 font-bold text-lg">
                           {formatCurrency(waiter.barShare)}
+                        </p>
+                      </div>
+                      <div className="bg-blue-900/20 rounded-lg p-3 text-center border border-blue-500/20">
+                        <p className="text-gray-400 text-xs mb-1">
+                          🧾 Para Caja (14%)
+                        </p>
+                        <p className="text-blue-400 font-bold text-lg">
+                          {formatCurrency(waiter.cashierShare)}
                         </p>
                       </div>
                     </div>
@@ -465,7 +481,7 @@ const DailySummary: React.FC = () => {
 
               {/* Resumen de distribución */}
               <div className="mt-4 pt-4 border-t border-gray-700">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Totales de Meseros */}
                   <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -485,7 +501,7 @@ const DailySummary: React.FC = () => {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-400 text-sm">
-                          Total para meseros (66%):
+                          Total meseros (66%):
                         </span>
                         <span className="text-green-400 font-bold text-xl">
                           {formatCurrency(summary.totalTips * 0.66)}
@@ -503,10 +519,34 @@ const DailySummary: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-400 text-sm">
-                          Suma de 34% de todos:
+                          Suma de 20% de todos:
                         </span>
                         <span className="text-purple-400 font-bold text-xl">
                           {formatCurrency(summary.totalBarShare)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500">Total propinas:</span>
+                        <span className="text-gray-400">
+                          {formatCurrency(summary.totalTips)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Total de Caja */}
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="text-blue-400" size={20} />
+                      <h4 className="text-blue-400 font-bold">Total Caja</h4>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">
+                          Suma de 14% de todos:
+                        </span>
+                        <span className="text-blue-400 font-bold text-xl">
+                          {formatCurrency(summary.totalCashierShare)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-xs">

@@ -1,4 +1,4 @@
-# Bar POS Application
+# Bar POS Application (ChepeChupes y Wikka)
 
 Una aplicación completa de Punto de Venta (POS) para bares y restaurantes, construida con React, TypeScript, Firebase y Tailwind CSS.
 

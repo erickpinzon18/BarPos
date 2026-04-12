@@ -1,77 +1,246 @@
-# 🍺 Bar POS App
+# Bar POS — Sistema de Punto de Venta para Bares y Restaurantes
 
-Sistema de punto de venta moderno para bares y restaurantes construido con React, TypeScript, Firebase y Tailwind CSS.
+Sistema de punto de venta moderno, en tiempo real, diseñado específicamente para bares y restaurantes. Construido con React 19, TypeScript, Firebase y Tailwind CSS.
 
-## ✨ Características
+## Tecnologías
 
-- 🔐 **Autenticación por roles**: Admin, Mesero, Cocina
-- 🪑 **Gestión de mesas**: Control de estado en tiempo real
-- 🍔 **Gestión de productos**: CRUD completo con categorías
-- 📋 **Sistema de órdenes**: Flujo completo desde pedido hasta entrega
-- 👨‍🍳 **Vista de cocina**: Sistema Kanban para preparación
-- 💰 **Checkout**: Procesamiento de pagos múltiples
-- 📱 **Responsive**: Diseño adaptable para móviles y tablets
-- 🔥 **Tiempo real**: Actualizaciones instantáneas con Firestore
+| Capa | Stack |
+|------|-------|
+| Frontend | React 19, TypeScript, Vite 7 |
+| Estilos | Tailwind CSS v3, PostCSS |
+| Backend | Firebase Auth + Firestore (tiempo real) |
+| Routing | React Router DOM v7 |
+| UI / Iconos | Headless UI, Lucide React |
+| Notificaciones | React Hot Toast |
 
-## 🚀 Tecnologías
+---
 
-- **Frontend**: React 19, TypeScript, Vite
-- **Estilos**: Tailwind CSS v3
-- **Backend**: Firebase (Auth + Firestore)
-- **Routing**: React Router v6
-- **Estado**: Context API + Custom Hooks
-- **Notificaciones**: React Hot Toast
-- **Iconos**: Lucide React
+## Roles y Acceso
 
-## 📁 Estructura del Proyecto
+La aplicación usa un único punto de entrada `/login` con control de acceso basado en roles:
 
+| Rol | Ruta base | Descripción |
+|-----|-----------|-------------|
+| `admin` | `/admin/*` | Acceso completo al sistema |
+| `waiter` | `/waiter/*` | Gestión de mesas y órdenes asignadas |
+| `kitchen` | `/kitchen/cocina` | Estación de cocina (Kanban) |
+| `barra` | `/kitchen/barra` | Estación de barra/bar (Kanban) |
+
+Cada ruta está protegida con `ProtectedRoute` que valida el rol y redirige si no hay acceso.
+
+---
+
+## Funcionalidades Implementadas
+
+### Panel Admin
+
+#### Dashboard de mesas (`/admin/home`)
+- Grid de mesas en tiempo real con estado visual: `libre`, `ocupada`, `reservada`, `limpieza`
+- Apertura de mesa y asignación directa a mesero
+- Contador de órdenes activas
+- Visualización del mesero asignado y orden actual por mesa
+
+#### Detalle de orden (`/admin/order/:tableId`)
+- Agregar productos al pedido desde el catálogo
+- Ajustar cantidades e ítems existentes
+- Eliminar ítems con verificación por PIN (solo admin)
+- Log de eliminaciones: quién eliminó, cuándo y qué ítem
+- Editar nombre personalizado de mesa (ej. "Mesa de Andrea")
+- Editar número de personas en la mesa (para dividir cuenta)
+- Agregar comentarios internos (no aparecen en el ticket del cliente)
+- Seguimiento de estado por ítem: `pendiente → en_preparacion → listo → entregado`
+
+#### Checkout (`/admin/checkout/:orderId`)
+- Cálculo automático de subtotal
+- Propina con porcentajes predefinidos: 0%, 10%, 15%, 18%, 20%
+- Campo de porcentaje de propina personalizado
+- Métodos de pago: Efectivo, Tarjeta, Transferencia
+- Cálculo de cambio para pagos en efectivo
+- Desglose por persona (división de cuenta)
+- Impresión de ticket térmico 80mm
+- Cierre de mesa con verificación PIN
+
+#### Kanban (`/admin/kanban`, `/admin/kanban/cocina`, `/admin/kanban/barra`)
+- Tableros Kanban separados para Cocina y Barra
+- Columnas: Pendiente → En Preparación → Listo → En proceso de entrega
+- Notificaciones de audio para nuevos pedidos (configurable por usuario)
+- Actualización de estado con un clic
+- Muestra: número de mesa, mesero, hora de creación
+- Retención configurable de ítems en columna "Entregado"
+
+#### Panel de control de cocina (`/admin/panel`)
+- Vista en lista como alternativa al Kanban
+- Filtros por estación (cocina / barra / todas)
+- Filtros por estado (todos, pendiente, listo, entregado)
+- Agrupación visual por estado
+
+#### Gestión de productos (`/admin/manage-products`)
+- CRUD completo de productos
+- Campos: nombre, descripción, precio, categoría, disponibilidad
+- Búsqueda por nombre y descripción
+- Filtrado por categoría
+- 7 categorías disponibles con estación asignada:
+
+| Categoría | Estación |
+|-----------|----------|
+| Bebida | Barra |
+| Botella | Barra |
+| Shot | Barra |
+| Servicio | Barra |
+| Entrada | Cocina |
+| Comida | Cocina |
+| Postre | Cocina |
+
+#### Cierre de caja (`/admin/cierre`)
+- Resumen de ventas del turno o día
+- Total de ventas, órdenes e ítems
+- Desglose por método de pago (efectivo, tarjeta, transferencia)
+- Gestión de propinas:
+  - Total recaudado en propinas
+  - Seguimiento por mesero
+  - Distribución automática: **66% mesero / 20% barra / 14% cajero**
+- Estadísticas por mesero: ventas totales, promedio por orden
+- Porcentaje de propina promedio
+- Selección de fecha para revisión de turnos anteriores
+- Turno configurado para horario bar: 5 PM – 3 AM
+
+#### Analytics (`/admin/analytics`)
+- Filtros de fecha: Día, Semana, Mes, Rango personalizado
+- Desglose de ventas por categoría con indicadores visuales
+- Tabla de registros: producto, cantidad, precio, mesero
+- Resumen por categoría: cantidad total y revenue
+- Paginación y filtrado por categoría
+- Totales acumulados del periodo seleccionado
+
+#### Historial de tickets (`/admin/tickets`)
+- Listado de todas las órdenes pagadas
+- Búsqueda por: ID de orden, número de mesa, mesero, nombre de mesa, comentarios
+- Agrupación por fecha
+- Reimpresión de cualquier ticket histórico
+- Modal de detalle completo del ticket
+
+#### Configuración (`/admin/settings`)
+- **Configuración del negocio**: nombre, teléfono, dirección, URL del logo
+- **Gestión de usuarios**:
+  - Crear usuarios con email, contraseña, rol y PIN
+  - Activar / desactivar usuarios
+  - Enviar correo de restablecimiento de contraseña
+  - Ver todos los usuarios por rol
+
+---
+
+### Panel Mesero
+
+#### Dashboard (`/waiter/home`)
+- Sección "Mis mesas" con las mesas asignadas al mesero
+- Mesas libres disponibles para abrir
+- Vista de mesas de otros meseros (solo lectura)
+- Apertura de nueva mesa
+
+#### Orden (`/waiter/order/:tableId`)
+- Tomar pedidos para mesas asignadas
+- Catálogo de productos agrupado por categoría
+- Input de cantidad por ítem
+- Notas especiales por ítem
+- Total y desglose en tiempo real
+- Seguimiento del estado de la orden
+
+#### Checkout (`/waiter/checkout/:orderId`)
+- Cálculo de cuenta con propinas
+- Múltiples métodos de pago
+- Impresión de ticket 80mm
+
+---
+
+### Estaciones de Cocina / Barra
+
+#### Kanban (`/kitchen/cocina` o `/kitchen/barra`)
+- Vista automática según el rol del usuario al iniciar sesión
+- Ítems filtrados por estación correspondiente
+- Flujo de estados: Pendiente → En Preparación → Listo → Entregado
+- Notificaciones de audio para nuevos pedidos
+- Actualización de estado con un clic
+- Muestra: número de mesa, mesero asignado, hora del pedido
+
+---
+
+## Sistema de Impresión
+
+Impresión de tickets en formato **80mm** con:
+- Encabezado con datos del negocio (nombre, teléfono, dirección)
+- ID del ticket y fecha/hora
+- Listado de ítems con cantidad y precio unitario
+- Subtotal, propina y total
+- Método de pago y cambio (si aplica)
+- Monto por persona (si hay división de cuenta)
+
+---
+
+## Estructura Firestore
+
+| Colección | Descripción |
+|-----------|-------------|
+| `users` | Perfil, rol, PIN y estado activo |
+| `tables` | Número, estado, mesero asignado, orden activa |
+| `products` | Nombre, precio, categoría, disponibilidad |
+| `orders` | Ítems, estado, pago, propina, personas, comentarios |
+| `config` | Configuración del negocio |
+
+### Esquema de orden (colección `orders`)
+
+```typescript
+{
+  tableId: string,
+  tableNumber: number,
+  tableName?: string,           // nombre personalizado de la mesa
+  waiterId: string,
+  waiterName: string,
+  peopleCount?: number,         // para división de cuenta
+  adminComment?: string,        // notas internas
+  items: [
+    {
+      id: string,
+      productId: string,
+      productName: string,
+      productPrice: number,
+      quantity: number,
+      status: "pendiente" | "en_preparacion" | "listo" | "entregado",
+      notes?: string,
+      category: string,
+      workstation: "cocina" | "barra",
+      deletedAt?: timestamp,    // si fue eliminado
+      deletedBy?: string,       // uid del que eliminó
+      createdAt: timestamp
+    }
+  ],
+  status: "activo" | "pagado" | "cancelado",
+  subtotal: number,
+  tipPercentage?: number,
+  tipAmount?: number,
+  total: number,
+  paymentMethod?: "efectivo" | "tarjeta" | "transferencia",
+  cashAmount?: number,
+  change?: number,
+  createdAt: timestamp,
+  updatedAt: timestamp
+}
 ```
-src/
-├── components/
-│   ├── ui/              # Componentes base (Button, Input, Modal, etc.)
-│   ├── common/          # Componentes específicos (TableCard, ProductCard, etc.)
-│   └── layouts/         # Layouts por rol (AdminLayout, WaiterLayout, etc.)
-├── contexts/            # Context providers (AuthContext)
-├── hooks/              # Custom hooks (useTables, useKitchenOrders)
-├── pages/              # Páginas organizadas por rol
-│   ├── admin/          # Dashboard, productos, mesas
-│   ├── waiter/         # Mesas, órdenes, checkout
-│   └── kitchen/        # Kanban de órdenes
-├── services/           # Servicios de Firebase
-├── utils/              # Tipos, utilidades, datos dummy
-└── routes/             # Rutas protegidas
+
+---
+
+## Instalación
+
+### 1. Clonar e instalar
+
+```bash
+git clone <repo-url>
+cd bar-pos-app
+npm install
 ```
 
-## 🛠️ Instalación
+### 2. Configurar Firebase
 
-1. **Clona el repositorio**
-   ```bash
-   git clone <repo-url>
-   cd bar-pos-app
-   ```
-
-2. **Instala las dependencias**
-   ```bash
-   npm install
-   ```
-
-3. **Configura Firebase** (ver sección siguiente)
-
-4. **Ejecuta el proyecto**
-   ```bash
-   npm run dev
-   ```
-
-## 🔥 Configuración de Firebase
-
-### 1. Crear proyecto Firebase
-1. Ve a [Firebase Console](https://console.firebase.google.com/)
-2. Crea un nuevo proyecto
-3. Habilita Authentication → Sign-in method → Email/Password
-4. Crea una base de datos Firestore en modo test
-
-### 2. Configurar el proyecto
-Crea `src/services/firebase.ts` con tu configuración:
+Crea `src/services/firebase.ts` con tu configuración de Firebase:
 
 ```typescript
 import { initializeApp } from 'firebase/app';
@@ -79,7 +248,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  // Tu configuración aquí
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
 };
 
 export const app = initializeApp(firebaseConfig);
@@ -87,139 +261,72 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 ```
 
-### 3. Crear datos de prueba
+Habilita en Firebase Console:
+- **Authentication** → Email/Password
+- **Firestore Database** en modo producción
 
-#### Usuarios (Firebase Auth + Firestore)
-1. Crea usuarios en Firebase Auth con estos emails
-2. En Firestore, crea documentos en la colección `users` usando el UID como ID:
+### 3. Crear datos iniciales
 
-**Admin** (ID del documento = UID de Firebase Auth)
+En Firestore, crea un documento en `users` con el UID del primer admin:
+
 ```json
 {
   "email": "admin@bar.com",
-  "displayName": "Administrador Principal",
+  "displayName": "Administrador",
   "role": "admin",
-  "createdAt": "2024-01-15T10:30:00.000Z",
-  "updatedAt": "2024-01-15T10:30:00.000Z"
+  "pin": "1234",
+  "active": true
 }
 ```
 
-**Mesero** (ID del documento = UID de Firebase Auth)
-```json
-{
-  "email": "mesero@bar.com",
-  "displayName": "Juan Pérez",
-  "role": "waiter",
-  "createdAt": "2024-01-15T10:30:00.000Z",
-  "updatedAt": "2024-01-15T10:30:00.000Z"
-}
-```
+A partir de ahí, los demás usuarios se crean desde la sección **Configuración → Usuarios** dentro de la app.
 
-**Cocina** (ID del documento = UID de Firebase Auth)
-```json
-{
-  "email": "cocina@bar.com",
-  "displayName": "Chef Mario",
-  "role": "kitchen",
-  "createdAt": "2024-01-15T10:30:00.000Z",
-  "updatedAt": "2024-01-15T10:30:00.000Z"
-}
-```
-
-#### Mesas (Colección `tables`)
-```json
-{
-  "number": 1,
-  "capacity": 4,
-  "status": "libre",
-  "createdAt": "2024-01-15T10:30:00.000Z",
-  "updatedAt": "2024-01-15T10:30:00.000Z"
-}
-```
-
-#### Productos (Colección `products`)
-```json
-{
-  "name": "Cerveza Corona",
-  "description": "Cerveza clara mexicana 355ml",
-  "price": 45,
-  "category": "Bebida",
-  "available": true,
-  "createdAt": "2024-01-15T10:30:00.000Z",
-  "updatedAt": "2024-01-15T10:30:00.000Z"
-}
-```
-
-## 👥 Roles y Funcionalidades
-
-### 🔧 Admin
-- ✅ Gestión completa de productos (CRUD)
-- ✅ Gestión de mesas
-- ✅ Vista general del sistema
-- ✅ Dashboard con métricas
-
-### 👨‍💼 Mesero
-- ✅ Gestionar mesas asignadas
-- ✅ Tomar órdenes
-- ✅ Procesar checkout y pagos
-- ✅ Vista de mesas en tiempo real
-
-### 👨‍🍳 Cocina
-- ✅ Ver órdenes pendientes
-- ✅ Sistema Kanban (Pendiente → En Preparación → Listo)
-- ✅ Actualizar estado de items
-- ✅ Notificaciones en tiempo real
-
-## 🔐 Credenciales de Desarrollo
-
-```
-Admin:    admin@bar.com    / password123
-Mesero:   mesero@bar.com   / password123
-Cocina:   cocina@bar.com   / password123
-```
-
-## 📜 Scripts Disponibles
+### 4. Ejecutar
 
 ```bash
-npm run dev      # Servidor de desarrollo
-npm run build    # Build de producción
-npm run preview  # Preview del build
-npm run lint     # Linting con ESLint
+npm run dev
 ```
 
-## 🎨 Personalización
+---
 
-### Colores del tema
-El proyecto usa Tailwind CSS con un tema oscuro personalizado. Los colores principales están en `tailwind.config.ts`.
+## Scripts
 
-### Componentes UI
-Todos los componentes base están en `src/components/ui/` y son completamente reutilizables.
+```bash
+npm run dev       # Servidor de desarrollo
+npm run build     # Build de producción
+npm run preview   # Preview del build
+npm run lint      # ESLint
+```
 
-## 🐛 Solución de Problemas
+---
 
-### Tailwind CSS no funciona
-1. Verifica que `postcss.config.js` tenga la configuración correcta
-2. Asegúrate de que `src/index.css` importe Tailwind
-3. Reinicia el servidor de desarrollo
+## Despliegue
 
-### Errores de Firebase
-1. Verifica la configuración en `firebase.ts`
-2. Asegúrate de que las reglas de Firestore permitan lectura/escritura
-3. Verifica que Authentication esté habilitado
+El proyecto incluye `firebase.json` y `.firebaserc` para despliegue en Firebase Hosting:
 
-### Errores de TypeScript
-1. Ejecuta `npm run build` para ver todos los errores
-2. Verifica que todos los tipos estén correctamente importados
-3. Asegúrate de usar `type` imports para tipos
+```bash
+npm run build
+firebase deploy
+```
 
-## 🤝 Contribución
+---
 
-1. Fork el proyecto
-2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
-3. Commit: `git commit -m 'Agregar nueva funcionalidad'`
-4. Push: `git push origin feature/nueva-funcionalidad`
-5. Abre un Pull Request
+## Solución de Problemas
 
-## 📄 Licencia
+**Tailwind no aplica estilos**
+- Verifica `postcss.config.js` y que `src/index.css` importe Tailwind
+- Reinicia el servidor de desarrollo
 
-Este proyecto está bajo la Licencia MIT.
+**Errores de Firebase**
+- Confirma que la configuración en `firebase.ts` es correcta
+- Verifica las reglas de Firestore (lectura/escritura habilitada para usuarios autenticados)
+
+**Usuario no puede iniciar sesión**
+- El campo `active: true` debe estar en el documento Firestore del usuario
+- El rol debe ser exactamente: `admin`, `waiter`, `kitchen` o `barra`
+
+---
+
+## Licencia
+
+MIT

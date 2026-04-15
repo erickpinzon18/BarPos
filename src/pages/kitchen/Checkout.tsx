@@ -75,7 +75,7 @@ const KitchenCheckout: React.FC = () => {
   const handlePrint = () => {
     if (!order) return;
     const perPerson = total / Math.max(1, order.peopleCount ?? 1);
-    printTicket80mm({ order: order as Order, subtotal, tipAmount, tipPercent, total, perPerson });
+    printTicket80mm({ order: order as Order, subtotal, tipAmount, tipPercent, total, perPerson, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
   };
 
   const handleFinalize = async () => {

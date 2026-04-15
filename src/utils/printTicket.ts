@@ -1,101 +1,302 @@
-// Helper to render a simple 80mm ticket HTML and open it in a new tab for printing
-import type { Order } from '../utils/types';
+/**
+ * Print Ticket Utility — BarPos
+ * Generates thermal-printer-friendly receipts using monospaced text layout.
+ * Supports 58mm and 80mm paper widths.
+ */
+import type { Order } from './types';
+
+// ─── Character widths per paper size ────────────────────────────────────────
+const CHARS_80MM = 48;
+const CHARS_58MM = 28;
+
+export type PaperSize = '58mm' | '80mm';
+
+// ─── Text formatting helpers ────────────────────────────────────────────────
+
+/** Center text within the given character width */
+const centerText = (text: string, width: number): string => {
+  const padding = Math.floor((width - text.length) / 2);
+  return ' '.repeat(Math.max(0, padding)) + text;
+};
+
+/** Create a horizontal separator line */
+const separator = (char = '-', width: number): string => char.repeat(width);
+
+/** Format a line with left-aligned and right-aligned text */
+const formatLine = (left: string, right: string, width: number): string => {
+  const spaces = width - left.length - right.length;
+  return left + ' '.repeat(Math.max(1, spaces)) + right;
+};
+
+/** Word-wrap text to avoid breaking mid-word on narrow tickets */
+const wrapText = (text = '', width: number): string[] => {
+  const normalized = String(text || '').trim();
+  if (!normalized) return [];
+
+  const words = normalized.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+
+  words.forEach((word) => {
+    if (!current) {
+      if (word.length <= width) {
+        current = word;
+      } else {
+        for (let i = 0; i < word.length; i += width) {
+          lines.push(word.slice(i, i + width));
+        }
+      }
+      return;
+    }
+
+    const next = `${current} ${word}`;
+    if (next.length <= width) {
+      current = next;
+    } else {
+      lines.push(current);
+      if (word.length <= width) {
+        current = word;
+      } else {
+        for (let i = 0; i < word.length; i += width) {
+          const chunk = word.slice(i, i + width);
+          if (chunk.length === width) {
+            lines.push(chunk);
+            current = '';
+          } else {
+            current = chunk;
+          }
+        }
+      }
+    }
+  });
+
+  if (current) lines.push(current);
+  return lines;
+};
+
+/** Push a label + value pair; if value fits inline use formatLine, otherwise wrap below */
+const pushLabeledValue = (lines: string[], label: string, value: string, width: number): void => {
+  const safeLabel = `${label}`;
+  const safeValue = `${value ?? ''}`.trim();
+
+  const inlineMinSpace = 8;
+  const inlineWidth = width - safeLabel.length - 1;
+  if (safeValue && inlineWidth >= inlineMinSpace && safeValue.length <= inlineWidth) {
+    lines.push(formatLine(safeLabel, safeValue, width));
+    return;
+  }
+
+  lines.push(safeLabel);
+  const wrapped = wrapText(safeValue || '-', Math.max(10, width - 2));
+  wrapped.forEach((line) => lines.push(`  ${line}`));
+};
+
+/** Format a money amount */
+const formatMoney = (amount: number): string => `$${amount.toFixed(2)}`;
+
+/** Escape HTML entities for safe injection into print document */
+const escapeHtml = (text = ''): string =>
+  String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+// ─── Ticket generation ─────────────────────────────────────────────────────
 
 type PrintOptions = {
   order: Order;
   subtotal: number;
   tipAmount: number;
-  tipPercent?: number; // Optional percentage as decimal (e.g., 0.15 for 15%)
+  tipPercent?: number; // Decimal e.g. 0.15 for 15%
   total: number;
   perPerson?: number;
+  paperSize?: PaperSize;
+  businessName?: string;
+  businessAddress?: string;
+  businessPhone?: string;
 };
 
-export const printTicket80mm = (opts: PrintOptions) => {
-  const { order, subtotal, tipAmount, tipPercent, total, perPerson } = opts;
+/**
+ * Generate the text content for a "Pase de Salida" ticket.
+ * Works for both 58mm and 80mm by switching the character width.
+ */
+export const generateTicketContent = (opts: PrintOptions): string => {
+  const {
+    order,
+    subtotal,
+    tipAmount,
+    tipPercent,
+    total,
+    perPerson,
+    paperSize = '80mm',
+    businessName,
+    businessAddress,
+    businessPhone,
+  } = opts;
 
-  // Build minimal, print-focused HTML. Use inline CSS sized for 80mm (~3.15 inches).
-  const html = `
-  <html>
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>Pase de Salida</title>
-      <style>
-        @page { size: 80mm auto; margin: 4mm; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; width: 80mm; margin:0; padding:0; color: #111; }
-        .ticket { padding: 6px; }
-        .center { text-align:center; }
-        h1 { margin: 6px 0; font-size: 30px; }
-        .muted { color: #000; font-size: 20px; }
-        .small { font-size: 20px; }
-        .row { display:flex; justify-content:space-between; margin:6px 0; font-size: 24px; }
-        .divider { border-top:1px dashed #000; margin:6px 0; }
-        .total { font-weight:700; font-size:30px; }
-      </style>
-    </head>
-    <body>
-      <div class="ticket">
-        <div class="center">
-          <h1>PASE DE SALIDA</h1>
-          <div class="muted small">ChepeChupes</div>
-            <div class="muted small">Fecha: ${new Date().toLocaleString()}</div>
-            <div class="muted small">Estado: ${order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE'}</div>
-            <div class="muted small">Ticket ID: ${order.id}</div>
-            ${Array.isArray(order.payments) && order.payments.length > 0 ? `<div class="muted small">Pago: ${order.payments[0].id} — ${order.payments[0].method} ${order.payments[0].receivedAmount ? '$' + Number(order.payments[0].receivedAmount).toFixed(2) : ''}</div>` : ''}
-        </div>
+  const W = paperSize === '58mm' ? CHARS_58MM : CHARS_80MM;
+  const lines: string[] = [];
+  const s = (char = '-') => separator(char, W);
+  const c = (text: string) => centerText(text, W);
 
-        <div class="divider"></div>
+  // ── Header ────────────────────────────────────────────────────────────────
+  lines.push(s('='));
+  lines.push(c('PASE DE SALIDA'));
+  lines.push(c((businessName || 'ChepeChupes').toUpperCase()));
+  lines.push(s('='));
+  lines.push('');
 
-        <div class="row"><div>${order.tableNumber === 0 ? 'Barra' : 'Mesa'}</div><div>${order.tableNumber === 0 ? 'Principal' : order.tableNumber}</div></div>
-        <div class="row"><div>Mesero</div><div>${order.waiterName}</div></div>
-        <div class="row"><div>Personas</div><div>${order.peopleCount ?? 1}</div></div>
+  // ── Order info ────────────────────────────────────────────────────────────
+  pushLabeledValue(lines, 'Fecha:', new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }), W);
 
-        <div class="divider"></div>
+  const statusLabel = order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE';
+  pushLabeledValue(lines, 'Estado:', statusLabel, W);
 
-        <div class="small muted">Items</div>
-        ${order.items.filter(i => !i.isDeleted).map(i => `<div class="row"><div>${i.quantity}x ${i.productName}</div><div>$${(i.productPrice * i.quantity).toFixed(2)}</div></div>`).join('')}
+  // For 80mm show full ID, for 58mm truncate
+  const ticketId = paperSize === '58mm' ? (order.id?.substring(0, 8) || 'N/A') : (order.id || 'N/A');
+  pushLabeledValue(lines, 'Ticket ID:', ticketId, W);
 
-        <div class="divider"></div>
+  if (Array.isArray(order.payments) && order.payments.length > 0) {
+    const p = order.payments[0];
+    const paymentInfo = `${p.method}${p.receivedAmount ? ' $' + Number(p.receivedAmount).toFixed(2) : ''}`;
+    pushLabeledValue(lines, 'Pago:', paymentInfo, W);
+  }
 
-        <div class="row"><div>Subtotal</div><div>$${subtotal.toFixed(2)}</div></div>
-        <div class="row"><div>Propina${typeof tipPercent === 'number' && tipPercent > 0 ? ` (${(tipPercent * 100).toFixed(0)}%)` : ''}</div><div>$${tipAmount.toFixed(2)}</div></div>
-        <div class="row total"><div>TOTAL</div><div>$${total.toFixed(2)}</div></div>
+  lines.push('');
+  lines.push(s());
 
-        ${typeof perPerson === 'number' ? `<div class="divider"></div><div class="row"><div>Total por persona</div><div>$${perPerson.toFixed(2)}</div></div>` : ''}
+  // ── Table / Waiter / People ───────────────────────────────────────────────
+  const mesaLabel = order.tableNumber === 0 ? 'Barra' : 'Mesa';
+  const mesaValue = order.tableNumber === 0 ? 'Principal' : String(order.tableNumber);
+  pushLabeledValue(lines, `${mesaLabel}:`, mesaValue, W);
+  pushLabeledValue(lines, 'Mesero:', order.waiterName, W);
+  pushLabeledValue(lines, 'Personas:', String(order.peopleCount ?? 1), W);
 
-        <div class="divider"></div>
-    <div class="center muted small">Prof. Mercedes Camacho 82, Praderas del Sol</div>
-        <div class="center muted small">Tel: 427-123-4567</div>
-      </div>
-    </body>
-  </html>
-  `;
+  lines.push(s());
+  lines.push('');
 
-//   // Try to open a new tab/window. If blocked by popup blocker, fall back to printing from an invisible iframe.
-//   const newWindow = window.open('', '_blank', 'noopener');
-//   if (newWindow) {
-//     try {
-//       newWindow.document.open();
-//       newWindow.document.write(html);
-//       newWindow.document.close();
-//       // Try to focus and print (may still be subject to browser policies)
-//       newWindow.focus();
-//       // Some browsers require a short delay before calling print
-//       setTimeout(() => {
-//         try {
-//           newWindow.print();
-//         } catch (e) {
-//           // ignore
-//         }
-//       }, 300);
-//       return;
-//     } catch (err) {
-//       // fall through to iframe approach
-//       console.warn('Fallo imprimiendo desde nueva ventana, intentando iframe fallback', err);
-//     }
-//   }
+  // ── Items header ──────────────────────────────────────────────────────────
+  if (paperSize === '58mm') {
+    lines.push('ARTICULOS');
+  } else {
+    lines.push('CANT  PRODUCTO                 IMPORTE');
+  }
+  lines.push(s());
 
-  // Fallback: inject a hidden iframe into the current document and print from it.
+  // ── Items ─────────────────────────────────────────────────────────────────
+  const activeItems = order.items.filter(i => !i.isDeleted);
+  activeItems.forEach(item => {
+    const qty = item.quantity;
+    const lineTotal = item.productPrice * qty;
+    const name = item.productName;
+
+    if (paperSize === '58mm') {
+      // Wrap item line, then push price below
+      wrapText(`${qty}x ${name}`, W).forEach(line => lines.push(line));
+      pushLabeledValue(lines, '  Importe:', formatMoney(lineTotal), W);
+    } else {
+      // Fixed-column layout for 80mm
+      const qtyStr = String(qty).padEnd(5);
+      const nameStr = (name.length > 22 ? name.substring(0, 22) : name).padEnd(22);
+      const priceStr = formatMoney(lineTotal).padStart(8);
+      lines.push(`${qtyStr} ${nameStr} ${priceStr}`);
+    }
+  });
+
+  lines.push(s());
+  lines.push('');
+
+  // ── Totals ────────────────────────────────────────────────────────────────
+  pushLabeledValue(lines, 'Subtotal:', formatMoney(subtotal), W);
+
+  const tipLabel = typeof tipPercent === 'number' && tipPercent > 0
+    ? `Propina (${(tipPercent * 100).toFixed(0)}%):`
+    : 'Propina:';
+  pushLabeledValue(lines, tipLabel, formatMoney(tipAmount), W);
+
+  lines.push(s('='));
+  pushLabeledValue(lines, 'TOTAL:', formatMoney(total), W);
+  lines.push(s('='));
+
+  // ── Per-person ────────────────────────────────────────────────────────────
+  if (typeof perPerson === 'number') {
+    lines.push('');
+    pushLabeledValue(lines, 'Por persona:', formatMoney(perPerson), W);
+  }
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  lines.push('');
+  lines.push(s());
+  lines.push(c('Gracias por su preferencia'));
+  lines.push(s());
+
+  if (businessAddress) {
+    lines.push('');
+    wrapText(businessAddress, W).forEach(line => lines.push(c(line)));
+  }
+  if (businessPhone) {
+    lines.push(c(`Tel: ${businessPhone}`));
+  }
+
+  // Fallback defaults
+  if (!businessAddress && !businessPhone) {
+    lines.push('');
+    wrapText('Prof. Mercedes Camacho 82, Praderas del Sol', W).forEach(line => lines.push(c(line)));
+    lines.push(c('Tel: 427-123-4567'));
+  }
+
+  lines.push('');
+
+  return lines.join('\n');
+};
+
+// ─── Print dispatch ─────────────────────────────────────────────────────────
+
+/**
+ * Send pre-formatted monospaced text content to the printer via a hidden iframe.
+ * The iframe approach avoids popup-blocker issues on mobile browsers.
+ */
+const sendToPrinter = (ticketContent: string, paperSize: PaperSize = '80mm', title = 'Pase de Salida'): void => {
+  const sizeMm = paperSize === '58mm' ? '58mm' : '80mm';
+  const fontSize = paperSize === '58mm' ? '10px' : '12px';
+  const lineHeight = paperSize === '58mm' ? '1.2' : '1.3';
+  const padding = paperSize === '58mm' ? '1.5mm' : '3mm';
+
+  const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(title)}</title>
+    <style>
+      @page {
+        margin: 0;
+        size: ${sizeMm} auto;
+      }
+      body {
+        width: ${sizeMm};
+        box-sizing: border-box;
+        font-family: 'Courier New', 'Courier', monospace;
+        font-size: ${fontSize};
+        line-height: ${lineHeight};
+        margin: 0;
+        padding: ${padding};
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        color: #000;
+      }
+      @media print {
+        body {
+          margin: 0;
+          padding: ${padding};
+        }
+      }
+    </style>
+  </head>
+  <body>${escapeHtml(ticketContent)}</body>
+</html>`;
+
   try {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -114,21 +315,19 @@ export const printTicket80mm = (opts: PrintOptions) => {
         const win = iframe.contentWindow;
         if (!win) throw new Error('No iframe window');
         win.focus();
-        // Delay slightly to ensure resources/rendering ready
         setTimeout(() => {
           try {
             win.print();
           } catch (e) {
             console.warn('Error printing from iframe', e);
           }
-          // Remove iframe after printing attempt
           setTimeout(() => {
-            try { document.body.removeChild(iframe); } catch (e) { /* ignore */ }
+            try { document.body.removeChild(iframe); } catch (_) { /* ignore */ }
           }, 1000);
         }, 300);
       } catch (e) {
-        console.error('Fallback iframe print failed', e);
-        try { document.body.removeChild(iframe); } catch (e) { /* ignore */ }
+        console.error('Iframe print failed', e);
+        try { document.body.removeChild(iframe); } catch (_) { /* ignore */ }
       }
     };
   } catch (err) {
@@ -136,109 +335,26 @@ export const printTicket80mm = (opts: PrintOptions) => {
   }
 };
 
-// Helper to render a 58mm ticket HTML and open it in a new tab for printing
-export const printTicket58mm = (opts: PrintOptions) => {
-  const { order, subtotal, tipAmount, tipPercent, total, perPerson } = opts;
+// ─── Public API ─────────────────────────────────────────────────────────────
 
-  // Build minimal, print-focused HTML. Use inline CSS sized for 58mm (~2.28 inches).
-  const html = `
-  <html>
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>Pase de Salida</title>
-      <style>
-        @page { size: 58mm auto; margin: 2mm; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; width: 58mm; margin:0; padding:0; color: #111; font-size: 18px; }
-        .ticket { padding: 4px; }
-        .center { text-align:center; }
-        h1 { margin: 4px 0; font-size: 13px; font-weight: 700; }
-        .muted { color: #666; font-size: 9px; }
-        .small { font-size: 9px; }
-        .row { display:flex; justify-content:space-between; margin:4px 0; font-size: 10px; }
-        .divider { border-top:1px dashed #ccc; margin:4px 0; }
-        .total { font-weight:700; font-size:13px; }
-        .item-row { display:flex; justify-content:space-between; margin:2px 0; font-size: 9px; }
-      </style>
-    </head>
-    <body>
-      <div class="ticket">
-        <div class="center">
-          <h1>PASE DE SALIDA</h1>
-          <div class="muted small">ChepeChupes</div>
-          <div class="muted small">${new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</div>
-          <div class="muted small">Estado: ${order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE'}</div>
-          <div class="muted small">ID: ${order.id?.substring(0, 8) || 'N/A'}</div>
-          ${Array.isArray(order.payments) && order.payments.length > 0 ? `<div class="muted small">${order.payments[0].method} ${order.payments[0].receivedAmount ? '$' + Number(order.payments[0].receivedAmount).toFixed(2) : ''}</div>` : ''}
-        </div>
+/**
+ * Generate and print a ticket. Defaults to 80mm but accepts paperSize option.
+ * This is the primary function that all Checkout pages should call.
+ */
+export const printTicket = (opts: PrintOptions): void => {
+  const paperSize = opts.paperSize || '80mm';
+  const ticketContent = generateTicketContent({ ...opts, paperSize });
+  sendToPrinter(ticketContent, paperSize);
+};
 
-        <div class="divider"></div>
+/** Alias for printTicket with 80mm default — keeps backward compatibility with existing imports */
+export const printTicket80mm = (opts: Omit<PrintOptions, 'paperSize'>): void => {
+  printTicket({ ...opts, paperSize: '80mm' });
+};
 
-        <div class="row"><div>${order.tableNumber === 0 ? 'Barra' : 'Mesa'}</div><div>${order.tableNumber === 0 ? 'Principal' : order.tableNumber}</div></div>
-        <div class="row"><div>Mesero</div><div>${order.waiterName}</div></div>
-        <div class="row"><div>Personas</div><div>${order.peopleCount ?? 1}</div></div>
-
-        <div class="divider"></div>
-
-        <div class="small muted">Items</div>
-        ${order.items.filter(i => !i.isDeleted).map(i => `<div class="item-row"><div>${i.quantity}x ${i.productName.length > 18 ? i.productName.substring(0, 18) + '...' : i.productName}</div><div>$${(i.productPrice * i.quantity).toFixed(2)}</div></div>`).join('')}
-
-        <div class="divider"></div>
-
-        <div class="row"><div>Subtotal</div><div>$${subtotal.toFixed(2)}</div></div>
-        <div class="row"><div>Propina${typeof tipPercent === 'number' && tipPercent > 0 ? ` (${(tipPercent * 100).toFixed(0)}%)` : ''}</div><div>$${tipAmount.toFixed(2)}</div></div>
-        <div class="row total"><div>TOTAL</div><div>$${total.toFixed(2)}</div></div>
-
-        ${typeof perPerson === 'number' ? `<div class="divider"></div><div class="row"><div>Por persona</div><div>$${perPerson.toFixed(2)}</div></div>` : ''}
-
-        <div class="divider"></div>
-        <div class="center muted small">Prof. Mercedes Camacho 82</div>
-        <div class="center muted small">Praderas del Sol</div>
-        <div class="center muted small">Tel: 427-123-4567</div>
-      </div>
-    </body>
-  </html>
-  `;
-
-  // Fallback: inject a hidden iframe into the current document and print from it.
-  try {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    iframe.style.visibility = 'hidden';
-    iframe.srcdoc = html;
-
-    document.body.appendChild(iframe);
-
-    iframe.onload = () => {
-      try {
-        const win = iframe.contentWindow;
-        if (!win) throw new Error('No iframe window');
-        win.focus();
-        // Delay slightly to ensure resources/rendering ready
-        setTimeout(() => {
-          try {
-            win.print();
-          } catch (e) {
-            console.warn('Error printing from iframe', e);
-          }
-          // Remove iframe after printing attempt
-          setTimeout(() => {
-            try { document.body.removeChild(iframe); } catch (e) { /* ignore */ }
-          }, 1000);
-        }, 300);
-      } catch (e) {
-        console.error('Fallback iframe print failed', e);
-        try { document.body.removeChild(iframe); } catch (e) { /* ignore */ }
-      }
-    };
-  } catch (err) {
-    alert('No se pudo iniciar la impresión. Revisa el bloqueador de ventanas emergentes o prueba guardar como PDF.');
-  }
+/** Alias for printTicket with 58mm */
+export const printTicket58mm = (opts: Omit<PrintOptions, 'paperSize'>): void => {
+  printTicket({ ...opts, paperSize: '58mm' });
 };
 
 export default printTicket80mm;

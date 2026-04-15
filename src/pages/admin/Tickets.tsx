@@ -36,7 +36,7 @@ const AdminTickets: React.FC = () => {
     const tipPercent = order.payments?.[0]?.tipPercent;
     const perPerson = order.peopleCount ? total / order.peopleCount : undefined;
 
-    printTicket80mm({ order, subtotal, tipAmount: tip, tipPercent, total, perPerson });
+    printTicket80mm({ order, subtotal, tipAmount: tip, tipPercent, total, perPerson, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
   };
 
   return (

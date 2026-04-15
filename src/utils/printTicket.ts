@@ -6,8 +6,11 @@
 import type { Order } from './types';
 
 // ─── Character widths per paper size ────────────────────────────────────────
-const CHARS_80MM = 48;
-const CHARS_58MM = 28;
+// Calculated for bold Courier New at print resolution:
+//   58mm usable ~54mm (~204px) ÷ (13px × 0.6) ≈ 26 chars → use 24 (safe)
+//   80mm usable ~74mm (~280px) ÷ (15px × 0.6) ≈ 31 chars → use 30 (safe)
+const CHARS_80MM = 30;
+const CHARS_58MM = 24;
 
 export type PaperSize = '58mm' | '80mm';
 
@@ -177,32 +180,20 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   lines.push(s());
   lines.push('');
 
-  // ── Items header ──────────────────────────────────────────────────────────
-  if (paperSize === '58mm') {
-    lines.push('ARTICULOS');
-  } else {
-    lines.push('CANT  PRODUCTO                 IMPORTE');
-  }
+  // ── Items header ────────────────────────────────────────────
+  lines.push('ARTICULOS');
   lines.push(s());
 
-  // ── Items ─────────────────────────────────────────────────────────────────
+  // ── Items ───────────────────────────────────────────────────
   const activeItems = order.items.filter(i => !i.isDeleted);
   activeItems.forEach(item => {
     const qty = item.quantity;
     const lineTotal = item.productPrice * qty;
     const name = item.productName;
 
-    if (paperSize === '58mm') {
-      // Wrap item line, then push price below
-      wrapText(`${qty}x ${name}`, W).forEach(line => lines.push(line));
-      pushLabeledValue(lines, '  Importe:', formatMoney(lineTotal), W);
-    } else {
-      // Fixed-column layout for 80mm
-      const qtyStr = String(qty).padEnd(5);
-      const nameStr = (name.length > 22 ? name.substring(0, 22) : name).padEnd(22);
-      const priceStr = formatMoney(lineTotal).padStart(8);
-      lines.push(`${qtyStr} ${nameStr} ${priceStr}`);
-    }
+    // Same layout for both paper sizes: wrap name then show importe inline
+    wrapText(`${qty}x ${name}`, W).forEach(line => lines.push(line));
+    pushLabeledValue(lines, '  Importe:', formatMoney(lineTotal), W);
   });
 
   lines.push(s());
@@ -260,8 +251,8 @@ export const generateTicketContent = (opts: PrintOptions): string => {
  */
 const sendToPrinter = (ticketContent: string, paperSize: PaperSize = '80mm', title = 'Pase de Salida'): void => {
   const sizeMm = paperSize === '58mm' ? '58mm' : '80mm';
-  const fontSize = paperSize === '58mm' ? '14px' : '16px';
-  const lineHeight = paperSize === '58mm' ? '1.4' : '1.4';
+  const fontSize = paperSize === '58mm' ? '13px' : '15px';
+  const lineHeight = '1.4';
   const padding = paperSize === '58mm' ? '2mm' : '3mm';
 
   const html = `<!DOCTYPE html>

@@ -29,6 +29,9 @@ import WaiterCheckout from "./pages/waiter/Checkout";
 
 // Kitchen Pages
 import KitchenKanban from "./pages/kitchen/Kanban";
+import KitchenHome from "./pages/kitchen/Home";
+import KitchenOrderDetails from "./pages/kitchen/OrderDetails";
+import KitchenCheckout from "./pages/kitchen/Checkout";
 
 function App() {
   return (
@@ -74,6 +77,9 @@ function App() {
         <Route path="/kitchen" element={<KitchenLayout />}>
           <Route path="cocina" element={<KitchenKanban />} />
           <Route path="barra" element={<KitchenKanban />} />
+          <Route path="mesas" element={<KitchenHome />} />
+          <Route path="order/:tableId" element={<KitchenOrderDetails />} />
+          <Route path="checkout/:orderId" element={<KitchenCheckout />} />
         </Route>
       </Route>
 

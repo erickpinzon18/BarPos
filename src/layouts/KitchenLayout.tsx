@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { getConfig } from '../services/firestoreService';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, LayoutDashboard } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const KitchenLayout: React.FC = () => {
@@ -12,9 +12,10 @@ const KitchenLayout: React.FC = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userName, setUserName] = useState<string>('Usuario');
 
-  // Determinar estación actual (cocina o barra)
+  // Determinar estación actual
   const isInCocina = location.pathname.includes('/cocina');
   const isInBarra = location.pathname.includes('/barra');
+  const isInMesas = location.pathname.includes('/mesas') || location.pathname.includes('/order') || location.pathname.includes('/checkout');
 
   // Load business config (name, logo) from Firestore
   useEffect(() => {
@@ -73,6 +74,19 @@ const KitchenLayout: React.FC = () => {
 
             {/* Station Navigation Buttons */}
             <div className="flex items-center gap-2">
+              {/* Mesas Button */}
+              <button
+                onClick={() => navigate('/kitchen/mesas')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${
+                  isInMesas
+                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/50'
+                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-amber-400'
+                }`}
+              >
+                <LayoutDashboard size={20} />
+                <span className="font-bold">Mesas</span>
+              </button>
+
               {/* Cocina Button */}
               <button
                 onClick={() => navigate('/kitchen/cocina')}

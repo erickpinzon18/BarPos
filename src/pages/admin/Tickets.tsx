@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useOrders } from '../../hooks/useOrders';
-import printTicket80mm from '../../utils/printTicket';
+import { printTicket } from '../../utils/printTicket';
 import { getConfig } from '../../services/firestoreService';
 import type { Order } from '../../utils/types';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePaperSize } from '../../hooks/usePaperSize';
 
 const AdminTickets: React.FC = () => {
   // Show historical tickets: use status 'pagado'
@@ -10,6 +12,8 @@ const AdminTickets: React.FC = () => {
   const [selected, setSelected] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [config, setConfig] = useState<any | null>(null);
+  const { currentUser } = useAuth();
+  const [paperSize, setPaperSize] = usePaperSize(currentUser?.id);
 
   const openModal = (order: Order) => setSelected(order);
   const closeModal = () => setSelected(null);
@@ -36,7 +40,7 @@ const AdminTickets: React.FC = () => {
     const tipPercent = order.payments?.[0]?.tipPercent;
     const perPerson = order.peopleCount ? total / order.peopleCount : undefined;
 
-    printTicket80mm({ order, subtotal, tipAmount: tip, tipPercent, total, perPerson, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
+    printTicket({ order, subtotal, tipAmount: tip, tipPercent, total, perPerson, paperSize, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
   };
 
   return (
@@ -202,9 +206,24 @@ const AdminTickets: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-2">{config?.address ?? 'Prof. Mercedes Camacho 82, Praderas del Sol, 76808 San Juan del Río, Qro.'}<br/>Tel: {config?.phone ?? '427-123-4567'}</p>
               </div>
             </div>
-            <div className="p-6 bg-gray-900/50 rounded-b-2xl flex gap-4">
-              <button onClick={() => handlePrint(selected)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">Imprimir</button>
-              <button onClick={closeModal} className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-5 rounded-lg">Cerrar</button>
+            <div className="p-6 bg-gray-900/50 rounded-b-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">🖨️ Papel</span>
+                <div className="flex bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                  <button
+                    onClick={() => setPaperSize('58mm')}
+                    className={`px-4 py-2 text-sm font-semibold transition-colors ${paperSize === '58mm' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                  >58mm</button>
+                  <button
+                    onClick={() => setPaperSize('80mm')}
+                    className={`px-4 py-2 text-sm font-semibold transition-colors ${paperSize === '80mm' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                  >80mm</button>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <button onClick={() => handlePrint(selected)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-lg">Imprimir</button>
+                <button onClick={closeModal} className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-5 rounded-lg">Cerrar</button>
+              </div>
             </div>
           </div>
         </div>

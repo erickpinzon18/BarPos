@@ -6,14 +6,18 @@ import type { Order } from '../../utils/types';
 import { closeTable, getConfig } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
-import { printTicket80mm } from '../../utils/printTicket';
+import { printTicket } from '../../utils/printTicket';
 import { ArrowLeft, Printer, Check } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePaperSize } from '../../hooks/usePaperSize';
 
 const WaiterCheckout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams<{ orderId?: string }>();
   const state = (location.state || {}) as { orderId?: string; tableId?: string; tableNumber?: number };
+  const { currentUser } = useAuth();
+  const [paperSize, setPaperSize] = usePaperSize(currentUser?.id);
 
   // Prefer orderId from URL params, then fallback to location.state
   const paramOrderId = params.orderId;
@@ -99,7 +103,7 @@ const WaiterCheckout: React.FC = () => {
   const handlePrint = () => {
     if (!order) return;
     const perPerson = ((total) / Math.max(1, (order.peopleCount ?? 1)));
-    printTicket80mm({ order: order as Order, subtotal, tipAmount, tipPercent, total, perPerson, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
+    printTicket({ order: order as Order, subtotal, tipAmount, tipPercent, total, perPerson, paperSize, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
   };
 
   const handleFinalize = async () => {
@@ -599,6 +603,20 @@ const WaiterCheckout: React.FC = () => {
       {/* Fixed Bottom Action Buttons - Mobile Optimized */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-800 p-4 shadow-lg z-20">
         <div className="flex flex-col gap-3">
+          {/* Paper size toggle */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">🖨️ Papel</span>
+            <div className="flex bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+              <button
+                onClick={() => setPaperSize('58mm')}
+                className={`px-3 py-1.5 text-xs font-semibold transition-colors ${paperSize === '58mm' ? 'bg-green-500 text-white' : 'text-gray-400 hover:text-white'}`}
+              >58mm</button>
+              <button
+                onClick={() => setPaperSize('80mm')}
+                className={`px-3 py-1.5 text-xs font-semibold transition-colors ${paperSize === '80mm' ? 'bg-green-500 text-white' : 'text-gray-400 hover:text-white'}`}
+              >80mm</button>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <button 
               disabled={closing} 

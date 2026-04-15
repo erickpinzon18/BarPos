@@ -338,11 +338,11 @@ const sendToPrinter = (ticketContent: string, paperSize: PaperSize = '80mm', tit
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Generate and print a ticket. Defaults to 80mm but accepts paperSize option.
+ * Generate and print a ticket. Defaults to 58mm but accepts paperSize option.
  * This is the primary function that all Checkout pages should call.
  */
 export const printTicket = (opts: PrintOptions): void => {
-  const paperSize = opts.paperSize || '80mm';
+  const paperSize = opts.paperSize || '58mm';
   const ticketContent = generateTicketContent({ ...opts, paperSize });
   sendToPrinter(ticketContent, paperSize);
 };

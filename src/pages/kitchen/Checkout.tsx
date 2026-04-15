@@ -6,13 +6,17 @@ import type { Order } from '../../utils/types';
 import { closeTable, getConfig } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
-import { printTicket80mm } from '../../utils/printTicket';
+import { printTicket } from '../../utils/printTicket';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePaperSize } from '../../hooks/usePaperSize';
 
 const KitchenCheckout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams<{ orderId?: string }>();
   const state = (location.state || {}) as { orderId?: string; tableId?: string; tableNumber?: number };
+  const { currentUser } = useAuth();
+  const [paperSize, setPaperSize] = usePaperSize(currentUser?.id);
 
   const paramOrderId = params.orderId;
   const propOrderId = paramOrderId ?? state.orderId;
@@ -75,7 +79,7 @@ const KitchenCheckout: React.FC = () => {
   const handlePrint = () => {
     if (!order) return;
     const perPerson = total / Math.max(1, order.peopleCount ?? 1);
-    printTicket80mm({ order: order as Order, subtotal, tipAmount, tipPercent, total, perPerson, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
+    printTicket({ order: order as Order, subtotal, tipAmount, tipPercent, total, perPerson, paperSize, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
   };
 
   const handleFinalize = async () => {
@@ -306,6 +310,20 @@ const KitchenCheckout: React.FC = () => {
           </div>
 
           <div className="flex flex-col space-y-3">
+            {/* Paper size toggle */}
+            <div className="flex items-center justify-between bg-gray-800 rounded-lg p-3 border border-gray-700">
+              <span className="text-sm text-gray-400">🖨️ Tamaño de papel</span>
+              <div className="flex bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+                <button
+                  onClick={() => setPaperSize('58mm')}
+                  className={`px-4 py-2 text-sm font-semibold transition-colors ${paperSize === '58mm' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                >58mm</button>
+                <button
+                  onClick={() => setPaperSize('80mm')}
+                  className={`px-4 py-2 text-sm font-semibold transition-colors ${paperSize === '80mm' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                >80mm</button>
+              </div>
+            </div>
             <button disabled={closing} onClick={handlePrint} className={`w-full ${closing ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-600 text-white hover:bg-gray-700'} font-bold py-3 px-4 rounded-lg transition`}>
               Imprimir Pase de Salida
             </button>

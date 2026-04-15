@@ -331,7 +331,7 @@ const WaiterOrderDetails: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-900 pb-24">
             {/* Fixed Header - Mobile Optimized */}
-            <div className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 shadow-lg">
+            <div className="sticky top-0 z-10 bg-gray-800 border-b border-gray-800 shadow-lg">
                 <div className="flex items-center justify-between p-4">
                     <div className="flex items-center flex-1">
                         <button
@@ -355,7 +355,7 @@ const WaiterOrderDetails: React.FC = () => {
             <div className="p-4 space-y-4">
                 {/* Info Cards - Mobile Stack */}
                 <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-800">
                         <div className="flex items-center mb-2">
                             <User className="w-5 h-5 text-green-400 mr-2" />
                             <p className="text-xs text-gray-400">Mesero</p>
@@ -363,7 +363,7 @@ const WaiterOrderDetails: React.FC = () => {
                         <p className="text-sm font-semibold text-white truncate">{order.waiterName}</p>
                     </div>
 
-                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-800">
                         <div className="flex items-center mb-2">
                             <Clock className="w-5 h-5 text-green-400 mr-2" />
                             <p className="text-xs text-gray-400">Tiempo</p>
@@ -371,7 +371,7 @@ const WaiterOrderDetails: React.FC = () => {
                         <p className="text-sm font-semibold text-white">{timeElapsed} min</p>
                     </div>
 
-                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-800">
                         <div className="flex items-center mb-2">
                             <Package className="w-5 h-5 text-green-400 mr-2" />
                             <p className="text-xs text-gray-400">Items</p>
@@ -387,7 +387,7 @@ const WaiterOrderDetails: React.FC = () => {
                         </p>
                     </div>
 
-                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-800">
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center">
                                 <User className="w-5 h-5 text-green-400 mr-2" />
@@ -413,7 +413,7 @@ const WaiterOrderDetails: React.FC = () => {
                 </div>
 
                 {/* Custom Table Name - Administrative Identifier */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                <div className="bg-gray-800 p-4 rounded-xl border border-gray-800">
                     <label htmlFor="tableName" className="block text-xs font-medium text-gray-400 mb-2">
                         🏷️ Nombre de Mesa / Identificación
                     </label>
@@ -432,7 +432,7 @@ const WaiterOrderDetails: React.FC = () => {
                 </div>
 
                 {/* Estado de Preparación - Compacto para móvil */}
-                <div className="bg-gray-800 p-4 rounded-xl border border-gray-700">
+                <div className="bg-gray-800 p-4 rounded-xl border border-gray-800">
                     <h3 className="text-sm font-semibold text-white mb-3 flex items-center">
                         <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
                         Estado de Items
@@ -470,8 +470,8 @@ const WaiterOrderDetails: React.FC = () => {
                 </div>
 
                 {/* Items List - Mobile Optimized */}
-                <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-                    <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+                <div className="bg-gray-800 rounded-xl border border-gray-800 overflow-hidden">
+                    <div className="p-4 border-b border-gray-800 flex items-center justify-between">
                         <h2 className="text-lg font-bold text-white">Items</h2>
                         <button
                             onClick={handleOpenAddItemModal}
@@ -592,7 +592,7 @@ const WaiterOrderDetails: React.FC = () => {
                                 onBlur={handleAdminCommentsBlur}
                                 placeholder="Notas: alergias, solicitudes especiales..."
                                 rows={2}
-                                className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
+                                className="w-full bg-gray-800 border border-gray-800 text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
                             />
                             <p className="text-xs text-gray-500 mt-1">
                                 Notas internas (no aparecen en el ticket)
@@ -603,7 +603,7 @@ const WaiterOrderDetails: React.FC = () => {
             </div>
 
             {/* Fixed Bottom Action Buttons - Mobile */}
-            <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 shadow-lg z-20">
+            <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-800 p-4 shadow-lg z-20">
                 <div className="flex gap-3">
                     <button
                         onClick={handleOpenAddItemModal}

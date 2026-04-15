@@ -86,14 +86,14 @@ const KitchenStatusControl: React.FC<KitchenStatusControlProps> = ({
   const workstation = categoryInfo?.workstation === 'cocina' ? '🍳 Cocina' : '🍹 Barra';
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+    <div className="bg-gray-800 p-4 rounded-lg border border-gray-800">
       <div className="flex items-center justify-between mb-3">
         <div>
           <h4 className="text-sm font-semibold text-white">{itemName}</h4>
           <p className="text-xs text-gray-400">{workstation} • {category}</p>
         </div>
         {loading && (
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-400"></div>
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500"></div>
         )}
       </div>
 
@@ -133,7 +133,7 @@ const KitchenStatusControl: React.FC<KitchenStatusControlProps> = ({
         </div>
         <div className="w-full bg-gray-700 rounded-full h-1">
           <div 
-            className="bg-amber-400 h-1 rounded-full transition-all duration-300"
+            className="bg-red-500 h-1 rounded-full transition-all duration-300"
             style={{ width: `${(statuses.indexOf(currentStatus) + 1) / statuses.length * 100}%` }}
           ></div>
         </div>

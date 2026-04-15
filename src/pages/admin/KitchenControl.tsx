@@ -62,7 +62,7 @@ const KitchenControl: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
           <p className="text-gray-400">Cargando órdenes...</p>
         </div>
       </div>
@@ -86,13 +86,13 @@ const KitchenControl: React.FC = () => {
           <p className="text-gray-400">Gestiona el estado de preparación de todos los items</p>
         </div>
         <div className="flex items-center space-x-2">
-          <RefreshCw className="w-5 h-5 text-amber-400" />
+          <RefreshCw className="w-5 h-5 text-red-500" />
           <span className="text-sm text-gray-400">Actualización en tiempo real</span>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 mb-6">
+      <div className="bg-gray-800 p-4 rounded-xl border border-gray-800 mb-6">
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center space-x-2">
             <Filter className="w-4 h-4 text-gray-400" />
@@ -105,7 +105,7 @@ const KitchenControl: React.FC = () => {
               onClick={() => setFilter('all')}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 filter === 'all' 
-                  ? 'bg-amber-500 text-gray-900' 
+                  ? 'bg-red-600 text-gray-900' 
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
@@ -177,7 +177,7 @@ const KitchenControl: React.FC = () => {
         {filteredItems.map((item) => (
           <div key={`${item.orderId}-${item.id}`} className="relative">
             {/* Table info badge */}
-            <div className="absolute -top-2 -right-2 bg-amber-500 text-gray-900 text-xs font-bold px-2 py-1 rounded-full z-10">
+            <div className="absolute -top-2 -right-2 bg-red-600 text-gray-900 text-xs font-bold px-2 py-1 rounded-full z-10">
               {item.tableNumber === 0 ? '🍹 Barra' : `Mesa ${item.tableNumber}`}
             </div>
             

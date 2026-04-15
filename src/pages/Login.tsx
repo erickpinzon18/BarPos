@@ -67,7 +67,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-950 text-gray-200 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo y Título */}
         <div className="text-center mb-10">
@@ -82,7 +82,7 @@ const Login: React.FC = () => {
             />
           ) : (
             <svg 
-              className="w-16 h-16 mx-auto mb-4 text-amber-400" 
+              className="w-16 h-16 mx-auto mb-4 text-red-500" 
               viewBox="0 0 24 24" 
               fill="none" 
               stroke="currentColor" 
@@ -98,16 +98,16 @@ const Login: React.FC = () => {
           <h1 className="text-4xl font-bold tracking-tighter text-white mb-2">
             {config?.name ?? 'Bar POS'}
           </h1>
-          <p className="text-lg text-amber-400 font-semibold">Sistema de Punto de Venta</p>
+          <p className="text-lg text-red-500 font-semibold">Sistema de Punto de Venta</p>
           <p className="text-sm text-gray-500 mt-2">Ingresa tus credenciales para continuar</p>
         </div>
 
         {/* Card de Login */}
-        <div className="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
+        <div className="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-800">
           <div className="text-center mb-6">
-            <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
-                className="w-10 h-10 text-amber-400"
+                className="w-10 h-10 text-red-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -137,7 +137,7 @@ const Login: React.FC = () => {
                 name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white text-sm rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 block w-full p-3.5 transition duration-200" 
+                className="bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white text-sm rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-600 block w-full p-3.5 transition duration-200" 
                 placeholder="correo@ejemplo.com" 
                 required
                 autoComplete="email"
@@ -155,7 +155,7 @@ const Login: React.FC = () => {
                 name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white text-sm rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 block w-full p-3.5 transition duration-200" 
+                className="bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white text-sm rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-600 block w-full p-3.5 transition duration-200" 
                 placeholder="••••••••" 
                 required
                 autoComplete="current-password"
@@ -173,7 +173,7 @@ const Login: React.FC = () => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               <div className="flex items-center justify-center gap-3">
                 {loading ? (
@@ -196,10 +196,10 @@ const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-700">
+          <div className="mt-6 pt-6 border-t border-gray-800">
             <div className="flex flex-wrap justify-center gap-4 text-xs text-gray-400">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
+                <span className="w-2 h-2 bg-red-600 rounded-full"></span>
                 <span>Administrador</span>
               </div>
               <div className="flex items-center gap-2">

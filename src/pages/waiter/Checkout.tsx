@@ -211,7 +211,7 @@ const WaiterCheckout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 pb-32">
       {/* Fixed Header - Mobile Optimized */}
-      <div className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 shadow-lg">
+      <div className="sticky top-0 z-10 bg-gray-800 border-b border-gray-800 shadow-lg">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center flex-1">
             <button
@@ -242,7 +242,7 @@ const WaiterCheckout: React.FC = () => {
         {/* Mobile: Toggle Ticket Button */}
         <button
           onClick={() => setShowTicket(!showTicket)}
-          className="w-full md:hidden bg-gray-800 border border-gray-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+          className="w-full md:hidden bg-gray-800 border border-gray-800 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2"
         >
           {showTicket ? '📋 Ocultar Ticket' : '👁️ Ver Ticket'}
         </button>
@@ -250,7 +250,7 @@ const WaiterCheckout: React.FC = () => {
         {/* Layout: Stack on mobile, side-by-side on desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Ticket Preview - Hidden on mobile unless toggled */}
-          <div className={`${showTicket ? 'block' : 'hidden'} md:block bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-700`}>
+          <div className={`${showTicket ? 'block' : 'hidden'} md:block bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-800`}>
             <div className="ticket bg-gray-900 p-4 md:p-6 rounded-lg text-sm text-white">
               <div className="text-center mb-4">
                 <h2 className="text-xl md:text-2xl font-extrabold text-green-400">PASE DE SALIDA</h2>
@@ -306,7 +306,7 @@ const WaiterCheckout: React.FC = () => {
                 </div>
 
                 {/* Per-person total */}
-                <div className="flex justify-between mt-2 items-center border-t border-gray-700 pt-2 text-sm">
+                <div className="flex justify-between mt-2 items-center border-t border-gray-800 pt-2 text-sm">
                   <span className="text-gray-300">Por persona ({order.peopleCount ?? 1})</span>
                   <span className="font-semibold text-white">
                     ${((total) / Math.max(1, (order.peopleCount ?? 1))).toFixed(2)}
@@ -329,7 +329,7 @@ const WaiterCheckout: React.FC = () => {
           {/* Controls Column */}
           <div className="space-y-4">
             {/* Propina Section */}
-            <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-700">
+            <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-800">
               <h3 className="font-semibold text-white mb-3 md:mb-4">💰 Propina</h3>
               <div className="grid grid-cols-4 gap-2">
                 <button 
@@ -359,7 +359,7 @@ const WaiterCheckout: React.FC = () => {
                   value={customTipPercent} 
                   onChange={(e) => handleCustomTipChange(e.target.value)} 
                   placeholder="%" 
-                  className="bg-gray-900 border border-gray-700 text-center rounded-lg focus:ring-green-500 focus:border-green-500 py-3 text-sm md:text-base text-white disabled:bg-gray-800 disabled:text-gray-500" 
+                  className="bg-gray-900 border border-gray-800 text-center rounded-lg focus:ring-green-500 focus:border-green-500 py-3 text-sm md:text-base text-white disabled:bg-gray-800 disabled:text-gray-500" 
                 />
               </div>
               <div className="mt-2 text-xs md:text-sm text-gray-400">
@@ -368,7 +368,7 @@ const WaiterCheckout: React.FC = () => {
             </div>
 
             {/* División de Cuenta Section */}
-            <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-700">
+            <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-800">
               <h3 className="font-semibold text-white mb-3 md:mb-4">🧮 Dividir Cuenta</h3>
               <div className="space-y-3">
                 <div>
@@ -386,7 +386,7 @@ const WaiterCheckout: React.FC = () => {
                       min="1"
                       value={splitBetween}
                       onChange={(e) => setSplitBetween(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="col-span-4 bg-gray-900 border border-gray-700 text-center rounded-lg focus:ring-green-500 focus:border-green-500 py-3 text-2xl font-bold text-white"
+                      className="col-span-4 bg-gray-900 border border-gray-800 text-center rounded-lg focus:ring-green-500 focus:border-green-500 py-3 text-2xl font-bold text-white"
                     />
                     <button
                       onClick={() => setSplitBetween(splitBetween + 1)}
@@ -460,7 +460,7 @@ const WaiterCheckout: React.FC = () => {
             </div>
 
             {/* Método de Pago Section */}
-            <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-700">
+            <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-800">
               <h3 className="font-semibold text-white mb-3 md:mb-4">💳 Método de Pago</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <button
@@ -469,7 +469,7 @@ const WaiterCheckout: React.FC = () => {
                   className={`py-3 px-4 rounded-lg font-bold transition-colors text-sm md:text-base ${paymentMethod === 'efectivo' 
                     ? 'bg-green-600 text-white shadow-md ring-2 ring-green-300' 
                     : isReadOnly 
-                    ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' 
+                    ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' 
                     : 'bg-transparent text-green-300 border border-green-700 hover:bg-green-700/20'}`}
                 >
                   💵 Efectivo
@@ -481,7 +481,7 @@ const WaiterCheckout: React.FC = () => {
                   className={`py-3 px-4 rounded-lg font-bold transition-colors text-sm md:text-base ${paymentMethod === 'tarjeta' 
                     ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' 
                     : isReadOnly 
-                    ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' 
+                    ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' 
                     : 'bg-transparent text-blue-300 border border-blue-700 hover:bg-blue-700/20'}`}
                 >
                   💳 Tarjeta
@@ -493,7 +493,7 @@ const WaiterCheckout: React.FC = () => {
                   className={`py-3 px-4 rounded-lg font-bold transition-colors text-sm md:text-base ${paymentMethod === 'transferencia' 
                     ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-300' 
                     : isReadOnly 
-                    ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' 
+                    ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' 
                     : 'bg-transparent text-purple-300 border border-purple-700 hover:bg-purple-700/20'}`}
                 >
                   📱 Transferencia
@@ -513,7 +513,7 @@ const WaiterCheckout: React.FC = () => {
                       value={cashReceived}
                       onChange={(e) => setCashReceived(e.target.value)}
                       placeholder="0.00"
-                      className="flex-1 bg-gray-900 border border-gray-700 text-right rounded-lg focus:ring-green-500 focus:border-green-500 py-3 px-3 text-white disabled:bg-gray-800"
+                      className="flex-1 bg-gray-900 border border-gray-800 text-right rounded-lg focus:ring-green-500 focus:border-green-500 py-3 px-3 text-white disabled:bg-gray-800"
                     />
                     <button
                       type="button"
@@ -597,7 +597,7 @@ const WaiterCheckout: React.FC = () => {
       </div>
 
       {/* Fixed Bottom Action Buttons - Mobile Optimized */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 shadow-lg z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-800 p-4 shadow-lg z-20">
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
             <button 

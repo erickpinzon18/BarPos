@@ -15,7 +15,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd }) => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <span className="font-semibold">{product.name}</span>
-          <span className="text-amber-400 font-medium">${product.price.toFixed(2)}</span>
+          <span className="text-red-500 font-medium">${product.price.toFixed(2)}</span>
         </div>
       </CardHeader>
       <CardContent>

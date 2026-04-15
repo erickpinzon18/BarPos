@@ -74,15 +74,15 @@ const Settings: React.FC = () => {
         <p className="text-gray-400">Administra los detalles de tu negocio, usuarios y permisos.</p>
       </header>
 
-      <div className="border-b border-gray-700 mb-8">
+      <div className="border-b border-gray-800 mb-8">
         <nav className="flex -mb-px">
-          <button onClick={() => setActiveTab('info')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'info' ? 'border-b-2 border-amber-400 text-amber-400' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
+          <button onClick={() => setActiveTab('info')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'info' ? 'border-b-2 border-red-500 text-red-500' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
             Información del Negocio
           </button>
-          <button onClick={() => setActiveTab('users')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'users' ? 'border-b-2 border-amber-400 text-amber-400' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
+          <button onClick={() => setActiveTab('users')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'users' ? 'border-b-2 border-red-500 text-red-500' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
             Gestión de Usuarios
           </button>
-          {/* <button onClick={() => setActiveTab('roles')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'roles' ? 'border-b-2 border-amber-400 text-amber-400' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
+          {/* <button onClick={() => setActiveTab('roles')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'roles' ? 'border-b-2 border-red-500 text-red-500' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
             Roles y Permisos
           </button> */}
         </nav>
@@ -90,7 +90,7 @@ const Settings: React.FC = () => {
 
       <div>
         {activeTab === 'info' && (
-          <div className="tab-content bg-gray-800 rounded-2xl border border-gray-700 p-8 max-w-4xl">
+          <div className="tab-content bg-gray-800 rounded-2xl border border-gray-800 p-8 max-w-4xl">
             <h2 className="text-2xl font-bold text-white mb-6">Detalles del Bar</h2>
             <form className="space-y-6" onSubmit={async (e) => {
               e.preventDefault();
@@ -107,31 +107,31 @@ const Settings: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-300">Nombre del Negocio</label>
-                  <input value={name} onChange={(e) => setName(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-amber-500 focus:border-amber-500" />
+                  <input value={name} onChange={(e) => setName(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-red-500 focus:border-red-600" />
                 </div>
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-300">Teléfono</label>
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-amber-500 focus:border-amber-500" />
+                  <input value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-red-500 focus:border-red-600" />
                 </div>
               </div>
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-300">Dirección</label>
-                <input value={address} onChange={(e) => setAddress(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-amber-500 focus:border-amber-500" />
+                <input value={address} onChange={(e) => setAddress(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-red-500 focus:border-red-600" />
               </div>
               <div>
                 <label className="block mb-2 text-sm font-medium text-gray-300">URL del Logo</label>
-                <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-amber-500 focus:border-amber-500" />
+                <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-red-500 focus:border-red-600" />
               </div>
               <div className="pt-4 flex justify-end">
-                <button type="submit" disabled={loading} className={`text-gray-900 bg-amber-500 hover:bg-amber-600 font-bold rounded-lg text-sm px-6 py-2.5 transition transform hover:-translate-y-px disabled:opacity-60`}>{loading ? 'Guardando...' : 'Guardar Cambios'}</button>
+                <button type="submit" disabled={loading} className={`text-gray-900 bg-red-600 hover:bg-red-700 font-bold rounded-lg text-sm px-6 py-2.5 transition transform hover:-translate-y-px disabled:opacity-60`}>{loading ? 'Guardando...' : 'Guardar Cambios'}</button>
               </div>
             </form>
           </div>
         )}
 
         {activeTab === 'users' && (
-          <div className="tab-content bg-gray-800 rounded-2xl border border-gray-700 p-6">
-            <div className="p-6 flex justify-between items-center border-b border-gray-700">
+          <div className="tab-content bg-gray-800 rounded-2xl border border-gray-800 p-6">
+            <div className="p-6 flex justify-between items-center border-b border-gray-800">
               <h2 className="text-2xl font-bold text-white">Usuarios del Sistema</h2>
               {/* <button onClick={() => setShowAddUserModal(true)} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition transform hover:-translate-y-px">Agregar Usuario</button> */}
             </div>
@@ -150,10 +150,10 @@ const Settings: React.FC = () => {
                     <tr><td colSpan={4} className="px-6 py-4">Cargando usuarios...</td></tr>
                   )}
                   {!usersLoading && users.length === 0 && (
-                    <tr className="border-b border-gray-700 hover:bg-gray-700/30"><td colSpan={4} className="px-6 py-4">No hay usuarios registrados.</td></tr>
+                    <tr className="border-b border-gray-800 hover:bg-gray-700/30"><td colSpan={4} className="px-6 py-4">No hay usuarios registrados.</td></tr>
                   )}
                   {!usersLoading && users.map((u) => (
-                    <tr key={u.id} className="border-b border-gray-700 hover:bg-gray-700/30">
+                    <tr key={u.id} className="border-b border-gray-800 hover:bg-gray-700/30">
                       <td className="px-6 py-4 font-medium text-white">{u.displayName || u.name || 'Sin nombre'} <p className="font-normal text-gray-400">{u.email}</p></td>
                       <td className="px-6 py-4">{u.role || '-'}</td>
                       <td className="px-6 py-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${u.active === false ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>{u.active === false ? 'Inactivo' : 'Activo'}</span></td>
@@ -194,7 +194,7 @@ const Settings: React.FC = () => {
         {/* Add User Modal (client-side only: creates Firestore profile, not Auth account) */}
         {showAddUserModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-            <div className="bg-gray-800 rounded-2xl border border-gray-700 p-6 w-full max-w-lg">
+            <div className="bg-gray-800 rounded-2xl border border-gray-800 p-6 w-full max-w-lg">
               <h3 className="text-lg font-bold text-white mb-4">Agregar Usuario</h3>
               <form onSubmit={async (e) => {
                 e.preventDefault();
@@ -234,7 +234,7 @@ const Settings: React.FC = () => {
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
                   <button type="button" onClick={() => setShowAddUserModal(false)} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600">Cancelar</button>
-                  <button type="submit" disabled={creatingUser} className="px-4 py-2 rounded bg-amber-500 hover:bg-amber-600 text-gray-900">{creatingUser ? 'Creando...' : 'Crear Usuario'}</button>
+                  <button type="submit" disabled={creatingUser} className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-gray-900">{creatingUser ? 'Creando...' : 'Crear Usuario'}</button>
                 </div>
               </form>
             </div>
@@ -242,19 +242,19 @@ const Settings: React.FC = () => {
         )}
 
         {activeTab === 'roles' && (
-          <div className="tab-content bg-gray-800 rounded-2xl border border-gray-700 p-8 max-w-4xl">
+          <div className="tab-content bg-gray-800 rounded-2xl border border-gray-800 p-8 max-w-4xl">
             <h2 className="text-2xl font-bold text-white mb-6">Roles y Permisos</h2>
             <div className="space-y-6">
               <div>
-                <h3 className="font-bold text-lg text-amber-400">Administrador</h3>
+                <h3 className="font-bold text-lg text-red-500">Administrador</h3>
                 <p className="text-sm text-gray-300 mt-2">Acceso completo al sistema: panel, configuración, gestión de usuarios y cierre de caja.</p>
               </div>
               <div>
-                <h3 className="font-bold text-lg text-amber-400">Mesero</h3>
+                <h3 className="font-bold text-lg text-red-500">Mesero</h3>
                 <p className="text-sm text-gray-300 mt-2">Puede agregar pedidos y cobrar (con PIN), pero no puede eliminar items ni acceder a la configuración.</p>
               </div>
               <div>
-                <h3 className="font-bold text-lg text-amber-400">Cocina</h3>
+                <h3 className="font-bold text-lg text-red-500">Cocina</h3>
                 <p className="text-sm text-gray-300 mt-2">Acceso al kanban de cocina para actualizar estados de preparación.</p>
               </div>
             </div>

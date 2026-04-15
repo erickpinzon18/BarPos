@@ -50,7 +50,7 @@ const AdminTickets: React.FC = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Buscar por ticket, id de pago, mesa, mesero, nombre de mesa, comentarios..."
-          className="w-full md:w-1/2 bg-gray-800 text-white rounded-lg p-3 border border-gray-700"
+          className="w-full md:w-1/2 bg-gray-800 text-white rounded-lg p-3 border border-gray-800"
         />
       </div>
 
@@ -115,10 +115,10 @@ const AdminTickets: React.FC = () => {
 
                 return (
                   <div key={dateKey}>
-                    <h2 className="text-xl font-bold text-amber-400 border-b-2 border-amber-400/30 pb-2 mb-4">{headerLabel}</h2>
+                    <h2 className="text-xl font-bold text-red-500 border-b-2 border-red-500/30 pb-2 mb-4">{headerLabel}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {groups[dateKey].map(order => (
-                        <div key={order.id} className="bg-gray-800 rounded-2xl border border-gray-700 p-5 flex flex-col justify-between">
+                        <div key={order.id} className="bg-gray-800 rounded-2xl border border-gray-800 p-5 flex flex-col justify-between">
                           <div>
                             <div className="flex justify-between items-center mb-2">
                               <h3 className="text-lg font-bold text-white">Ticket #{order.id?.slice(0, 6).toUpperCase()}</h3>
@@ -130,12 +130,12 @@ const AdminTickets: React.FC = () => {
                             </div>
                             <p className="text-sm text-gray-300"><span className="font-semibold">{order.tableNumber === 0 ? 'Barra:' : 'Mesa:'}</span> {order.tableNumber === 0 ? 'Principal' : (order.tableNumber ?? '-')}</p>
                             {order.tableName && (
-                              <p className="text-sm text-amber-300"><span className="font-semibold">🏷️</span> {order.tableName}</p>
+                              <p className="text-sm text-red-400"><span className="font-semibold">🏷️</span> {order.tableName}</p>
                             )}
                             <p className="text-sm text-gray-300"><span className="font-semibold">Mesero:</span> {order.waiterName ?? '-'}</p>
                           </div>
-                            <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
-                            <p className="text-xl font-bold text-amber-400">${(order.total ?? 0).toFixed(2)}</p>
+                            <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
+                            <p className="text-xl font-bold text-red-500">${(order.total ?? 0).toFixed(2)}</p>
                             <div className="flex gap-2">
                               <button onClick={() => openModal(order)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Ver / Reimprimir</button>
                             </div>
@@ -154,11 +154,11 @@ const AdminTickets: React.FC = () => {
       {/* Modal */}
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-md m-4 border border-gray-700 relative">
+          <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-md m-4 border border-gray-800 relative">
             <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-white text-3xl">&times;</button>
             <div className="p-8">
                 <div className="text-center mb-6 border-b border-gray-600 pb-6">
-                <h2 className="text-2xl font-bold text-amber-400 tracking-widest">PASE DE SALIDA</h2>
+                <h2 className="text-2xl font-bold text-red-500 tracking-widest">PASE DE SALIDA</h2>
                 <p className="text-lg font-semibold text-white mt-1">{config?.name ?? 'ChepeChupes'} — Ticket de salida</p>
                 <p className="text-sm text-gray-400">Fecha: {new Date(selected.createdAt || Date.now()).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date(selected.createdAt || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
                 <p className="text-xs text-gray-400 mt-1">ID ticket: {selected.id}</p>
@@ -193,8 +193,8 @@ const AdminTickets: React.FC = () => {
                   })()}</span>
                 </div>
                 <div className="flex justify-between items-center text-2xl mt-2">
-                  <span className="font-bold text-amber-400">TOTAL:</span>
-                  <span className="font-bold text-amber-400">${(selected.total ?? 0).toFixed(2)}</span>
+                  <span className="font-bold text-red-500">TOTAL:</span>
+                  <span className="font-bold text-red-500">${(selected.total ?? 0).toFixed(2)}</span>
                 </div>
               </div>
               <div className="text-center pt-6 border-t border-gray-600">

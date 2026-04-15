@@ -1,7 +1,7 @@
 // src/components/common/QuantityModal.tsx
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
-import type { Product } from '../../utils/types';
+import React, { useState, useEffect } from "react";
+import { X, Plus, Minus, ShoppingCart } from "lucide-react";
+import type { Product } from "../../utils/types";
 
 interface QuantityModalProps {
   isOpen: boolean;
@@ -18,10 +18,10 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
   onConfirm,
   product,
   loading = false,
-  title = "Agregar Producto"
+  title = "Agregar Producto",
 }) => {
   const [quantity, setQuantity] = useState(1);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleQuantityChange = (change: number) => {
     const newQuantity = Math.max(1, quantity + change);
@@ -30,39 +30,39 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
 
   const handleConfirm = async () => {
     if (quantity < 1) {
-      setError('La cantidad debe ser mayor a 0');
+      setError("La cantidad debe ser mayor a 0");
       return;
     }
 
     try {
-      setError('');
+      setError("");
       await onConfirm(quantity);
       handleClose();
     } catch (error: any) {
-      setError(error.message || 'Error al agregar el producto');
+      setError(error.message || "Error al agregar el producto");
     }
   };
 
   const handleClose = () => {
     setQuantity(1);
-    setError('');
+    setError("");
     onClose();
   };
 
   // Cerrar modal con tecla Escape
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isOpen && !loading) {
+      if (event.key === "Escape" && isOpen && !loading) {
         handleClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
+      document.addEventListener("keydown", handleEscapeKey);
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener("keydown", handleEscapeKey);
     };
   }, [isOpen, loading]);
 
@@ -70,7 +70,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setQuantity(1);
-      setError('');
+      setError("");
     }
   }, [isOpen]);
 
@@ -79,18 +79,18 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
   const totalPrice = product.price * quantity;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       onClick={handleClose}
     >
-      <div 
-        className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-700"
+      <div
+        className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <ShoppingCart className="w-6 h-6 text-amber-400 mr-2" />
+            <ShoppingCart className="w-6 h-6 text-red-500 mr-2" />
             <h2 className="text-xl font-bold text-white">{title}</h2>
           </div>
           <button
@@ -105,12 +105,18 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
         {/* Product Info */}
         <div className="mb-6">
           <div className="bg-gray-700 rounded-lg p-4 mb-4">
-            <h3 className="text-lg font-semibold text-white mb-1">{product.name}</h3>
+            <h3 className="text-lg font-semibold text-white mb-1">
+              {product.name}
+            </h3>
             {product.description && (
-              <p className="text-gray-400 text-sm mb-2">{product.description}</p>
+              <p className="text-gray-400 text-sm mb-2">
+                {product.description}
+              </p>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-amber-400 font-bold">${product.price.toFixed(2)}</span>
+              <span className="text-red-500 font-bold">
+                ${product.price.toFixed(2)}
+              </span>
               <span className="text-xs text-gray-500 bg-gray-600 px-2 py-1 rounded">
                 {product.category}
               </span>
@@ -131,12 +137,14 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
             >
               <Minus className="w-5 h-5" />
             </button>
-            
+
             <div className="text-center">
-              <div className="text-3xl font-bold text-white mb-1">{quantity}</div>
+              <div className="text-3xl font-bold text-white mb-1">
+                {quantity}
+              </div>
               <div className="text-xs text-gray-400">unidades</div>
             </div>
-            
+
             <button
               onClick={() => handleQuantityChange(1)}
               disabled={loading}
@@ -148,10 +156,10 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
         </div>
 
         {/* Total */}
-        <div className="mb-6 p-4 bg-amber-900/20 border border-amber-600 rounded-lg">
+        <div className="mb-6 p-4 bg-red-900/20 border border-red-700 rounded-lg">
           <div className="flex justify-between items-center">
-            <span className="text-amber-300 font-medium">Total:</span>
-            <span className="text-2xl font-bold text-amber-400">
+            <span className="text-red-400 font-medium">Total:</span>
+            <span className="text-2xl font-bold text-red-500">
               ${totalPrice.toFixed(2)} MXN
             </span>
           </div>
@@ -176,7 +184,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-gray-900 font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
+            className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-gray-100 font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
             disabled={loading}
           >
             {loading ? (

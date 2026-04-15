@@ -72,7 +72,7 @@ const KitchenLogin: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-950 text-gray-200 flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Logo y Título */}
                 <div className="text-center mb-10">
@@ -112,7 +112,7 @@ const KitchenLogin: React.FC = () => {
                 </div>
 
                 {/* Card de Login */}
-                <div className="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
+                <div className="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-800">
                     <div className="text-center mb-6">
                         <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                             <svg
@@ -228,7 +228,7 @@ const KitchenLogin: React.FC = () => {
                         </button>
                     </form>
 
-                    <div className="mt-6 pt-6 border-t border-gray-700">
+                    <div className="mt-6 pt-6 border-t border-gray-800">
                         <p className="text-xs text-gray-500 text-center">
                             💡 Serás redirigido a tu estación (cocina o barra) automáticamente
                         </p>

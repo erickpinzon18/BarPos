@@ -115,7 +115,7 @@ const KitchenHome: React.FC = () => {
         className={`bg-gray-800 p-6 rounded-2xl shadow-lg hover:scale-105 transition-transform duration-200 cursor-pointer min-h-[200px] ${
           isActive
             ? `border-2 ${isBar ? 'border-purple-500' : 'border-orange-500'}`
-            : `border border-gray-700 hover:border-${isBar ? 'purple' : 'orange'}-400 transition-colors duration-200`
+            : `border border-gray-800 hover:border-${isBar ? 'purple' : 'orange'}-400 transition-colors duration-200`
         }`}
       >
         {isActive ? (

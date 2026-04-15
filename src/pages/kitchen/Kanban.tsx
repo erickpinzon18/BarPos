@@ -156,7 +156,7 @@ const KitchenKanban: React.FC = () => {
     const timeLabel = dt ? dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
 
     return (
-      <div key={`${orderId}_${item.id}`} className="bg-gray-900 border border-gray-700 rounded-2xl p-4 mb-3 shadow-sm">
+      <div key={`${orderId}_${item.id}`} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-3 shadow-sm">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
@@ -165,7 +165,7 @@ const KitchenKanban: React.FC = () => {
                   {tableNumber === 0 ? '🍹 Barra' : `Mesa ${tableNumber ?? '?'}`}
                 </span>
                 {item.quantity > 1 && (
-                  <span className="bg-amber-500/20 text-amber-400 text-xs font-bold px-2 py-1 rounded-full">
+                  <span className="bg-red-500/20 text-red-500 text-xs font-bold px-2 py-1 rounded-full">
                     x{item.quantity}
                   </span>
                 )}
@@ -230,7 +230,7 @@ const KitchenKanban: React.FC = () => {
               <span className="text-sm font-medium">Sonido Activo</span>
             </div>
           )}
-          <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
+          <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg border border-gray-800">
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>

@@ -22,7 +22,7 @@ import toast from "react-hot-toast";
 const navLinkClassMobile = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 py-3 px-4 rounded-lg transition-colors text-sm font-medium ${
     isActive
-      ? "bg-amber-500/20 text-amber-400 border-l-4 border-amber-400"
+      ? "bg-red-500/20 text-red-500 border-l-4 border-red-500"
       : "text-gray-400 hover:bg-gray-700/50 hover:text-gray-200"
   }`;
 
@@ -47,7 +47,7 @@ const AdminLayout: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-900 text-gray-200 h-screen flex overflow-hidden">
+    <div className="bg-gray-950 text-gray-200 h-screen flex overflow-hidden">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <Outlet />
@@ -57,7 +57,7 @@ const AdminLayout: React.FC = () => {
       <div className="md:hidden fixed bottom-6 right-6 z-50">
         <button
           onClick={() => setShowMobileMenu(!showMobileMenu)}
-          className="bg-amber-500 hover:bg-amber-600 text-gray-900 rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-200"
+          className="bg-red-600 hover:bg-red-700 text-gray-900 rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-200"
           aria-label="Abrir menú"
         >
           {showMobileMenu ? <X size={24} /> : <Menu size={24} />}
@@ -74,11 +74,11 @@ const AdminLayout: React.FC = () => {
           />
 
           {/* Panel del menú */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t-2 border-amber-500 z-50 max-h-[80vh] overflow-y-auto rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom-full duration-300">
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t-2 border-red-600 z-50 max-h-[80vh] overflow-y-auto rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom-full duration-300">
             <div className="p-6">
               {/* Header del usuario */}
-              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-700">
-                <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-800">
+                <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
                   <span className="text-2xl">👤</span>
                 </div>
                 <div className="flex-1">

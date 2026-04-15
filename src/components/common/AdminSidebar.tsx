@@ -21,8 +21,8 @@ import {
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 py-2.5 px-4 rounded-lg transition-colors text-sm font-medium ${
     isActive
-      ? "bg-amber-500/10 text-amber-400"
-      : "text-gray-400 hover:bg-gray-700/50 hover:text-gray-200"
+      ? "bg-red-500/10 text-red-400 border-l-2 border-red-500"
+      : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200"
   }`;
 
 const logoutButtonClass = `flex w-full items-center gap-3 py-2.5 px-4 rounded-lg transition-colors text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300`;
@@ -64,7 +64,7 @@ export const AdminSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="bg-gray-800 text-gray-100 w-64 p-4 hidden md:flex flex-col h-screen overflow-y-auto">
+    <aside className="bg-gray-950 text-gray-100 w-64 p-4 hidden md:flex flex-col h-screen overflow-y-auto border-r border-gray-800">
       {/* Logo y Título */}
       <div className="flex items-center justify-center px-4 py-4 flex-shrink-0">
         {logoUrl ? (
@@ -75,7 +75,7 @@ export const AdminSidebar: React.FC = () => {
           />
         ) : (
           <svg
-            className="w-10 h-10 mr-2 text-amber-400"
+            className="w-10 h-10 mr-2 text-red-500"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -138,11 +138,11 @@ export const AdminSidebar: React.FC = () => {
             <span>Configuración</span>
           </NavLink>
 
-          <hr className="my-4 border-gray-700" />
+          <hr className="my-4 border-gray-800" />
 
           {/* Perfil de Usuario */}
           <div className="flex items-center gap-3 p-2 mb-2">
-            <UserCircle size={40} className="text-gray-500" />
+            <UserCircle size={40} className="text-gray-600" />
             <div>
               <p className="font-semibold text-white text-sm">
                 {currentUser?.displayName ?? "Usuario"}

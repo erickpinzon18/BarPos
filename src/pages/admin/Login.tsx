@@ -49,7 +49,7 @@ const AdminLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-950 text-gray-200 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo y Título */}
         <div className="text-center mb-10">
@@ -64,7 +64,7 @@ const AdminLogin: React.FC = () => {
             />
           ) : (
             <svg 
-              className="w-16 h-16 mx-auto mb-4 text-amber-400" 
+              className="w-16 h-16 mx-auto mb-4 text-red-500" 
               viewBox="0 0 24 24" 
               fill="none" 
               stroke="currentColor" 
@@ -80,16 +80,16 @@ const AdminLogin: React.FC = () => {
           <h1 className="text-4xl font-bold tracking-tighter text-white mb-2">
             {config?.name ?? 'Bar POS'}
           </h1>
-          <p className="text-lg text-amber-400 font-semibold">Administrador</p>
+          <p className="text-lg text-red-500 font-semibold">Administrador</p>
           <p className="text-sm text-gray-500 mt-2">Acceso al panel de control</p>
         </div>
 
         {/* Card de Login */}
-        <div className="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-700">
+        <div className="bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-800">
           <div className="text-center mb-6">
-            <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
-                className="w-10 h-10 text-amber-400"
+                className="w-10 h-10 text-red-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -119,7 +119,7 @@ const AdminLogin: React.FC = () => {
                 name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white text-sm rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 block w-full p-3.5 transition duration-200" 
+                className="bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white text-sm rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-600 block w-full p-3.5 transition duration-200" 
                 placeholder="correo@ejemplo.com" 
                 required
               />
@@ -136,7 +136,7 @@ const AdminLogin: React.FC = () => {
                 name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white text-sm rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 block w-full p-3.5 transition duration-200" 
+                className="bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white text-sm rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-600 block w-full p-3.5 transition duration-200" 
                 placeholder="••••••••" 
                 required
               />
@@ -153,7 +153,7 @@ const AdminLogin: React.FC = () => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               <div className="flex items-center justify-center gap-3">
                 {loading ? (
@@ -176,7 +176,7 @@ const AdminLogin: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-700">
+          <div className="mt-6 pt-6 border-t border-gray-800">
             <p className="text-xs text-gray-500 text-center">
               🔐 Panel exclusivo para administradores
             </p>
@@ -188,7 +188,7 @@ const AdminLogin: React.FC = () => {
           <div className="text-sm text-center">
             <a
               href="/waiter/login"
-              className="text-amber-400 hover:text-amber-500 transition-colors opacity-70 hover:opacity-100"
+              className="text-red-500 hover:text-red-400 transition-colors opacity-70 hover:opacity-100"
             >
               Iniciar sesión como Mesero
             </a>
@@ -197,7 +197,7 @@ const AdminLogin: React.FC = () => {
           <div className="text-sm text-center">
             <a
               href="/kitchen/login"
-              className="text-amber-400 hover:text-amber-500 transition-colors opacity-70 hover:opacity-100"
+              className="text-red-500 hover:text-red-400 transition-colors opacity-70 hover:opacity-100"
             >
               Iniciar sesión como Cocina / Barra
             </a>

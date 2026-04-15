@@ -283,7 +283,7 @@ const Analytics: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <BarChart3 className="text-amber-400" />
+          <BarChart3 className="text-red-500" />
           Analytics
         </h1>
         <p className="text-gray-400">
@@ -293,12 +293,12 @@ const Analytics: React.FC = () => {
       </div>
 
       {/* Filters Section */}
-      <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700">
+      <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-800">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Date Filter Type */}
           <div className="flex-1">
             <label className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-              <Calendar size={16} className="text-amber-400" />
+              <Calendar size={16} className="text-red-500" />
               Período
             </label>
             <div className="flex flex-wrap gap-2 mt-2">
@@ -313,7 +313,7 @@ const Analytics: React.FC = () => {
                   onClick={() => setDateFilterType(key as DateFilterType)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     dateFilterType === key
-                      ? "bg-amber-500 text-gray-900"
+                      ? "bg-red-600 text-gray-900"
                       : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                   }`}
                 >
@@ -338,7 +338,7 @@ const Analytics: React.FC = () => {
                   onChange={(e) =>
                     setSelectedDate(new Date(e.target.value + "-01"))
                   }
-                  className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-amber-400 focus:outline-none w-full"
+                  className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-red-500 focus:outline-none w-full"
                 />
               </div>
             )}
@@ -353,7 +353,7 @@ const Analytics: React.FC = () => {
                   onChange={(e) =>
                     setSelectedDate(new Date(e.target.value + "T12:00:00"))
                   }
-                  className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-amber-400 focus:outline-none w-full"
+                  className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-red-500 focus:outline-none w-full"
                 />
               </div>
             )}
@@ -369,7 +369,7 @@ const Analytics: React.FC = () => {
                     onChange={(e) =>
                       setStartDate(new Date(e.target.value + "T00:00:00"))
                     }
-                    className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-amber-400 focus:outline-none w-full"
+                    className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-red-500 focus:outline-none w-full"
                   />
                 </div>
                 <div className="flex-1">
@@ -382,7 +382,7 @@ const Analytics: React.FC = () => {
                     onChange={(e) =>
                       setEndDate(new Date(e.target.value + "T23:59:59"))
                     }
-                    className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-amber-400 focus:outline-none w-full"
+                    className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-red-500 focus:outline-none w-full"
                   />
                 </div>
               </div>
@@ -392,13 +392,13 @@ const Analytics: React.FC = () => {
           {/* Category Filter */}
           <div className="flex-1">
             <label className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-              <Filter size={16} className="text-amber-400" />
+              <Filter size={16} className="text-red-500" />
               Categoría
             </label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-amber-400 focus:outline-none w-full mt-2"
+              className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-red-500 focus:outline-none w-full mt-2"
             >
               <option value="Todos">Todas las categorías</option>
               {CATEGORIES.map((cat) => (
@@ -413,7 +413,7 @@ const Analytics: React.FC = () => {
 
       {loading ? (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-400"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
           <p className="mt-4 text-gray-400">Cargando analytics...</p>
         </div>
       ) : (
@@ -460,8 +460,8 @@ const Analytics: React.FC = () => {
                 onClick={() => setSelectedCategory(summary.category)}
                 className={`bg-gray-800 rounded-xl p-4 border cursor-pointer transition-all hover:scale-105 ${
                   selectedCategory === summary.category
-                    ? "border-amber-400 ring-2 ring-amber-400/20"
-                    : "border-gray-700 hover:border-gray-600"
+                    ? "border-red-500 ring-2 ring-red-500/20"
+                    : "border-gray-800 hover:border-gray-600"
                 }`}
               >
                 <div className="text-2xl mb-2">{summary.icon}</div>
@@ -471,7 +471,7 @@ const Analytics: React.FC = () => {
                 <p className="text-lg font-bold text-white">
                   {summary.quantity}
                 </p>
-                <p className="text-sm text-amber-400">
+                <p className="text-sm text-red-500">
                   {formatCurrency(summary.total)}
                 </p>
               </div>
@@ -479,10 +479,10 @@ const Analytics: React.FC = () => {
           </div>
 
           {/* Totals Row */}
-          <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+          <div className="bg-gradient-to-r from-red-500/10 to-red-600/10 border border-red-600/30 rounded-xl p-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
               <div>
-                <TrendingUp className="mx-auto text-amber-400 mb-1" size={20} />
+                <TrendingUp className="mx-auto text-red-500 mb-1" size={20} />
                 <p className="text-gray-400 text-xs">Total Ventas</p>
                 <p className="text-2xl font-bold text-white">
                   {formatCurrency(
@@ -538,10 +538,10 @@ const Analytics: React.FC = () => {
                   return (
                     <div
                       key={catGroup.category}
-                      className="bg-gray-800/80 rounded-xl p-4 border border-gray-700"
+                      className="bg-gray-900/80 rounded-xl p-4 border border-gray-800"
                     >
                       {/* Category Header */}
-                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-700">
+                      <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-800">
                         <div className="flex items-center gap-3">
                           <span className="text-3xl">
                             {catInfo?.icon || "📦"}
@@ -578,7 +578,7 @@ const Analytics: React.FC = () => {
                               >
                                 {product.name}
                               </p>
-                              <span className="bg-amber-500/20 text-amber-400 font-bold text-sm px-2 py-0.5 rounded-full whitespace-nowrap">
+                              <span className="bg-red-500/20 text-red-500 font-bold text-sm px-2 py-0.5 rounded-full whitespace-nowrap">
                                 ×{product.quantity}
                               </span>
                             </div>
@@ -596,10 +596,10 @@ const Analytics: React.FC = () => {
           )}
 
           {/* Sales Table */}
-          <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-            <div className="p-4 border-b border-gray-700">
+          <div className="bg-gray-800 rounded-xl border border-gray-800 overflow-hidden">
+            <div className="p-4 border-b border-gray-800">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Package size={20} className="text-amber-400" />
+                <Package size={20} className="text-red-500" />
                 Detalle de Ventas
                 <span className="text-sm font-normal text-gray-400">
                   ({filteredData.length} registros)
@@ -679,7 +679,7 @@ const Analytics: React.FC = () => {
                           <td className="px-4 py-3 text-right text-sm text-gray-300">
                             {formatCurrency(record.unitPrice)}
                           </td>
-                          <td className="px-4 py-3 text-right text-sm text-amber-400 font-semibold">
+                          <td className="px-4 py-3 text-right text-sm text-red-500 font-semibold">
                             {formatCurrency(record.total)}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-300">
@@ -692,10 +692,10 @@ const Analytics: React.FC = () => {
                 </tbody>
               </table>
               {filteredData.length > displayCount && (
-                <div className="p-4 text-center border-t border-gray-700">
+                <div className="p-4 text-center border-t border-gray-800">
                   <button
                     onClick={() => setDisplayCount((prev) => prev + 100)}
-                    className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-lg transition-colors"
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-black font-semibold rounded-lg transition-colors"
                   >
                     Cargar más ({filteredData.length - displayCount} restantes)
                   </button>

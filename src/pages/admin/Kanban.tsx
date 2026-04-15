@@ -151,12 +151,12 @@ const AdminKanban: React.FC = () => {
     const dt = parseDate(item.createdAt);
     const timeLabel = dt ? dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
     return (
-      <div key={`${orderId}_${item.id}`} className="bg-gray-900 border border-gray-700 rounded-2xl p-3 mb-3 shadow-sm">
+      <div key={`${orderId}_${item.id}`} className="bg-gray-900 border border-gray-800 rounded-2xl p-3 mb-3 shadow-sm">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-amber-300">{tableNumber === 0 ? '🍹 Barra' : `Mesa ${tableNumber ?? '-'}`}</span>
+                <span className="text-sm font-semibold text-red-400">{tableNumber === 0 ? '🍹 Barra' : `Mesa ${tableNumber ?? '-'}`}</span>
                 <span className="text-xs text-gray-400">{waiterName}</span>
               </div>
               <span className="ml-auto text-xs text-gray-400">{timeLabel}</span>
@@ -171,7 +171,7 @@ const AdminKanban: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className="inline-block bg-amber-400 text-black text-sm font-bold px-3 py-1 rounded-full">{item.quantity}x</span>
+                <span className="inline-block bg-red-500 text-black text-sm font-bold px-3 py-1 rounded-full">{item.quantity}x</span>
                 <span className="mt-2 text-xs uppercase bg-white/5 text-gray-200 px-2 py-0.5 rounded">{item.status}</span>
               </div>
             </div>
@@ -262,7 +262,7 @@ const AdminKanban: React.FC = () => {
                 <div key={cat.key} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
                   <span className={`w-3 h-3 rounded-full ${cat.color}`}></span>
                   <span>{cat.icon} {cat.label}</span>
-                  <span className="ml-2 font-semibold text-amber-300">{count}</span>
+                  <span className="ml-2 font-semibold text-red-400">{count}</span>
                 </div>
               );
             })}
@@ -283,7 +283,7 @@ const AdminKanban: React.FC = () => {
           {!soundEnabled && (
             <button
               onClick={enableSound}
-              className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg border border-amber-500 transition-colors"
+              className="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg border border-red-600 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
@@ -299,7 +299,7 @@ const AdminKanban: React.FC = () => {
               <span className="text-sm font-medium">Sonido Activo</span>
             </div>
           )}
-          <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg border border-gray-700">
+          <div className="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-lg border border-gray-800">
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>

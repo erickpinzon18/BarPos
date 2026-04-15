@@ -3,14 +3,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos base personalizados */
+/* Estilos base personalizados - Tema Negro con Rojo Neón */
 @layer base {
   html {
     font-family: 'Poppins', system-ui, sans-serif;
   }
   
   body {
-    @apply bg-gray-900 text-gray-200 min-h-screen;
+    @apply bg-gray-950 text-gray-200 min-h-screen;
+    background: linear-gradient(180deg, #0a0a0f 0%, #0d0d14 100%);
   }
 }
 
@@ -22,5 +23,14 @@
   
   .table-card:active {
     @apply scale-95;
+  }
+
+  /* Neon red glow effect for key interactive elements */
+  .neon-glow {
+    box-shadow: 0 0 15px rgba(255, 23, 68, 0.4), 0 0 30px rgba(255, 23, 68, 0.15);
+  }
+
+  .neon-glow-sm {
+    box-shadow: 0 0 8px rgba(255, 23, 68, 0.3), 0 0 16px rgba(255, 23, 68, 0.1);
   }
 }

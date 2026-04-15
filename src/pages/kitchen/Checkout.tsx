@@ -188,7 +188,7 @@ const KitchenCheckout: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
           <div className="ticket bg-gray-900 p-6 rounded-lg text-sm text-white">
             <div className="text-center mb-4">
               <h2 className="text-2xl font-extrabold text-orange-400">PASE DE SALIDA</h2>
@@ -226,7 +226,7 @@ const KitchenCheckout: React.FC = () => {
               <div className="flex justify-between"><span className="font-bold">Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="font-bold">Propina ({(tipPercent * 100).toFixed(0)}%):</span><span>${tipAmount.toFixed(2)}</span></div>
               <div className="flex justify-between text-xl mt-2 text-orange-400"><span className="font-bold">TOTAL:</span><span>${total.toFixed(2)}</span></div>
-              <div className="flex justify-between mt-2 items-center border-t border-gray-700 pt-2">
+              <div className="flex justify-between mt-2 items-center border-t border-gray-800 pt-2">
                 <span className="text-sm text-gray-300">Total por persona ({order.peopleCount ?? 1})</span>
                 <span className="text-sm font-semibold text-white">${(total / Math.max(1, order.peopleCount ?? 1)).toFixed(2)}</span>
               </div>
@@ -244,29 +244,29 @@ const KitchenCheckout: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Propina</h3>
             <div className="flex space-x-2 items-center">
               <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.10)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.10 ? 'bg-orange-500 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>10%</button>
               <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.15)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.15 ? 'bg-orange-500 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>15%</button>
               <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.20)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.20 ? 'bg-orange-500 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>20%</button>
-              <input disabled={isReadOnly} type="number" value={customTipPercent} onChange={e => handleCustomTipChange(e.target.value)} placeholder="Otro %" className="w-24 bg-gray-900 border border-gray-700 text-center rounded-lg focus:ring-orange-500 focus:border-orange-500 py-3" />
+              <input disabled={isReadOnly} type="number" value={customTipPercent} onChange={e => handleCustomTipChange(e.target.value)} placeholder="Otro %" className="w-24 bg-gray-900 border border-gray-800 text-center rounded-lg focus:ring-orange-500 focus:border-orange-500 py-3" />
             </div>
             <div className="mt-2 text-sm text-gray-400">Seleccionado: {(tipPercent * 100).toFixed(0)}%</div>
           </div>
 
-          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Método de Pago</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <button disabled={isReadOnly} onClick={() => setPaymentMethod('efectivo')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'efectivo' ? 'bg-green-600 text-white shadow-md ring-2 ring-green-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-transparent text-green-300 border border-green-700 hover:bg-green-700/20'}`}>Efectivo</button>
-              <button disabled={isReadOnly} onClick={() => setPaymentMethod('tarjeta')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'tarjeta' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-transparent text-blue-300 border border-blue-700 hover:bg-blue-700/20'}`}>Tarjeta</button>
-              <button disabled={isReadOnly} onClick={() => setPaymentMethod('transferencia')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'transferencia' ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-transparent text-purple-300 border border-purple-700 hover:bg-purple-700/20'}`}>Transferencia</button>
+              <button disabled={isReadOnly} onClick={() => setPaymentMethod('efectivo')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'efectivo' ? 'bg-green-600 text-white shadow-md ring-2 ring-green-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-green-300 border border-green-700 hover:bg-green-700/20'}`}>Efectivo</button>
+              <button disabled={isReadOnly} onClick={() => setPaymentMethod('tarjeta')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'tarjeta' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-blue-300 border border-blue-700 hover:bg-blue-700/20'}`}>Tarjeta</button>
+              <button disabled={isReadOnly} onClick={() => setPaymentMethod('transferencia')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'transferencia' ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-purple-300 border border-purple-700 hover:bg-purple-700/20'}`}>Transferencia</button>
             </div>
             {paymentMethod === 'efectivo' && (
               <div className="mt-4">
                 <label className="text-sm text-gray-400 block mb-2">Monto recibido</label>
                 <div className="flex items-center space-x-2">
-                  <input disabled={isReadOnly} type="number" min="0" step="0.01" value={cashReceived} onChange={e => setCashReceived(e.target.value)} placeholder="0.00" className="w-full bg-gray-900 border border-gray-700 text-right rounded-lg focus:ring-orange-500 focus:border-orange-500 py-3 px-3 text-white" />
+                  <input disabled={isReadOnly} type="number" min="0" step="0.01" value={cashReceived} onChange={e => setCashReceived(e.target.value)} placeholder="0.00" className="w-full bg-gray-900 border border-gray-800 text-right rounded-lg focus:ring-orange-500 focus:border-orange-500 py-3 px-3 text-white" />
                   <button type="button" disabled={isReadOnly} onClick={() => setCashReceived(total.toFixed(2))} className="ml-2 bg-orange-500 text-gray-900 font-bold py-2 px-3 rounded-lg">Exacto</button>
                 </div>
                 <div className="mt-2 text-sm text-gray-300">

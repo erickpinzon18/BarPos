@@ -46,8 +46,8 @@ const KitchenLayout: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-900 text-gray-200 min-h-screen flex flex-col">
-      <header className="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-10 border-b border-gray-700">
+    <div className="bg-gray-950 text-gray-200 min-h-screen flex flex-col">
+      <header className="bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10 border-b border-gray-800">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -61,7 +61,7 @@ const KitchenLayout: React.FC = () => {
                   }}
                 />
               ) : (
-                <svg className="w-8 h-8 mr-2 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-8 h-8 mr-2 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 22h8"/>
                   <path d="M12 12v10"/>
                   <path d="m19 2-7 10-7-10"/>
@@ -79,8 +79,8 @@ const KitchenLayout: React.FC = () => {
                 onClick={() => navigate('/kitchen/mesas')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${
                   isInMesas
-                    ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/50'
-                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-amber-400'
+                    ? 'bg-red-700 text-white shadow-lg shadow-red-500/50'
+                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-red-500'
                 }`}
               >
                 <LayoutDashboard size={20} />
@@ -124,8 +124,8 @@ const KitchenLayout: React.FC = () => {
       <div className="fixed bottom-6 left-6 z-50">
         {/* User Menu (shown when clicked) */}
         {showUserMenu && (
-          <div className="absolute bottom-full mb-2 left-0 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden w-64 animate-in slide-in-from-bottom-2">
-            <div className="p-4 border-b border-gray-700 bg-gray-750">
+          <div className="absolute bottom-full mb-2 left-0 bg-gray-800 border border-gray-800 rounded-lg shadow-xl overflow-hidden w-64 animate-in slide-in-from-bottom-2">
+            <div className="p-4 border-b border-gray-800 bg-gray-750">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
                   <User className="w-6 h-6 text-orange-400" />

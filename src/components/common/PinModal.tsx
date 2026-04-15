@@ -139,13 +139,13 @@ const PinModal: React.FC<PinModalProps> = ({
       onClick={handleClose}
     >
       <div 
-        className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-700"
+        className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <Lock className="w-6 h-6 text-amber-400 mr-2" />
+            <Lock className="w-6 h-6 text-red-500 mr-2" />
             <h2 className="text-xl font-bold text-white">{title}</h2>
           </div>
           <button
@@ -188,7 +188,7 @@ const PinModal: React.FC<PinModalProps> = ({
                     key={index}
                     className={`w-12 h-12 rounded-lg flex items-center justify-center text-3xl font-bold transition-all ${
                       pin.length > index
-                        ? 'bg-amber-500 text-gray-900 scale-110'
+                        ? 'bg-red-600 text-gray-900 scale-110'
                         : 'bg-gray-700 text-gray-500'
                     }`}
                   >
@@ -254,7 +254,7 @@ const PinModal: React.FC<PinModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-3 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading || !pin.trim() || pin.length < 4}
             >
               {loading ? 'Verificando...' : 'Confirmar'}

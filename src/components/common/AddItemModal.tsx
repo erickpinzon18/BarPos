@@ -107,11 +107,11 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
       onClick={handleClose}
     >
       <div 
-        className="bg-gray-800 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-700"
+        className="bg-gray-800 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-700">
+        <div className="flex justify-between items-center p-6 border-b border-gray-800">
           <h2 className="text-2xl font-bold text-white">Agregar Producto</h2>
           <button
             onClick={handleClose}
@@ -133,7 +133,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
                 placeholder="Buscar producto..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 placeholder-gray-500 text-white text-sm rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-gray-900 border border-gray-800 placeholder-gray-500 text-white text-sm rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             
@@ -176,7 +176,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
                   </p>
                 )}
                 
-                <p className="text-amber-400 font-bold text-sm mb-3">
+                <p className="text-red-500 font-bold text-sm mb-3">
                   ${product.price.toFixed(2)}
                 </p>
                 

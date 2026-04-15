@@ -17,10 +17,10 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, fo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className={cn("relative z-10 w-full max-w-lg mx-4 rounded-xl bg-gray-800 border border-gray-700 shadow-xl", className)}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className={cn("relative z-10 w-full max-w-lg mx-4 rounded-xl bg-gray-900 border border-gray-800 shadow-xl", className)}>
         {title && (
-          <div className="px-6 py-4 border-b border-gray-700">
+          <div className="px-6 py-4 border-b border-gray-800">
             <h3 className="text-lg font-semibold text-white">{title}</h3>
           </div>
         )}
@@ -28,7 +28,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, fo
           {children}
         </div>
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-700 bg-gray-850 rounded-b-xl">
+          <div className="px-6 py-4 border-t border-gray-800 bg-gray-950 rounded-b-xl">
             {footer}
           </div>
         )}

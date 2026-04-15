@@ -236,17 +236,17 @@ const DailySummary: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <TrendingUp className="text-amber-400" />
+          <TrendingUp className="text-red-500" />
           Cierre de Caja
         </h1>
         <p className="text-gray-400">Resumen de ventas del turno</p>
       </div>
 
       {/* Selector de Fecha */}
-      <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700">
+      <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-800">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex items-center gap-2">
-            <Calendar className="text-amber-400" size={20} />
+            <Calendar className="text-red-500" size={20} />
             <label className="text-sm font-semibold text-white">
               Seleccionar turno:
             </label>
@@ -257,7 +257,7 @@ const DailySummary: React.FC = () => {
             onChange={(e) =>
               setSelectedDate(new Date(e.target.value + "T12:00:00"))
             }
-            className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-amber-400 focus:outline-none"
+            className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:border-red-500 focus:outline-none"
           />
           <div className="flex items-center gap-2 text-sm text-gray-300">
             <Clock size={16} />
@@ -280,7 +280,7 @@ const DailySummary: React.FC = () => {
 
       {loading ? (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-400"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
           <p className="mt-4 text-gray-400">Cargando resumen...</p>
         </div>
       ) : summary ? (
@@ -330,10 +330,10 @@ const DailySummary: React.FC = () => {
             </div>
 
             {/* Total de Propinas */}
-            <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/30 rounded-xl p-5">
+            <div className="bg-gradient-to-br from-red-500/10 to-red-700/5 border border-red-600/30 rounded-xl p-5">
               <div className="flex items-center justify-between mb-2">
-                <TrendingUp className="text-amber-400" size={24} />
-                <span className="text-xs font-semibold text-amber-400 bg-amber-500/20 px-2 py-1 rounded">
+                <TrendingUp className="text-red-500" size={24} />
+                <span className="text-xs font-semibold text-red-500 bg-red-500/20 px-2 py-1 rounded">
                   PROPINAS
                 </span>
               </div>
@@ -347,9 +347,9 @@ const DailySummary: React.FC = () => {
           {/* Desglose Detallado */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Métodos de Pago */}
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-800">
               <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-                <DollarSign className="text-amber-400" size={20} />
+                <DollarSign className="text-red-500" size={20} />
                 Métodos de Pago
               </h3>
               <div className="space-y-4">
@@ -377,9 +377,9 @@ const DailySummary: React.FC = () => {
             </div>
 
             {/* Estadísticas Adicionales */}
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-800">
               <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-                <TrendingUp className="text-amber-400" size={20} />
+                <TrendingUp className="text-red-500" size={20} />
                 Estadísticas
               </h3>
               <div className="space-y-4">
@@ -413,9 +413,9 @@ const DailySummary: React.FC = () => {
 
           {/* Corte de Propinas por Mesero */}
           {summary.waiterStats && summary.waiterStats.length > 0 && (
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-800 mb-6">
               <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-                <Users className="text-amber-400" size={20} />
+                <Users className="text-red-500" size={20} />
                 Corte de Propinas por Mesero
               </h3>
               <div className="space-y-3">
@@ -480,7 +480,7 @@ const DailySummary: React.FC = () => {
               </div>
 
               {/* Resumen de distribución */}
-              <div className="mt-4 pt-4 border-t border-gray-700">
+              <div className="mt-4 pt-4 border-t border-gray-800">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Totales de Meseros */}
                   <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
@@ -563,8 +563,8 @@ const DailySummary: React.FC = () => {
           )}
 
           {/* Resumen Final */}
-          <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-500/30 rounded-xl p-6">
-            <h3 className="text-2xl font-bold mb-4 text-amber-400 text-center">
+          <div className="bg-gradient-to-r from-red-500/10 to-red-600/10 border-2 border-red-600/30 rounded-xl p-6">
+            <h3 className="text-2xl font-bold mb-4 text-red-500 text-center">
               💰 Resumen del Turno
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
@@ -576,7 +576,7 @@ const DailySummary: React.FC = () => {
               </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Propinas Totales</p>
-                <p className="text-3xl font-bold text-amber-400">
+                <p className="text-3xl font-bold text-red-500">
                   {formatCurrency(summary.totalTips)}
                 </p>
               </div>
@@ -591,7 +591,7 @@ const DailySummary: React.FC = () => {
 
           {/* Mensaje si no hay datos */}
           {summary.totalOrders === 0 && (
-            <div className="text-center py-8 mt-6 bg-gray-800/50 rounded-xl border border-gray-700">
+            <div className="text-center py-8 mt-6 bg-gray-800/50 rounded-xl border border-gray-800">
               <Package className="mx-auto text-gray-600 mb-3" size={48} />
               <p className="text-gray-400 text-lg">
                 No hay ventas registradas en este turno

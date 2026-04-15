@@ -149,7 +149,7 @@ const WaiterHome: React.FC = () => {
             ? `border-2 ${isBar ? 'border-purple-500' : 'border-green-500'} cursor-pointer hover:scale-105` 
             : isFreeTable
             ? `border-2 ${isBar ? 'border-purple-600' : 'border-green-600'} cursor-pointer hover:scale-105 ${isBar ? 'hover:border-purple-400' : 'hover:border-green-400'}`
-            : 'border border-gray-700 opacity-40 cursor-not-allowed'
+            : 'border border-gray-800 opacity-40 cursor-not-allowed'
         }`}
       >
         {isMyTable && isActive ? (
@@ -244,7 +244,7 @@ const WaiterHome: React.FC = () => {
               <span className="text-xl font-bold text-white">
                 {isBar ? '🍹 Barra' : `Mesa ${table.number}`}
               </span>
-              <span className="bg-amber-500 text-amber-100 text-sm font-bold px-3 py-1 rounded-full">
+              <span className="bg-red-600 text-red-100 text-sm font-bold px-3 py-1 rounded-full">
                 Ocupada
               </span>
             </div>
@@ -301,8 +301,8 @@ const WaiterHome: React.FC = () => {
       <div className="fixed bottom-6 left-6 z-50">
         {/* User Menu (shown when clicked) */}
         {showUserMenu && (
-          <div className="absolute bottom-full mb-2 left-0 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden w-64 animate-in slide-in-from-bottom-2">
-            <div className="p-4 border-b border-gray-700">
+          <div className="absolute bottom-full mb-2 left-0 bg-gray-800 border border-gray-800 rounded-lg shadow-xl overflow-hidden w-64 animate-in slide-in-from-bottom-2">
+            <div className="p-4 border-b border-gray-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold">
                   <User className="w-5 h-5" />

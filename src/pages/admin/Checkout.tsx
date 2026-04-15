@@ -166,7 +166,7 @@ const AdminCheckout: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
           <p className="text-gray-400">Cargando detalles de la orden...</p>
         </div>
       </div>
@@ -179,7 +179,7 @@ const AdminCheckout: React.FC = () => {
         <p className="text-red-400">{error}</p>
         <button
           onClick={() => navigate('/admin/home')}
-          className="mt-4 bg-amber-500 hover:bg-amber-600 text-gray-900 px-4 py-2 rounded-lg"
+          className="mt-4 bg-red-600 hover:bg-red-700 text-gray-900 px-4 py-2 rounded-lg"
         >
           Volver al Panel
         </button>
@@ -194,7 +194,7 @@ const AdminCheckout: React.FC = () => {
         <p className="text-gray-400 mb-4">No se encontró una orden activa para esta mesa.</p>
         <button
           onClick={() => navigate('/admin/home')}
-          className="bg-amber-500 hover:bg-amber-600 text-gray-900 px-4 py-2 rounded-lg"
+          className="bg-red-600 hover:bg-red-700 text-gray-900 px-4 py-2 rounded-lg"
         >
           Volver al Panel
         </button>
@@ -223,10 +223,10 @@ const AdminCheckout: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+        <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
           <div className="ticket bg-gray-900 p-6 rounded-lg text-sm text-white">
             <div className="text-center mb-4">
-              <h2 className="text-2xl font-extrabold text-amber-400">PASE DE SALIDA</h2>
+              <h2 className="text-2xl font-extrabold text-red-500">PASE DE SALIDA</h2>
               <p className="text-sm text-gray-400">{config?.name ?? 'ChepeChupes'} — Ticket de salida</p>
               <p className="text-xs text-gray-500 mt-2">Fecha: {new Date().toLocaleString()}</p>
               <p className="text-xs text-gray-500 mt-1">Id: {order.id}</p>
@@ -245,7 +245,7 @@ const AdminCheckout: React.FC = () => {
 
               <div className="text-right">
                 <p className="text-sm text-gray-400">Personas</p>
-                <p className="text-xl font-extrabold text-amber-400">{order.peopleCount ?? 1}</p>
+                <p className="text-xl font-extrabold text-red-500">{order.peopleCount ?? 1}</p>
               </div>
             </div>
 
@@ -263,10 +263,10 @@ const AdminCheckout: React.FC = () => {
                             <div className="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
               {/* <div className="flex justify-between"><span>Propina ({(tipPercent * 100).toFixed(0)}%):</span><span>${tipAmount.toFixed(2)}</span></div> */}
               <div className="flex justify-between"><span className="font-bold">Propina ({(tipPercent * 100).toFixed(0)}%):</span><span id="tip-amount">${tipAmount.toFixed(2)}</span></div>
-              <div className="flex justify-between text-xl mt-2 text-amber-400"><span className="font-bold">TOTAL:</span><span id="total-amount">${total.toFixed(2)}</span></div>
+              <div className="flex justify-between text-xl mt-2 text-red-500"><span className="font-bold">TOTAL:</span><span id="total-amount">${total.toFixed(2)}</span></div>
 
               {/* Per-person total */}
-              <div className="flex justify-between mt-2 items-center border-t border-gray-700 pt-2">
+              <div className="flex justify-between mt-2 items-center border-t border-gray-800 pt-2">
                 <span className="text-sm text-gray-300">Total por persona ({order.peopleCount ?? 1})</span>
                 <span className="text-sm font-semibold text-white">
                   ${((total) / Math.max(1, (order.peopleCount ?? 1))).toFixed(2)}
@@ -287,25 +287,25 @@ const AdminCheckout: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Propina</h3>
             <div className="flex space-x-2 items-center">
-              <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.10)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.10 ? 'bg-amber-500 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>10%</button>
-              <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.15)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.15 ? 'bg-amber-500 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>15%</button>
-              <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.20)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.20 ? 'bg-amber-500 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>20%</button>
-              <input disabled={isReadOnly} type="number" value={customTipPercent} onChange={(e) => handleCustomTipChange(e.target.value)} placeholder="Otro %" className="w-24 bg-gray-900 border border-gray-700 text-center rounded-lg focus:ring-amber-500 focus:border-amber-500 py-3" />
+              <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.10)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.10 ? 'bg-red-600 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>10%</button>
+              <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.15)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.15 ? 'bg-red-600 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>15%</button>
+              <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.20)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.20 ? 'bg-red-600 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>20%</button>
+              <input disabled={isReadOnly} type="number" value={customTipPercent} onChange={(e) => handleCustomTipChange(e.target.value)} placeholder="Otro %" className="w-24 bg-gray-900 border border-gray-800 text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3" />
             </div>
 
             <div className="mt-2 text-sm text-gray-400">Seleccionado: {(tipPercent * 100).toFixed(0)}%</div>
           </div>
 
-          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700">
+          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Método de Pago</h3>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                  <button
                    disabled={isReadOnly}
                    onClick={() => setPaymentMethod('efectivo')}
-                   className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'efectivo' ? 'bg-green-600 text-white shadow-md ring-2 ring-green-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-transparent text-green-300 border border-green-700 hover:bg-green-700/20'}`}
+                   className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'efectivo' ? 'bg-green-600 text-white shadow-md ring-2 ring-green-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-green-300 border border-green-700 hover:bg-green-700/20'}`}
                  >
                    Efectivo
                  </button>
@@ -313,7 +313,7 @@ const AdminCheckout: React.FC = () => {
                  <button
                    disabled={isReadOnly}
                    onClick={() => setPaymentMethod('tarjeta')}
-                   className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'tarjeta' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-transparent text-blue-300 border border-blue-700 hover:bg-blue-700/20'}`}
+                   className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'tarjeta' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-blue-300 border border-blue-700 hover:bg-blue-700/20'}`}
                  >
                    Tarjeta
                  </button>
@@ -321,7 +321,7 @@ const AdminCheckout: React.FC = () => {
                  <button
                    disabled={isReadOnly}
                    onClick={() => setPaymentMethod('transferencia')}
-                   className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'transferencia' ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-700 cursor-not-allowed' : 'bg-transparent text-purple-300 border border-purple-700 hover:bg-purple-700/20'}`}
+                   className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'transferencia' ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-purple-300 border border-purple-700 hover:bg-purple-700/20'}`}
                  >
                    Transferencia
                  </button>
@@ -339,13 +339,13 @@ const AdminCheckout: React.FC = () => {
                     value={cashReceived}
                     onChange={(e) => setCashReceived(e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-gray-900 border border-gray-700 text-right rounded-lg focus:ring-amber-500 focus:border-amber-500 py-3 px-3 text-white"
+                    className="w-full bg-gray-900 border border-gray-800 text-right rounded-lg focus:ring-red-500 focus:border-red-600 py-3 px-3 text-white"
                   />
                   <button
                     type="button"
                     disabled={isReadOnly}
                     onClick={() => setCashReceived(total.toFixed(2))}
-                    className="ml-2 bg-amber-500 text-gray-900 font-bold py-2 px-3 rounded-lg"
+                    className="ml-2 bg-red-600 text-gray-900 font-bold py-2 px-3 rounded-lg"
                   >
                     Exacto
                   </button>
@@ -415,7 +415,7 @@ const AdminCheckout: React.FC = () => {
           <div className="flex flex-col space-y-3">
             {/* Imprimir debe permanecer disponible incluso en modo solo-lectura; solo deshabilitamos mientras cerramos */}
             <button disabled={closing} onClick={handlePrint} className={`w-full ${closing ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-600 text-white hover:bg-gray-700'} font-bold py-3 px-4 rounded-lg transition`}>Imprimir Pase de Salida</button>
-            <button disabled={closing || isReadOnly} onClick={handleFinalize} className={`w-full ${isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-amber-500 text-gray-900 hover:bg-amber-600'} font-bold py-3 px-4 rounded-lg transition`}>{closing ? 'Cerrando...' : 'Finalizar y Cerrar Mesa'}</button>
+            <button disabled={closing || isReadOnly} onClick={handleFinalize} className={`w-full ${isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-red-600 text-gray-900 hover:bg-red-700'} font-bold py-3 px-4 rounded-lg transition`}>{closing ? 'Cerrando...' : 'Finalizar y Cerrar Mesa'}</button>
           </div>
         </div>
       </div>

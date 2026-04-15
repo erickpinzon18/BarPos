@@ -36,7 +36,7 @@ export const CATEGORIES: Category[] = [
     key: 'Shot',
     label: 'Shot',
     icon: '🥃',
-    color: 'bg-amber-500',
+    color: 'bg-red-500',
     workstation: 'barra'
   },
   {

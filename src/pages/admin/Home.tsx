@@ -48,7 +48,7 @@ const AdminHome: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
           <p className="text-gray-400">Cargando datos...</p>
         </div>
       </div>
@@ -187,8 +187,8 @@ const AdminHome: React.FC = () => {
         onClick={() => handleTableClick(table)}
         className={`bg-gray-800 p-6 rounded-2xl shadow-lg hover:scale-105 transition-transform duration-200 cursor-pointer min-h-[200px] ${
           isActive 
-            ? `border-2 ${isBar ? 'border-purple-500' : 'border-amber-500'}` 
-            : `border border-gray-700 hover:border-${isBar ? 'purple' : 'amber'}-400 transition-colors duration-200`
+            ? `border-2 ${isBar ? 'border-purple-500' : 'border-red-600'}` 
+            : `border border-gray-800 hover:border-${isBar ? 'purple' : 'red'}-400 transition-colors duration-200`
         }`}
       >
         {isActive ? (
@@ -198,13 +198,13 @@ const AdminHome: React.FC = () => {
               <span className="text-xl font-bold text-white">
                 {isBar ? '🍹 Barra' : `Mesa ${table.number}`}
               </span>
-              <span className={`${isBar ? 'bg-purple-500 text-purple-100' : 'bg-amber-500 text-amber-100'} text-sm font-bold px-3 py-1 rounded-full`}>
+              <span className={`${isBar ? 'bg-purple-500 text-purple-100' : 'bg-red-600 text-red-100'} text-sm font-bold px-3 py-1 rounded-full`}>
                 Activa
               </span>
             </div>
             {currentOrder?.tableName && (
               <div className="mb-3 px-3 py-2 bg-gray-700/50 rounded-lg border border-gray-600">
-                <p className="text-sm font-medium text-amber-300 truncate">🏷️ {currentOrder.tableName}</p>
+                <p className="text-sm font-medium text-red-400 truncate">🏷️ {currentOrder.tableName}</p>
               </div>
             )}
             <div className="space-y-2 mb-4">
@@ -229,7 +229,7 @@ const AdminHome: React.FC = () => {
                 <div className="space-y-3 mb-4">
                   <button 
                     onClick={handleViewOrder}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-medium py-3 px-4 rounded-lg text-base transition-colors"
+                    className="w-full bg-red-600 hover:bg-red-700 text-gray-900 font-medium py-3 px-4 rounded-lg text-base transition-colors"
                   >
                     Ver Pedido
                   </button>
@@ -254,7 +254,7 @@ const AdminHome: React.FC = () => {
                     })()
                   )}
                 </div>
-                <p className={`text-3xl font-bold ${isBar ? 'text-purple-400' : 'text-amber-400'} text-center`}>
+                <p className={`text-3xl font-bold ${isBar ? 'text-purple-400' : 'text-red-500'} text-center`}>
                   ${totalAmount} MXN
                 </p>
               </>

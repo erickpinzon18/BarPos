@@ -260,9 +260,9 @@ export const generateTicketContent = (opts: PrintOptions): string => {
  */
 const sendToPrinter = (ticketContent: string, paperSize: PaperSize = '80mm', title = 'Pase de Salida'): void => {
   const sizeMm = paperSize === '58mm' ? '58mm' : '80mm';
-  const fontSize = paperSize === '58mm' ? '10px' : '12px';
-  const lineHeight = paperSize === '58mm' ? '1.2' : '1.3';
-  const padding = paperSize === '58mm' ? '1.5mm' : '3mm';
+  const fontSize = paperSize === '58mm' ? '14px' : '16px';
+  const lineHeight = paperSize === '58mm' ? '1.4' : '1.4';
+  const padding = paperSize === '58mm' ? '2mm' : '3mm';
 
   const html = `<!DOCTYPE html>
 <html>
@@ -279,12 +279,14 @@ const sendToPrinter = (ticketContent: string, paperSize: PaperSize = '80mm', tit
         box-sizing: border-box;
         font-family: 'Courier New', 'Courier', monospace;
         font-size: ${fontSize};
+        font-weight: bold;
         line-height: ${lineHeight};
         margin: 0;
         padding: ${padding};
         white-space: pre-wrap;
         word-wrap: break-word;
         color: #000;
+        -webkit-print-color-adjust: exact;
       }
       @media print {
         body {

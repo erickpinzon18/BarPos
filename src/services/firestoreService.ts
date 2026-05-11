@@ -47,6 +47,8 @@ const convertTimestamps = (data: any) => {
       const newItem = { ...it };
       if (newItem.createdAt?.toDate) newItem.createdAt = newItem.createdAt.toDate();
       if (newItem.updatedAt?.toDate) newItem.updatedAt = newItem.updatedAt.toDate();
+      if (newItem.printedAt?.toDate) newItem.printedAt = newItem.printedAt.toDate();
+      if (newItem.deletedAt?.toDate) newItem.deletedAt = newItem.deletedAt.toDate();
       return newItem;
     });
   }
@@ -557,6 +559,28 @@ export const getKitchenOrdersRealtime = (callback: (orders: Order[]) => void) =>
   }, (error) => {
     console.error('Error in kitchen orders realtime listener:', error);
   });
+};
+
+export const markItemsAsPrinted = async (orderId: string, itemIds: string[]): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    if (!orderDoc.exists()) return { success: false, error: 'Pedido no encontrado' };
+
+    const orderData = orderDoc.data() as Order;
+    const now = Timestamp.now();
+    const updatedItems = orderData.items.map(item =>
+      itemIds.includes(item.id) && !item.printedAt
+        ? { ...item, printedAt: now }
+        : item
+    );
+
+    await updateDoc(orderRef, { items: updatedItems });
+    return { success: true };
+  } catch (error) {
+    console.error('Error marking items as printed:', error);
+    return { success: false, error: 'Error al marcar items como impresos' };
+  }
 };
 
 export const updateOrderStatusInKanban = async (orderId: string, itemId: string, newStatus: OrderItem['status']): Promise<FirestoreResponse<void>> => {

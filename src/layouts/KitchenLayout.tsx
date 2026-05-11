@@ -1,16 +1,26 @@
 // src/layouts/KitchenLayout.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { getConfig } from '../services/firestoreService';
-import { User, LogOut, LayoutDashboard } from 'lucide-react';
+import { User, LogOut, LayoutDashboard, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
+import { useAutoPrintTickets } from '../hooks/useAutoPrintTickets';
+import { usePaperSize } from '../hooks/usePaperSize';
 
 const KitchenLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentUser } = useAuth();
   const [config, setConfig] = useState<any | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [userName, setUserName] = useState<string>('Usuario');
+  const printMenuRef = useRef<HTMLDivElement>(null);
+
+  const defaultStation = currentUser?.role === 'barra' ? 'barra' : 'cocina';
+  const [paperSize] = usePaperSize(currentUser?.id);
+  const { enabled: autoPrintEnabled, setEnabled: setAutoPrintEnabled, stations, setStations } = useAutoPrintTickets(defaultStation, paperSize);
 
   // Determinar estación actual
   const isInCocina = location.pathname.includes('/cocina');
@@ -38,6 +48,26 @@ const KitchenLayout: React.FC = () => {
       setUserName(storedUserName);
     }
   }, []);
+
+  // Close print menu when clicking outside
+  useEffect(() => {
+    if (!showPrintMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (printMenuRef.current && !printMenuRef.current.contains(e.target as Node)) {
+        setShowPrintMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showPrintMenu]);
+
+  const toggleStation = (s: 'cocina' | 'barra') => {
+    if (stations.includes(s)) {
+      setStations(stations.filter(x => x !== s));
+    } else {
+      setStations([...stations, s]);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('kitchenUserName');
@@ -74,6 +104,58 @@ const KitchenLayout: React.FC = () => {
 
             {/* Station Navigation Buttons */}
             <div className="flex items-center gap-2">
+              {/* Auto-print toggle */}
+              <div className="relative" ref={printMenuRef}>
+                <button
+                  onClick={() => setShowPrintMenu(!showPrintMenu)}
+                  title="Auto-imprimir comandas"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-full transition-all duration-200 ${
+                    autoPrintEnabled
+                      ? 'bg-green-700 text-white shadow-lg shadow-green-500/40'
+                      : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                  }`}
+                >
+                  <Printer size={18} />
+                  <span className={`text-xs font-bold ${autoPrintEnabled ? 'text-green-200' : 'text-gray-400'}`}>
+                    {autoPrintEnabled ? 'AUTO' : 'OFF'}
+                  </span>
+                </button>
+
+                {showPrintMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-60 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl z-50 p-4 flex flex-col gap-3">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Auto-imprimir comandas</p>
+
+                    {/* Enable toggle */}
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <span className="text-sm text-gray-200">Activar auto-print</span>
+                      <button
+                        onClick={() => setAutoPrintEnabled(!autoPrintEnabled)}
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${autoPrintEnabled ? 'bg-green-600' : 'bg-gray-600'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${autoPrintEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </label>
+
+                    {/* Station checkboxes */}
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs text-gray-400">Estaciones a imprimir:</p>
+                      {(['cocina', 'barra'] as const).map(s => (
+                        <label key={s} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={stations.includes(s)}
+                            onChange={() => toggleStation(s)}
+                            className="w-4 h-4 rounded accent-orange-500"
+                          />
+                          <span className="text-sm text-gray-200 capitalize">{s === 'cocina' ? '👨‍🍳 Cocina' : '🍹 Barra'}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <p className="text-xs text-gray-500">Imprime un ticket cuando llega un nuevo pedido, sin importar en qué pestaña estés.</p>
+                  </div>
+                )}
+              </div>
               {/* Mesas Button */}
               <button
                 onClick={() => navigate('/kitchen/mesas')}

@@ -56,6 +56,7 @@ export interface OrderItem {
   deletedBy?: string; // ID del usuario que lo eliminó
   deletedByName?: string; // Nombre del usuario que lo eliminó
   deletedAt?: Date; // Fecha de eliminación
+  printedAt?: Date; // Timestamp de cuando se imprimió la comanda automáticamente
   createdAt: Date;
   updatedAt: Date;
 }

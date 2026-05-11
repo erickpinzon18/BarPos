@@ -1,9 +1,10 @@
 // src/components/common/AddItemModal.tsx
-import React, { useState, useEffect } from 'react';
-import { X, Search, Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Search, Plus, Tag, Clock } from 'lucide-react';
 import QuantityModal from './QuantityModal';
-import type { Product } from '../../utils/types';
+import type { Product, Promotion } from '../../utils/types';
 import { FILTER_CATEGORIES } from '../../utils/categories';
+import { isPromotionWithinSchedule } from '../../hooks/usePromotions';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface AddItemModalProps {
   onAddItem: (productId: string, quantity: number) => Promise<void>;
   products: Product[];
   loading?: boolean;
+  activePromotions?: Promotion[];
 }
 
 const AddItemModal: React.FC<AddItemModalProps> = ({
@@ -18,7 +20,8 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
   onClose,
   onAddItem,
   products,
-  loading = false
+  loading = false,
+  activePromotions = [],
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
@@ -32,14 +35,46 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
   // Filtrar productos
   const filteredProducts = products.filter(product => {
     if (!product.available) return false;
-    
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesCategory = selectedCategory === 'Todos' || product.category === selectedCategory;
-    
     return matchesSearch && matchesCategory;
   });
+
+  // Promoción activa+vigente que aplique a un producto
+  const getProductPromo = useMemo(() => (product: Product): Promotion | null => {
+    return activePromotions.find(promo => {
+      if (!isPromotionWithinSchedule(promo.cutoffTime)) return false;
+      const catOk = promo.categories.length === 0 || promo.categories.includes(product.category);
+      const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(product.id);
+      return catOk && prodOk;
+    }) ?? null;
+  }, [activePromotions]);
+
+  // Promoción que aplica pero está EXPIRADA (fuera de horario)
+  const getExpiredPromo = useMemo(() => (product: Product): Promotion | null => {
+    return activePromotions.find(promo => {
+      if (isPromotionWithinSchedule(promo.cutoffTime)) return false; // solo expiradas
+      const catOk = promo.categories.length === 0 || promo.categories.includes(product.category);
+      const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(product.id);
+      return catOk && prodOk;
+    }) ?? null;
+  }, [activePromotions]);
+
+  // Precio efectivo después de aplicar la promo (por unidad)
+  const getEffectivePrice = (product: Product, promo: Promotion | null): number => {
+    if (!promo) return product.price;
+    switch (promo.discountType) {
+      case 'fixedprice':
+        return Math.min(product.price, promo.discountValue);
+      case 'percentage':
+        return product.price * (1 - promo.discountValue / 100);
+      case 'fixed':
+        return Math.max(0, product.price - promo.discountValue);
+      default:
+        return product.price;
+    }
+  };
 
 
   const handleAddItem = (product: Product) => {
@@ -156,41 +191,100 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 
           {/* Products Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="bg-gray-900 rounded-lg p-4 flex flex-col">
-                {/* Product Image Placeholder */}
-                <div className="bg-gray-700 rounded-md mb-3 h-24 flex items-center justify-center">
-                  <span className="text-gray-500 text-xs text-center px-2">
+            {filteredProducts.map((product) => {
+              const promo = getProductPromo(product);
+              const expiredPromo = !promo ? getExpiredPromo(product) : null;
+              const effectivePrice = getEffectivePrice(product, promo);
+              const hasDiscount = promo !== null && effectivePrice < product.price;
+              const hasExpired = expiredPromo !== null;
+              return (
+                <div key={product.id} className={`rounded-lg p-4 flex flex-col relative transition-all ${
+                  hasDiscount
+                    ? 'bg-green-950/40 ring-2 ring-green-500/60 border-l-4 border-green-500'
+                    : hasExpired
+                    ? 'bg-amber-950/20 ring-1 ring-amber-600/40 border-l-4 border-amber-600'
+                    : 'bg-gray-900'
+                }`}>
+                  {/* Product Image Placeholder */}
+                  <div className="bg-gray-700 rounded-md mb-3 h-24 flex items-center justify-center relative overflow-hidden">
+                    <span className="text-gray-500 text-xs text-center px-2">
+                      {product.name}
+                    </span>
+                    {/* PROMO badge esquina */}
+                    {hasDiscount && (
+                      <div className="absolute top-1.5 right-1.5 bg-green-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide shadow-lg flex items-center gap-0.5">
+                        <Tag size={9} />
+                        PROMO
+                      </div>
+                    )}
+                    {/* EXPIRED badge */}
+                    {hasExpired && (
+                      <div className="absolute top-1.5 right-1.5 bg-amber-600 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide shadow-lg flex items-center gap-0.5">
+                        <Clock size={9} />
+                        EXPIRADA
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Product Info */}
+                  <h4 className="font-semibold text-white text-sm mb-1 flex-grow">
                     {product.name}
-                  </span>
+                  </h4>
+
+                  {product.description && (
+                    <p className="text-gray-500 text-xs mb-2 line-clamp-2">
+                      {product.description}
+                    </p>
+                  )}
+
+                  {/* Price + Promo */}
+                  {hasDiscount ? (
+                    <div className="mb-2">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-green-400 font-bold text-sm">${effectivePrice.toFixed(2)}</span>
+                        <span className="text-gray-500 text-xs line-through">${product.price.toFixed(2)}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-1 text-xs text-green-400">
+                        <Tag size={10} />
+                        <span className="font-medium truncate">{promo!.name}</span>
+                        <span className="text-green-600 flex-shrink-0 flex items-center gap-0.5">
+                          <Clock size={9} />{promo!.cutoffTime}
+                        </span>
+                      </div>
+                    </div>
+                  ) : hasExpired ? (
+                    <div className="mb-2">
+                      <p className="text-red-500 font-bold text-sm">
+                        ${product.price.toFixed(2)}
+                      </p>
+                      <div className="mt-1 flex items-center gap-1 text-xs text-amber-400">
+                        <Clock size={10} />
+                        <span className="font-medium truncate">{expiredPromo!.name}</span>
+                        <span className="text-amber-500 flex-shrink-0">· expiró {expiredPromo!.cutoffTime}hrs</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-red-500 font-bold text-sm mb-3">
+                      ${product.price.toFixed(2)}
+                    </p>
+                  )}
+
+                  {/* Add Button */}
+                  <button
+                    onClick={() => handleAddItem(product)}
+                    disabled={loading}
+                    className={`w-full font-bold py-2 px-3 rounded-lg transition-colors text-xs flex items-center justify-center disabled:opacity-50 ${
+                      hasDiscount
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Seleccionar
+                  </button>
                 </div>
-                
-                {/* Product Info */}
-                <h4 className="font-semibold text-white text-sm mb-1 flex-grow">
-                  {product.name}
-                </h4>
-                
-                {product.description && (
-                  <p className="text-gray-500 text-xs mb-2 line-clamp-2">
-                    {product.description}
-                  </p>
-                )}
-                
-                <p className="text-red-500 font-bold text-sm mb-3">
-                  ${product.price.toFixed(2)}
-                </p>
-                
-                {/* Add Button */}
-                <button
-                  onClick={() => handleAddItem(product)}
-                  disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg transition-colors text-xs flex items-center justify-center disabled:opacity-50"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Seleccionar
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* No Products Found */}

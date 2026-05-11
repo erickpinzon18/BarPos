@@ -15,6 +15,7 @@ import {
   ClipboardCheck,
   Calculator,
   BarChart3,
+  Tag,
 } from "lucide-react";
 
 // Estilos para los enlaces de navegación, cambia el color si está activo
@@ -128,6 +129,10 @@ export const AdminSidebar: React.FC = () => {
           <NavLink to="/admin/manage-products" className={navLinkClass}>
             <Package size={20} />
             <span>Productos</span>
+          </NavLink>
+          <NavLink to="/admin/promotions" className={navLinkClass}>
+            <Tag size={20} />
+            <span>Promociones</span>
           </NavLink>
         </nav>
 

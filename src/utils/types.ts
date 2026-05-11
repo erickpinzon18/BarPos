@@ -92,6 +92,37 @@ export interface Payment {
   createdAt: Date;
 }
 
+// Promotion type
+export type DiscountType = 'percentage' | 'fixed' | '2x1' | 'nxprice' | 'fixedprice';
+
+export interface Promotion {
+  id: string;
+  name: string;
+  description?: string;
+  discountType: DiscountType;
+  /**
+   * Valor del descuento según tipo:
+   * - percentage: 0-100
+   * - fixed: monto a descontar en pesos
+   * - 2x1: ignorado
+   * - nxprice: precio del bundle
+   * - fixedprice: precio final por unidad (ej: $1000 por botella)
+   */
+  discountValue: number;
+  /** Categorías a las que aplica; vacío = aplica a todas */
+  categories: CategoryKey[];
+  /**
+   * IDs de productos específicos a los que aplica dentro de las categorías seleccionadas.
+   * Vacío = todos los productos de las categorías seleccionadas (o todos si categories también está vacío).
+   */
+  productIds: string[];
+  /** Hora límite para aplicar la promoción, formato "HH:mm" (24h). Después de esta hora ya no se puede usar */
+  cutoffTime: string;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Form interfaces for components
 export interface LoginFormData {
   email: string;

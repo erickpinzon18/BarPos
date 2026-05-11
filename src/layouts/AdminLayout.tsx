@@ -16,6 +16,7 @@ import {
   ClipboardCheck,
   Calculator,
   BarChart3,
+  Tag,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -156,6 +157,14 @@ const AdminLayout: React.FC = () => {
                 >
                   <Package size={20} />
                   <span>Productos</span>
+                </NavLink>
+                <NavLink
+                  to="/admin/promotions"
+                  className={navLinkClassMobile}
+                  onClick={closeMobileMenu}
+                >
+                  <Tag size={20} />
+                  <span>Promociones</span>
                 </NavLink>
                 <NavLink
                   to="/admin/settings"

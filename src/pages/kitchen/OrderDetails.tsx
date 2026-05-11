@@ -9,10 +9,11 @@ import {
 } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag } from "lucide-react";
 import type { OrderItem, Product } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
+import { useActivePromotions, isPromotionWithinSchedule } from "../../hooks/usePromotions";
 import {
   updateOrderPeopleCount,
   updateOrderTableName,
@@ -24,6 +25,7 @@ const KitchenOrderDetails: React.FC = () => {
   const navigate = useNavigate();
   const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
   const { products } = useProducts();
+  const { promotions: activePromotions } = useActivePromotions();
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -257,6 +259,22 @@ const KitchenOrderDetails: React.FC = () => {
     0
   );
 
+  // Encuentra la primera promoción activa que aplique a un item del pedido
+  const getItemPromo = (item: OrderItem) => {
+    if (item.isDeleted) return null;
+    return activePromotions.find(promo => {
+      // Por categoría
+      const categoryMatch =
+        promo.categories.length === 0 ||
+        promo.categories.includes(item.category);
+      // Por producto específico
+      const productMatch =
+        !promo.productIds || promo.productIds.length === 0 ||
+        promo.productIds.includes(item.productId);
+      return categoryMatch && productMatch;
+    }) ?? null;
+  };
+
   return (
     <div className="p-4 md:p-8">
       <div className="flex items-center justify-between mb-6">
@@ -455,13 +473,17 @@ const KitchenOrderDetails: React.FC = () => {
           ) : (
             order.items.map((item: OrderItem) => {
               const isDeleted = item.isDeleted;
+              const itemPromo = !isDeleted ? getItemPromo(item) : null;
+              const promoValid = itemPromo ? isPromotionWithinSchedule(itemPromo.cutoffTime, item.createdAt) : false;
               return (
                 <div
                   key={item.id}
                   className={`p-6 transition-colors ${
                     isDeleted
                       ? "bg-gray-800/50 border-l-4 border-gray-600"
-                      : "hover:bg-gray-700/50"
+                      : promoValid
+                        ? "bg-green-950/30 border-l-4 border-green-500 hover:bg-green-950/50"
+                        : "hover:bg-gray-700/50"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -537,6 +559,25 @@ const KitchenOrderDetails: React.FC = () => {
                           <p>Fecha: {item.deletedAt?.toLocaleString()}</p>
                         </div>
                       )}
+                      {/* Promo badge */}
+                      {!isDeleted && (() => {
+                        const promo = getItemPromo(item);
+                        if (!promo) return null;
+                        const valid = isPromotionWithinSchedule(promo.cutoffTime, item.createdAt);
+                        return valid ? (
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-900/40 border border-green-700/50 text-xs text-green-400">
+                            <Tag size={11} />
+                            <span className="font-semibold">{promo.name}</span>
+                            <span className="text-green-500/80">· válido hasta las {promo.cutoffTime} hrs</span>
+                          </div>
+                        ) : (
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-900/30 border border-amber-700/40 text-xs text-amber-400">
+                            <Clock size={11} />
+                            <span className="font-semibold">{promo.name}</span>
+                            <span className="text-amber-500/80">· expiró a las {promo.cutoffTime} hrs</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="text-right ml-4">
                       <p
@@ -649,6 +690,7 @@ const KitchenOrderDetails: React.FC = () => {
           onAddItem={handleAddItem}
           products={products}
           loading={addItemLoading}
+          activePromotions={activePromotions}
         />
 
         <QuantityModal

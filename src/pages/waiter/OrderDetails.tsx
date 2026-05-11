@@ -1,9 +1,10 @@
 // src/pages/waiter/OrderDetails.tsx
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Package, User, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock, Package, User, Plus, Trash2, Tag } from 'lucide-react';
 import { useOrderByTableId } from '../../hooks/useOrders';
 import { useProducts } from '../../hooks/useProducts';
+import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
 import { deleteOrderItem, addItemToOrder, verifyUserPin } from '../../services/orderService';
 import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments } from '../../services/firestoreService';
 import PinModal from '../../components/common/PinModal';
@@ -16,6 +17,7 @@ const WaiterOrderDetails: React.FC = () => {
     const navigate = useNavigate();
     const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
     const { products } = useProducts();
+    const { promotions: activePromotions } = useActivePromotions();
 
     // Estados para el modal de PIN
     const [showPinModal, setShowPinModal] = useState(false);
@@ -325,6 +327,43 @@ const WaiterOrderDetails: React.FC = () => {
     const calculatedSubtotal = activeItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
     const calculatedTotal = calculatedSubtotal;
 
+    // Promo: primera promoción activa+vigente que aplique a un item
+    const getItemPromo = (item: OrderItem) => {
+        if (item.isDeleted) return null;
+        return activePromotions.find(promo => {
+            const categoryMatch = promo.categories.length === 0 || promo.categories.includes(item.category);
+            const productMatch = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(item.productId);
+            return categoryMatch && productMatch;
+        }) ?? null;
+    };
+
+    // Descuento automático estimado (solo promos vigentes)
+    const autoDiscount = (() => {
+        let total = 0;
+        for (const promo of activePromotions) {
+            const applicable = activeItems.filter(i => {
+                const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
+                const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
+                const timeOk = isPromotionWithinSchedule(promo.cutoffTime, i.createdAt);
+                return catOk && prodOk && timeOk;
+            });
+            if (applicable.length === 0) continue;
+            const sub = applicable.reduce((s, i) => s + i.productPrice * i.quantity, 0);
+            if (promo.discountType === 'percentage') total += sub * (promo.discountValue / 100);
+            else if (promo.discountType === 'fixed') total += Math.min(promo.discountValue, sub);
+            else if (promo.discountType === '2x1') {
+                for (const item of applicable) total += Math.floor(item.quantity / 2) * item.productPrice;
+            } else if (promo.discountType === 'fixedprice') {
+                for (const item of applicable) {
+                    const diff = item.productPrice - promo.discountValue;
+                    if (diff > 0) total += diff * item.quantity;
+                }
+            }
+            break; // solo aplica la primera promo coincidente
+        }
+        return total;
+    })();
+
     // Determinar si es la barra (mesa 0)
     const isBar = order.tableNumber === 0;
 
@@ -507,26 +546,42 @@ const WaiterOrderDetails: React.FC = () => {
                             // Lista de items - Compacta para móvil
                             order.items.map((item: OrderItem) => {
                                 const isDeleted = item.isDeleted;
+                                const itemPromo = !isDeleted ? getItemPromo(item) : null;
+                                const promoValid = itemPromo ? isPromotionWithinSchedule(itemPromo.cutoffTime, item.createdAt) : false;
 
                                 return (
                                     <div
                                         key={item.id}
-                                        className={`p-4 ${isDeleted
+                                        className={`p-4 transition-colors ${
+                                            isDeleted
                                                 ? 'bg-gray-800/50 border-l-4 border-gray-600'
-                                                : 'hover:bg-gray-700/50'
-                                            }`}
+                                                : promoValid
+                                                    ? 'bg-green-950/30 border-l-4 border-green-500 hover:bg-green-950/50'
+                                                    : 'hover:bg-gray-700/50'
+                                        }`}
                                     >
                                         <div className="flex items-start justify-between mb-2">
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <h3 className={`font-semibold truncate ${isDeleted ? 'text-gray-500 line-through' : 'text-white'
-                                                        }`}>
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <h3 className={`font-semibold truncate ${isDeleted ? 'text-gray-500 line-through' : 'text-white'}`}>
                                                         {item.productName}
                                                     </h3>
-                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${getStatusColor(item.status)
-                                                        }`}>
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${getStatusColor(item.status)}`}>
                                                         {getStatusText(item.status)}
                                                     </span>
+                                                    {/* PROMO badge prominent */}
+                                                    {promoValid && (
+                                                        <span className="inline-flex items-center gap-1 bg-green-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide flex-shrink-0">
+                                                            <Tag size={9} />
+                                                            PROMO · hasta {itemPromo!.cutoffTime}hrs
+                                                        </span>
+                                                    )}
+                                                    {itemPromo && !promoValid && (
+                                                        <span className="inline-flex items-center gap-1 bg-amber-700/60 text-amber-300 text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide flex-shrink-0">
+                                                            <Clock size={9} />
+                                                            PROMO expirada
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-3 text-xs text-gray-400">
                                                     <span>Cant: {item.quantity}</span>
@@ -574,9 +629,21 @@ const WaiterOrderDetails: React.FC = () => {
                     {/* Resumen - Compacto */}
                     <div className="p-4 bg-gray-700/50 border-t border-gray-600">
                         <div className="space-y-1.5 mb-4">
-                            <div className="flex justify-between text-lg font-bold text-white">
-                                <span>Total:</span>
-                                <span>${calculatedTotal.toFixed(2)}</span>
+                            <div className="flex justify-between text-sm text-gray-400">
+                                <span>Subtotal:</span>
+                                <span>${calculatedSubtotal.toFixed(2)}</span>
+                            </div>
+                            {autoDiscount > 0 && (
+                                <div className="flex justify-between text-sm text-green-400">
+                                    <span className="flex items-center gap-1"><Tag size={12} /> Promo estimada:</span>
+                                    <span>-${autoDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-lg font-bold text-white border-t border-gray-600 pt-1.5">
+                                <span>Total{autoDiscount > 0 ? ' con promo' : ''}:</span>
+                                <span className={autoDiscount > 0 ? 'text-green-400' : ''}>
+                                    ${(calculatedTotal - autoDiscount).toFixed(2)}
+                                </span>
                             </div>
                         </div>
 
@@ -664,6 +731,7 @@ const WaiterOrderDetails: React.FC = () => {
                 onAddItem={handleAddItem}
                 products={products}
                 loading={addItemLoading}
+                activePromotions={activePromotions}
             />
 
             {/* Quantity Modal for Adding More */}

@@ -9,10 +9,11 @@ import {
 } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag } from "lucide-react";
 import type { OrderItem, Product } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
+import { useActivePromotions, isPromotionWithinSchedule } from "../../hooks/usePromotions";
 import {
   updateOrderPeopleCount,
   updateOrderTableName,
@@ -24,6 +25,7 @@ const OrderDetails: React.FC = () => {
   const navigate = useNavigate();
   const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
   const { products } = useProducts();
+  const { promotions: activePromotions } = useActivePromotions();
 
   // Estados para el modal de PIN
   const [showPinModal, setShowPinModal] = useState(false);
@@ -361,6 +363,47 @@ const OrderDetails: React.FC = () => {
   );
   const calculatedTotal = calculatedSubtotal;
 
+  // Encuentra la promoción activa que aplique a un item
+  const getItemPromo = (item: OrderItem) => {
+    if (item.isDeleted) return null;
+    return activePromotions.find(promo => {
+      const categoryMatch =
+        promo.categories.length === 0 ||
+        promo.categories.includes(item.category);
+      const productMatch =
+        !promo.productIds || promo.productIds.length === 0 ||
+        promo.productIds.includes(item.productId);
+      return categoryMatch && productMatch;
+    }) ?? null;
+  };
+
+  // Descuento automático estimado (solo promos vigentes al momento de agregar el item)
+  const autoDiscount = (() => {
+    let total = 0;
+    for (const promo of activePromotions) {
+      const applicable = activeItems.filter(i => {
+        const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
+        const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
+        const timeOk = isPromotionWithinSchedule(promo.cutoffTime, i.createdAt);
+        return catOk && prodOk && timeOk;
+      });
+      if (applicable.length === 0) continue;
+      const sub = applicable.reduce((s, i) => s + i.productPrice * i.quantity, 0);
+      if (promo.discountType === 'percentage') total += sub * (promo.discountValue / 100);
+      else if (promo.discountType === 'fixed') total += Math.min(promo.discountValue, sub);
+      else if (promo.discountType === '2x1') {
+        for (const item of applicable) total += Math.floor(item.quantity / 2) * item.productPrice;
+      } else if (promo.discountType === 'fixedprice') {
+        for (const item of applicable) {
+          const diff = item.productPrice - promo.discountValue;
+          if (diff > 0) total += diff * item.quantity;
+        }
+      }
+      break; // solo aplica la primera promo coincidente
+    }
+    return total;
+  })();
+
   return (
     <div className="p-4 md:p-8">
       {/* Header */}
@@ -617,6 +660,8 @@ const OrderDetails: React.FC = () => {
             // Lista de items existentes
             order.items.map((item: OrderItem) => {
               const isDeleted = item.isDeleted;
+              const itemPromo = !isDeleted ? getItemPromo(item) : null;
+              const promoValid = itemPromo ? isPromotionWithinSchedule(itemPromo.cutoffTime, item.createdAt) : false;
 
               return (
                 <div
@@ -624,7 +669,9 @@ const OrderDetails: React.FC = () => {
                   className={`p-6 transition-colors ${
                     isDeleted
                       ? "bg-gray-800/50 border-l-4 border-gray-600"
-                      : "hover:bg-gray-700/50"
+                      : promoValid
+                        ? "bg-green-950/30 border-l-4 border-green-500 hover:bg-green-950/50"
+                        : "hover:bg-gray-700/50"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -705,6 +752,25 @@ const OrderDetails: React.FC = () => {
                           <p>Fecha: {item.deletedAt?.toLocaleString()}</p>
                         </div>
                       )}
+                      {/* Promo badge */}
+                      {!isDeleted && (() => {
+                        const promo = getItemPromo(item);
+                        if (!promo) return null;
+                        const valid = isPromotionWithinSchedule(promo.cutoffTime, item.createdAt);
+                        return valid ? (
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-900/40 border border-green-700/50 text-xs text-green-400">
+                            <Tag size={11} />
+                            <span className="font-semibold">{promo.name}</span>
+                            <span className="text-green-500/80">· válido hasta las {promo.cutoffTime} hrs</span>
+                          </div>
+                        ) : (
+                          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-900/30 border border-amber-700/40 text-xs text-amber-400">
+                            <Clock size={11} />
+                            <span className="font-semibold">{promo.name}</span>
+                            <span className="text-amber-500/80">· expiró a las {promo.cutoffTime} hrs</span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="text-right ml-4">
@@ -735,9 +801,21 @@ const OrderDetails: React.FC = () => {
         {/* Order Summary */}
         <div className="p-6 bg-gray-700/50 border-t border-gray-600">
           <div className="space-y-2">
-            <div className="flex justify-between text-xl font-bold text-white">
-              <span>Total:</span>
+            <div className="flex justify-between text-sm text-gray-400">
+              <span>Subtotal:</span>
               <span>${calculatedTotal.toFixed(2)}</span>
+            </div>
+            {autoDiscount > 0 && (
+              <div className="flex justify-between text-sm text-green-400">
+                <span className="flex items-center gap-1"><Tag size={12} /> Promo estimada:</span>
+                <span>-${autoDiscount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xl font-bold text-white border-t border-gray-600 pt-2">
+              <span>Total{autoDiscount > 0 ? ' con promo' : ''}:</span>
+              <span className={autoDiscount > 0 ? 'text-green-400' : ''}>
+                ${(calculatedTotal - autoDiscount).toFixed(2)}
+              </span>
             </div>
           </div>
 
@@ -837,6 +915,7 @@ const OrderDetails: React.FC = () => {
           onAddItem={handleAddItem}
           products={products}
           loading={addItemLoading}
+          activePromotions={activePromotions}
         />
 
         {/* Quantity Modal for Adding More */}

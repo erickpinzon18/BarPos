@@ -19,6 +19,7 @@ import AdminKitchenControl from "./pages/admin/KitchenControl";
 import Settings from "./pages/admin/Settings";
 import AdminTickets from "./pages/admin/Tickets";
 import ManageProducts from "./pages/admin/ManageProducts";
+import Promotions from "./pages/admin/Promotions";
 import DailySummary from "./pages/admin/DailySummary";
 import Analytics from "./pages/admin/Analytics";
 
@@ -54,6 +55,7 @@ function App() {
           <Route path="kanban/barra" element={<AdminKanban />} />
           <Route path="tickets" element={<AdminTickets />} />
           <Route path="manage-products" element={<ManageProducts />} />
+          <Route path="promotions" element={<Promotions />} />
           <Route path="checkout/:orderId" element={<AdminCheckout />} />
           <Route path="order/:tableId" element={<AdminOrderDetails />} />
           <Route path="panel" element={<AdminKitchenControl />} />

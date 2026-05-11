@@ -23,6 +23,7 @@ import type {
   Table,
   Order,
   OrderItem,
+  Promotion,
   CreateData,
   UpdateData,
   FirestoreResponse
@@ -640,3 +641,99 @@ export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>>
     return { success: false, error: 'Error al obtener estadísticas diarias' };
   }
 };
+
+// PROMOTION MANAGEMENT
+export const getPromotions = async (): Promise<FirestoreResponse<Promotion[]>> => {
+  try {
+    const promotionsQuery = query(collection(db, 'promotions'), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(promotionsQuery);
+    const promotions = querySnapshot.docs.map(doc =>
+      convertTimestamps({ id: doc.id, ...doc.data() }) as Promotion
+    );
+    return { success: true, data: promotions };
+  } catch (error) {
+    console.error('Error getting promotions:', error);
+    return { success: false, error: 'Error al obtener promociones' };
+  }
+};
+
+export const getActivePromotions = async (): Promise<FirestoreResponse<Promotion[]>> => {
+  try {
+    const promotionsQuery = query(
+      collection(db, 'promotions'),
+      where('active', '==', true),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(promotionsQuery);
+    const promotions = querySnapshot.docs.map(doc =>
+      convertTimestamps({ id: doc.id, ...doc.data() }) as Promotion
+    );
+    return { success: true, data: promotions };
+  } catch (error) {
+    console.error('Error getting active promotions:', error);
+    return { success: false, error: 'Error al obtener promociones activas' };
+  }
+};
+
+export const getActivePromotionsRealtime = (callback: (promotions: Promotion[]) => void) => {
+  const promotionsQuery = query(
+    collection(db, 'promotions'),
+    where('active', '==', true),
+    orderBy('createdAt', 'desc')
+  );
+
+  return onSnapshot(promotionsQuery, (snapshot) => {
+    const promotions = snapshot.docs.map(doc =>
+      convertTimestamps({ id: doc.id, ...doc.data() }) as Promotion
+    );
+    callback(promotions);
+  }, (error) => {
+    console.error('Error in promotions realtime listener:', error);
+  });
+};
+
+export const addPromotion = async (promotionData: CreateData<Promotion>): Promise<FirestoreResponse<Promotion>> => {
+  try {
+    const now = Timestamp.now();
+    const promotionWithTimestamps = {
+      ...promotionData,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const docRef = await addDoc(collection(db, 'promotions'), promotionWithTimestamps);
+    const newPromotion = convertTimestamps({ id: docRef.id, ...promotionWithTimestamps }) as Promotion;
+    return { success: true, data: newPromotion };
+  } catch (error) {
+    console.error('Error adding promotion:', error);
+    return { success: false, error: 'Error al agregar promoción' };
+  }
+};
+
+export const updatePromotion = async (promotionId: string, updates: UpdateData<Promotion>): Promise<FirestoreResponse<Promotion>> => {
+  try {
+    const updateData = {
+      ...updates,
+      updatedAt: Timestamp.now()
+    };
+
+    await updateDoc(doc(db, 'promotions', promotionId), updateData);
+    const updatedDoc = await getDoc(doc(db, 'promotions', promotionId));
+    const updatedPromotion = convertTimestamps({ id: updatedDoc.id, ...updatedDoc.data() }) as Promotion;
+    return { success: true, data: updatedPromotion };
+  } catch (error) {
+    console.error('Error updating promotion:', error);
+    return { success: false, error: 'Error al actualizar promoción' };
+  }
+};
+
+export const deletePromotion = async (promotionId: string): Promise<FirestoreResponse<void>> => {
+  try {
+    await deleteDoc(doc(db, 'promotions', promotionId));
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting promotion:', error);
+    return { success: false, error: 'Error al eliminar promoción' };
+  }
+};
+

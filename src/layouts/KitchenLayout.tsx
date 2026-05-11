@@ -19,7 +19,7 @@ const KitchenLayout: React.FC = () => {
   const printMenuRef = useRef<HTMLDivElement>(null);
 
   const defaultStation = currentUser?.role === 'barra' ? 'barra' : 'cocina';
-  const [paperSize] = usePaperSize(currentUser?.id);
+  const [paperSize, setPaperSize] = usePaperSize(currentUser?.id);
   const { enabled: autoPrintEnabled, setEnabled: setAutoPrintEnabled, stations, setStations } = useAutoPrintTickets(defaultStation, paperSize);
 
   // Determinar estación actual
@@ -150,6 +150,26 @@ const KitchenLayout: React.FC = () => {
                           <span className="text-sm text-gray-200 capitalize">{s === 'cocina' ? '👨‍🍳 Cocina' : '🍹 Barra'}</span>
                         </label>
                       ))}
+                    </div>
+
+                    {/* Paper size */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400">Ancho de papel:</p>
+                      <div className="flex bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+                        {(['58mm', '80mm'] as const).map(size => (
+                          <button
+                            key={size}
+                            onClick={() => setPaperSize(size)}
+                            className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                              paperSize === size
+                                ? 'bg-orange-600 text-white'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     <p className="text-xs text-gray-500">Imprime un ticket cuando llega un nuevo pedido, sin importar en qué pestaña estés.</p>

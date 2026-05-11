@@ -2,13 +2,11 @@
 import React, { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useOrderById, useOrderByTableId } from '../../hooks/useOrders';
-import type { Order, Promotion } from '../../utils/types';
+import type { Order } from '../../utils/types';
 import { closeTable, getConfig } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
-import { printTicket } from '../../utils/printTicket';
 import { useAuth } from '../../contexts/AuthContext';
-import { usePaperSize } from '../../hooks/usePaperSize';
 import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
 import { Tag, Clock, AlertTriangle, Check } from 'lucide-react';
 
@@ -17,8 +15,7 @@ const KitchenCheckout: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams<{ orderId?: string }>();
   const state = (location.state || {}) as { orderId?: string; tableId?: string; tableNumber?: number };
-  const { currentUser } = useAuth();
-  const [paperSize, setPaperSize] = usePaperSize(currentUser?.id);
+  useAuth();
 
   const paramOrderId = params.orderId;
   const propOrderId = paramOrderId ?? state.orderId;
@@ -37,8 +34,11 @@ const KitchenCheckout: React.FC = () => {
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo');
+  const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'tarjeta' | 'transferencia' | 'mixto'>('efectivo');
   const [cashReceived, setCashReceived] = useState<string>('');
+  const [mixedEfectivo, setMixedEfectivo] = useState<string>('');
+  const [mixedTarjeta, setMixedTarjeta] = useState<string>('');
+  const [mixedTransferencia, setMixedTransferencia] = useState<string>('');
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
   const [config, setConfig] = useState<any | null>(null);
   const [selectedPromoId, setSelectedPromoId] = useState<string | null>(null);
@@ -127,14 +127,18 @@ const KitchenCheckout: React.FC = () => {
     }
   };
 
-  const handlePrint = () => {
-    if (!order) return;
-    const perPerson = total / Math.max(1, order.peopleCount ?? 1);
-    printTicket({ order: order as Order, subtotal, tipAmount, tipPercent, total, perPerson, paperSize, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
-  };
-
   const handleFinalize = async () => {
     if (!order) return;
+    if (paymentMethod === 'mixto') {
+      const efe = Number(mixedEfectivo || 0);
+      const tar = Number(mixedTarjeta || 0);
+      const tra = Number(mixedTransferencia || 0);
+      const sum = efe + tar + tra;
+      if (Math.abs(sum - total) > 0.01) {
+        alert(`En el pago mixto, la suma de los montos ($${sum.toFixed(2)}) debe ser igual al total ($${total.toFixed(2)}).`);
+        return;
+      }
+    }
     setShowPinModal(true);
   };
 
@@ -144,11 +148,20 @@ const KitchenCheckout: React.FC = () => {
     try {
       const tableId = order.tableId;
       const orderId = order.id;
-      let paymentDetails: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string } | undefined;
+      let paymentDetails: any;
       if (paymentMethod === 'efectivo') {
         const received = Number(cashReceived || 0);
         const change = Math.max(0, received - total);
         paymentDetails = { receivedAmount: received, change, tipAmount, tipPercent, cashierId: authorizedUser?.id };
+      } else if (paymentMethod === 'mixto') {
+        const efe = Number(mixedEfectivo || 0);
+        const tar = Number(mixedTarjeta || 0);
+        const tra = Number(mixedTransferencia || 0);
+        const splitPayments = [];
+        if (efe > 0) splitPayments.push({ method: 'efectivo', amount: efe, receivedAmount: Number(cashReceived || efe), change: Math.max(0, Number(cashReceived || efe) - efe) });
+        if (tar > 0) splitPayments.push({ method: 'tarjeta', amount: tar });
+        if (tra > 0) splitPayments.push({ method: 'transferencia', amount: tra });
+        paymentDetails = { tipAmount, tipPercent, cashierId: authorizedUser?.id, splitPayments };
       } else {
         paymentDetails = { tipAmount, tipPercent, cashierId: authorizedUser?.id };
       }
@@ -178,7 +191,7 @@ const KitchenCheckout: React.FC = () => {
 
   React.useEffect(() => {
     if (!order) return;
-    if (order.paymentMethod === 'efectivo' || order.paymentMethod === 'tarjeta' || order.paymentMethod === 'transferencia') {
+    if (order.paymentMethod === 'efectivo' || order.paymentMethod === 'tarjeta' || order.paymentMethod === 'transferencia' || order.paymentMethod === 'mixto') {
       setPaymentMethod(order.paymentMethod);
     }
     if (order.status === 'pagado') setIsReadOnly(true);
@@ -365,10 +378,11 @@ const KitchenCheckout: React.FC = () => {
 
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Método de Pago</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <button disabled={isReadOnly} onClick={() => setPaymentMethod('efectivo')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'efectivo' ? 'bg-green-600 text-white shadow-md ring-2 ring-green-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-green-300 border border-green-700 hover:bg-green-700/20'}`}>Efectivo</button>
               <button disabled={isReadOnly} onClick={() => setPaymentMethod('tarjeta')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'tarjeta' ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-blue-300 border border-blue-700 hover:bg-blue-700/20'}`}>Tarjeta</button>
               <button disabled={isReadOnly} onClick={() => setPaymentMethod('transferencia')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'transferencia' ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-purple-300 border border-purple-700 hover:bg-purple-700/20'}`}>Transferencia</button>
+              <button disabled={isReadOnly} onClick={() => setPaymentMethod('mixto')} className={`py-3 px-4 rounded-lg font-bold transition-colors flex items-center justify-center ${paymentMethod === 'mixto' ? 'bg-yellow-600 text-white shadow-md ring-2 ring-yellow-300' : isReadOnly ? 'bg-transparent text-gray-500 border border-gray-800 cursor-not-allowed' : 'bg-transparent text-yellow-300 border border-yellow-700 hover:bg-yellow-700/20'}`}>Mixto</button>
             </div>
             {paymentMethod === 'efectivo' && (
               <div className="mt-4">
@@ -411,26 +425,54 @@ const KitchenCheckout: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {paymentMethod === 'mixto' && (
+              <div className="mt-4 p-4 bg-gray-900 rounded-lg border border-gray-700">
+                <h4 className="text-sm font-semibold text-white mb-3">Montos por Método</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-400 w-24">Efectivo:</label>
+                    <input disabled={isReadOnly} type="number" min="0" step="0.01" value={mixedEfectivo} onChange={(e) => setMixedEfectivo(e.target.value)} placeholder="0.00" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800" />
+                  </div>
+                  {Number(mixedEfectivo) > 0 && (
+                    <div className="flex items-center gap-2 pl-26">
+                      <label className="text-xs text-gray-500 w-24">Recibido:</label>
+                      <input disabled={isReadOnly} type="number" min="0" step="0.01" value={cashReceived} onChange={(e) => setCashReceived(e.target.value)} placeholder="Monto entregado" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-white disabled:bg-gray-800 text-sm" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-400 w-24">Tarjeta:</label>
+                    <input disabled={isReadOnly} type="number" min="0" step="0.01" value={mixedTarjeta} onChange={(e) => setMixedTarjeta(e.target.value)} placeholder="0.00" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-400 w-24">Transf.:</label>
+                    <input disabled={isReadOnly} type="number" min="0" step="0.01" value={mixedTransferencia} onChange={(e) => setMixedTransferencia(e.target.value)} placeholder="0.00" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800" />
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-3 border-t border-gray-700">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Total a cubrir:</span>
+                    <span className="text-white font-medium">${total.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-gray-400">Suma actual:</span>
+                    <span className={`font-bold ${Math.abs((Number(mixedEfectivo||0)+Number(mixedTarjeta||0)+Number(mixedTransferencia||0)) - total) < 0.01 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${(Number(mixedEfectivo||0)+Number(mixedTarjeta||0)+Number(mixedTransferencia||0)).toFixed(2)}
+                    </span>
+                  </div>
+                  {Number(mixedEfectivo) > 0 && Number(cashReceived) > Number(mixedEfectivo) && (
+                    <div className="flex justify-between text-sm mt-1 text-green-400">
+                      <span>Cambio (Efectivo):</span>
+                      <span className="font-bold">${(Number(cashReceived) - Number(mixedEfectivo)).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col space-y-3">
-            {/* Paper size toggle */}
-            <div className="flex items-center justify-between bg-gray-800 rounded-lg p-3 border border-gray-700">
-              <span className="text-sm text-gray-400">🖨️ Tamaño de papel</span>
-              <div className="flex bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
-                <button
-                  onClick={() => setPaperSize('58mm')}
-                  className={`px-4 py-2 text-sm font-semibold transition-colors ${paperSize === '58mm' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                >58mm</button>
-                <button
-                  onClick={() => setPaperSize('80mm')}
-                  className={`px-4 py-2 text-sm font-semibold transition-colors ${paperSize === '80mm' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'}`}
-                >80mm</button>
-              </div>
-            </div>
-            <button disabled={closing} onClick={handlePrint} className={`w-full ${closing ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-600 text-white hover:bg-gray-700'} font-bold py-3 px-4 rounded-lg transition`}>
-              Imprimir Pase de Salida
-            </button>
             <button disabled={closing || isReadOnly} onClick={handleFinalize} className={`w-full ${isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-orange-500 text-gray-900 hover:bg-orange-600'} font-bold py-3 px-4 rounded-lg transition`}>
               {closing ? 'Cerrando...' : 'Finalizar y Cerrar Mesa'}
             </button>

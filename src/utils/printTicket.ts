@@ -162,9 +162,16 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   pushLabeledValue(lines, 'Ticket ID:', ticketId, W);
 
   if (Array.isArray(order.payments) && order.payments.length > 0) {
-    const p = order.payments[0];
-    const paymentInfo = `${p.method}${p.receivedAmount ? ' $' + Number(p.receivedAmount).toFixed(2) : ''}`;
-    pushLabeledValue(lines, 'Pago:', paymentInfo, W);
+    if (order.payments.length === 1) {
+      const p = order.payments[0];
+      const paymentInfo = `${p.method}${p.receivedAmount ? ' $' + Number(p.receivedAmount).toFixed(2) : ''}`;
+      pushLabeledValue(lines, 'Pago:', paymentInfo, W);
+    } else {
+      pushLabeledValue(lines, 'Pago:', 'Mixto', W);
+      order.payments.forEach(p => {
+        lines.push(`  ${p.method}: ${p.amount ? '$' + p.amount.toFixed(2) : ''}`);
+      });
+    }
   }
 
   lines.push('');

@@ -69,7 +69,7 @@ export interface Order {
   waiterName: string;
   items: OrderItem[];
   status: OrderStatus;
-  paymentMethod?: 'efectivo' | 'tarjeta' | 'transferencia';
+  paymentMethod?: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto';
   peopleCount?: number; // number of people at the table when the order was closed
   payments?: Payment[];
   subtotal?: number;
@@ -83,7 +83,8 @@ export interface Order {
 
 export interface Payment {
   id?: string;
-  method: 'efectivo' | 'tarjeta' | 'transferencia';
+  method: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto';
+  amount?: number;
   receivedAmount?: number;
   change?: number;
   tipAmount?: number;

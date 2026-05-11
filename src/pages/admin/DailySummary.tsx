@@ -153,7 +153,16 @@ const DailySummary: React.FC = () => {
         );
 
         // Contar por método de pago
-        if (order.paymentMethod) {
+        if (order.paymentMethod === 'mixto') {
+          if (Array.isArray(order.payments)) {
+            order.payments.forEach(p => {
+              const method = p.method as keyof typeof summary.paymentMethods;
+              if (summary.paymentMethods[method] !== undefined) {
+                summary.paymentMethods[method] += (p.amount || 0);
+              }
+            });
+          }
+        } else if (order.paymentMethod) {
           const method =
             order.paymentMethod as keyof typeof summary.paymentMethods;
           if (summary.paymentMethods[method] !== undefined) {

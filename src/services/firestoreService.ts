@@ -327,9 +327,9 @@ export async function addUserClient(userData: Partial<User>) {
 export const closeTable = async (
   tableId: string,
   orderId: string,
-  paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia',
+  paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto',
   peopleCount?: number,
-  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string }
+  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string; splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number }[] }
 ): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);
@@ -381,21 +381,37 @@ export const closeTable = async (
     }
     batch.update(orderRef, orderUpdate);
 
-    // If payment details were provided, append a payment object to the order document's payments array
+    // If payment details were provided, append payment objects to the order document's payments array
     if (paymentDetails) {
-      const paymentObj: any = {
-        id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        method: paymentMethod,
-        receivedAmount: typeof paymentDetails.receivedAmount === 'number' ? paymentDetails.receivedAmount : null,
-        change: typeof paymentDetails.change === 'number' ? paymentDetails.change : null,
-        tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
-        tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
-        cashierId: paymentDetails.cashierId ?? null,
-        createdAt: Timestamp.now()
-      };
-      // Use arrayUnion to add the payment object into the payments array on the order
+      let newPayments: any[] = [];
+      if (paymentMethod === 'mixto' && paymentDetails.splitPayments && paymentDetails.splitPayments.length > 0) {
+        newPayments = paymentDetails.splitPayments.map((p, index) => ({
+          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${index}`,
+          method: p.method,
+          amount: p.amount,
+          receivedAmount: typeof p.receivedAmount === 'number' ? p.receivedAmount : null,
+          change: typeof p.change === 'number' ? p.change : null,
+          tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
+          tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
+          cashierId: paymentDetails.cashierId ?? null,
+          createdAt: Timestamp.now()
+        }));
+      } else {
+        newPayments = [{
+          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          method: paymentMethod,
+          receivedAmount: typeof paymentDetails.receivedAmount === 'number' ? paymentDetails.receivedAmount : null,
+          change: typeof paymentDetails.change === 'number' ? paymentDetails.change : null,
+          tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
+          tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
+          cashierId: paymentDetails.cashierId ?? null,
+          createdAt: Timestamp.now()
+        }];
+      }
+
+      // Use arrayUnion to add the payment objects into the payments array on the order
       batch.update(orderRef, {
-        payments: arrayUnion(paymentObj)
+        payments: arrayUnion(...newPayments)
       });
     }
     

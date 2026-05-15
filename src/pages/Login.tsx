@@ -5,13 +5,36 @@ import { useAuth } from '../contexts/AuthContext';
 import { getConfig } from '../services/firestoreService';
 
 const Login: React.FC = () => {
-  const { login } = useAuth();
+  const { login, currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [config, setConfig] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      switch (currentUser.role) {
+        case 'admin':
+          navigate('/admin/home', { replace: true });
+          break;
+        case 'waiter':
+          navigate('/waiter/home', { replace: true });
+          break;
+        case 'kitchen':
+          localStorage.setItem('kitchenUserName', currentUser.displayName || currentUser.email || 'Usuario');
+          navigate('/kitchen/cocina', { replace: true });
+          break;
+        case 'barra':
+          localStorage.setItem('kitchenUserName', currentUser.displayName || currentUser.email || 'Usuario');
+          navigate('/kitchen/barra', { replace: true });
+          break;
+        default:
+          break;
+      }
+    }
+  }, [currentUser, authLoading, navigate]);
 
   useEffect(() => {
     let mounted = true;
@@ -65,6 +88,15 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+        <p className="text-gray-400 text-sm animate-pulse">Verificando sesión...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-200 flex flex-col items-center justify-center p-4">

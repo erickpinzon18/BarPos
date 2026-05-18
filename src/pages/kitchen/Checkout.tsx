@@ -8,7 +8,7 @@ import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
-import { Tag, Clock, AlertTriangle, Check } from 'lucide-react';
+import { Tag, Clock } from 'lucide-react';
 
 const KitchenCheckout: React.FC = () => {
   const location = useLocation();

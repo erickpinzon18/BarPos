@@ -3,8 +3,8 @@ import React, { useEffect, useRef } from 'react';
 import { useKitchenOrders } from '../../hooks/useKitchenOrders';
 import { useLocation } from 'react-router-dom';
 import KanbanColumn from '../../components/common/KanbanColumn';
-import type { Order, OrderItemStatus } from '../../utils/types';
-import { updateOrderStatusInKanban } from '../../services/firestoreService';
+import type { Order } from '../../utils/types';
+
 import { getCategoriesByWorkstation } from '../../utils/categories';
 import { KANBAN_DELIVERED_RETENTION_MINUTES } from '../../utils/constants';
 import { playNotificationSound } from '../../utils/notificationSound';
@@ -132,10 +132,6 @@ const AdminKanban: React.FC = () => {
     return <div className="text-center py-8">Cargando pedidos...</div>;
   }
 
-  const handleMoveTo = async (orderId: string, itemId: string, newStatus: OrderItemStatus) => {
-    // optimistic UI isn't necessary here because realtime subscription will update
-    await updateOrderStatusInKanban(orderId, itemId, newStatus);
-  };
 
   const renderItemCard = (entry: ItemEntry, isDelivered = false) => {
     const { item, orderId, tableNumber, waiterName } = entry;

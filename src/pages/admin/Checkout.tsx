@@ -13,7 +13,7 @@ import {
   useActivePromotions,
   isPromotionWithinSchedule,
 } from "../../hooks/usePromotions";
-import { Tag, Clock, Check } from "lucide-react";
+import { Tag, Clock } from "lucide-react";
 
 const AdminCheckout: React.FC = () => {
   const location = useLocation();

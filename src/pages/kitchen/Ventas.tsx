@@ -5,7 +5,7 @@ import { getTodayAllOrders } from '../../services/firestoreService';
 import { sendToPrinter } from '../../utils/printTicket';
 import { usePaperSize } from '../../hooks/usePaperSize';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Order, OrderItem } from '../../utils/types';
+import type { Order } from '../../utils/types';
 import { CATEGORIES } from '../../utils/categories';
 import type { CategoryKey } from '../../utils/categories';
 

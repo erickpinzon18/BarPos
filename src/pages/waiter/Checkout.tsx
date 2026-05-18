@@ -6,7 +6,7 @@ import type { Order } from "../../utils/types";
 import { closeTable, getConfig } from "../../services/firestoreService";
 import { verifyUserPin } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
-import { ArrowLeft, Check, Tag, Clock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Check, Tag, Clock } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   useActivePromotions,

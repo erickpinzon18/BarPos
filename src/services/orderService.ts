@@ -111,7 +111,8 @@ export const addItemToOrder = async (
   productName: string,
   productPrice: number,
   category: string,
-  quantity: number
+  quantity: number,
+  notes?: string
 ): Promise<void> => {
   try {
     console.log('➕ Agregando item a orden:', { orderId, productId, productName, quantity });
@@ -119,13 +120,13 @@ export const addItemToOrder = async (
     // Obtener la orden actual
     const orderRef = doc(db, 'orders', orderId);
     const orderDoc = await getDoc(orderRef);
-    
+
     if (!orderDoc.exists()) {
       throw new Error('Orden no encontrada');
     }
 
     const orderData = orderDoc.data() as Order;
-    
+
     // Crear nuevo item
     const newItem: OrderItem = {
       id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -135,6 +136,7 @@ export const addItemToOrder = async (
       quantity: quantity,
       status: 'pendiente',
       category: category as any,
+      ...(notes ? { notes } : {}),
       createdAt: new Date(),
       updatedAt: new Date()
     };

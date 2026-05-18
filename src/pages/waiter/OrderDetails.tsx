@@ -6,7 +6,7 @@ import { useOrderByTableId } from '../../hooks/useOrders';
 import { useProducts } from '../../hooks/useProducts';
 import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
 import { deleteOrderItem, addItemToOrder, verifyUserPin } from '../../services/orderService';
-import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments } from '../../services/firestoreService';
+import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments, updateOrderStatusInKanban } from '../../services/firestoreService';
 import PinModal from '../../components/common/PinModal';
 import AddItemModal from '../../components/common/AddItemModal';
 import QuantityModal from '../../components/common/QuantityModal';
@@ -100,7 +100,7 @@ const WaiterOrderDetails: React.FC = () => {
     };
 
     // Función para agregar item a la orden
-    const handleAddItem = async (productId: string, quantity: number) => {
+    const handleAddItem = async (productId: string, quantity: number, notes?: string) => {
         if (!order) return;
 
         setAddItemLoading(true);
@@ -116,7 +116,8 @@ const WaiterOrderDetails: React.FC = () => {
                 product.name,
                 product.price,
                 product.category,
-                quantity
+                quantity,
+                notes
             );
 
             console.log('✅ Item agregado exitosamente');
@@ -290,16 +291,22 @@ const WaiterOrderDetails: React.FC = () => {
         );
     }
 
+    // Marcar item como entregado (recogido por el mesero)
+    const handleMarkDelivered = async (itemId: string) => {
+        if (!order) return;
+        try {
+            await updateOrderStatusInKanban(order.id, itemId, 'entregado');
+        } catch (error) {
+            console.error('Error marcando item como entregado:', error);
+        }
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'pendiente':
                 return 'bg-yellow-500 text-yellow-100';
-            case 'en_preparacion':
-                return 'bg-blue-500 text-blue-100';
-            case 'listo':
-                return 'bg-green-500 text-green-100';
             case 'entregado':
-                return 'bg-gray-500 text-gray-100';
+                return 'bg-green-600 text-green-100';
             default:
                 return 'bg-gray-500 text-gray-100';
         }
@@ -308,13 +315,9 @@ const WaiterOrderDetails: React.FC = () => {
     const getStatusText = (status: string) => {
         switch (status) {
             case 'pendiente':
-                return 'Pendiente';
-            case 'en_preparacion':
-                return 'En Preparación';
-            case 'listo':
-                return 'Listo';
+                return '⏳ Pendiente';
             case 'entregado':
-                return 'Entregado';
+                return '✅ Entregado';
             default:
                 return status;
         }
@@ -359,10 +362,24 @@ const WaiterOrderDetails: React.FC = () => {
                     if (diff > 0) total += diff * item.quantity;
                 }
             }
-            break; // solo aplica la primera promo coincidente
+            break;
         }
         return total;
     })();
+
+    // Calcula el precio con descuento de un item individual (sólo si la promo es vigente)
+    const getItemDiscountedTotal = (item: OrderItem): number | null => {
+        const promo = getItemPromo(item);
+        if (!promo) return null;
+        const valid = isPromotionWithinSchedule(promo.cutoffTime, item.createdAt);
+        if (!valid) return null;
+        const original = item.productPrice * item.quantity;
+        if (promo.discountType === 'percentage') return original * (1 - promo.discountValue / 100);
+        if (promo.discountType === 'fixed') return Math.max(0, original - promo.discountValue);
+        if (promo.discountType === '2x1') return original - Math.floor(item.quantity / 2) * item.productPrice;
+        if (promo.discountType === 'fixedprice') return Math.min(promo.discountValue, item.productPrice) * item.quantity;
+        return null;
+    };
 
     // Determinar si es la barra (mesa 0)
     const isBar = order.tableNumber === 0;
@@ -476,31 +493,21 @@ const WaiterOrderDetails: React.FC = () => {
                         <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
                         Estado de Items
                     </h3>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                         {(() => {
                             const activeItems = order.items.filter(item => !item.isDeleted);
                             const pendingCount = activeItems.filter(item => item.status === 'pendiente').reduce((sum, item) => sum + item.quantity, 0);
-                            const preparingCount = activeItems.filter(item => item.status === 'en_preparacion').reduce((sum, item) => sum + item.quantity, 0);
-                            const readyCount = activeItems.filter(item => item.status === 'listo').reduce((sum, item) => sum + item.quantity, 0);
                             const deliveredCount = activeItems.filter(item => item.status === 'entregado').reduce((sum, item) => sum + item.quantity, 0);
 
                             return (
                                 <>
                                     <div className="text-center p-2 bg-yellow-900/20 border border-yellow-600 rounded-lg">
                                         <div className="text-xl font-bold text-yellow-400">{pendingCount}</div>
-                                        <div className="text-xs text-yellow-300">⏳</div>
-                                    </div>
-                                    <div className="text-center p-2 bg-orange-900/20 border border-orange-600 rounded-lg">
-                                        <div className="text-xl font-bold text-orange-400">{preparingCount}</div>
-                                        <div className="text-xs text-orange-300">🔥</div>
+                                        <div className="text-xs text-yellow-300">⏳ Pendiente</div>
                                     </div>
                                     <div className="text-center p-2 bg-green-900/20 border border-green-600 rounded-lg">
-                                        <div className="text-xl font-bold text-green-400">{readyCount}</div>
-                                        <div className="text-xs text-green-300">✅</div>
-                                    </div>
-                                    <div className="text-center p-2 bg-blue-900/20 border border-blue-600 rounded-lg">
-                                        <div className="text-xl font-bold text-blue-400">{deliveredCount}</div>
-                                        <div className="text-xs text-blue-300">🍽️</div>
+                                        <div className="text-xl font-bold text-green-400">{deliveredCount}</div>
+                                        <div className="text-xs text-green-300">✅ Entregado</div>
                                     </div>
                                 </>
                             );
@@ -583,12 +590,23 @@ const WaiterOrderDetails: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-3 text-xs text-gray-400">
-                                                    <span>Cant: {item.quantity}</span>
-                                                    <span>${item.productPrice.toFixed(2)} c/u</span>
-                                                    <span className="text-green-400 font-semibold">
-                                                        ${(item.productPrice * item.quantity).toFixed(2)}
-                                                    </span>
+                                                <div className="flex items-center gap-3 text-xs">
+                                                    <span className="text-gray-400">Cant: {item.quantity}</span>
+                                                    {(() => {
+                                                        const discounted = !isDeleted ? getItemDiscountedTotal(item) : null;
+                                                        const original = item.productPrice * item.quantity;
+                                                        if (discounted !== null) {
+                                                            return (
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <span className="line-through text-gray-500">${original.toFixed(2)}</span>
+                                                                    <span className="text-green-400 font-bold">${discounted.toFixed(2)}</span>
+                                                                </span>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <span className="text-gray-300 font-semibold">${original.toFixed(2)}</span>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 {item.notes && (
                                                     <p className="text-xs text-gray-500 mt-1 italic">
@@ -603,9 +621,18 @@ const WaiterOrderDetails: React.FC = () => {
                                             </div>
                                             {!isDeleted && (
                                                 <div className="flex flex-col gap-2 ml-2">
+                                                    {item.status === 'pendiente' && (
+                                                        <button
+                                                            onClick={() => handleMarkDelivered(item.id)}
+                                                            className="p-2 bg-green-600 hover:bg-green-500 active:scale-95 rounded-lg transition-all"
+                                                            title="Marcar como entregado"
+                                                        >
+                                                            <span className="text-white text-sm">✓</span>
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => handleAddAnother(item)}
-                                                        className="p-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                                                        className="p-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors"
                                                         title="Agregar más"
                                                     >
                                                         <Plus className="w-4 h-4 text-white" />
@@ -627,22 +654,22 @@ const WaiterOrderDetails: React.FC = () => {
                     </div>
 
                     {/* Resumen - Compacto */}
-                    <div className="p-4 bg-gray-700/50 border-t border-gray-600">
-                        <div className="space-y-1.5 mb-4">
+                    <div className="p-4 bg-gray-800/80 border-t border-gray-700">
+                        <div className="space-y-2 mb-4">
                             <div className="flex justify-between text-sm text-gray-400">
                                 <span>Subtotal:</span>
                                 <span>${calculatedSubtotal.toFixed(2)}</span>
                             </div>
                             {autoDiscount > 0 && (
                                 <div className="flex justify-between text-sm text-green-400">
-                                    <span className="flex items-center gap-1"><Tag size={12} /> Promo estimada:</span>
-                                    <span>-${autoDiscount.toFixed(2)}</span>
+                                    <span className="flex items-center gap-1"><Tag size={12} /> Descuento promo:</span>
+                                    <span className="font-semibold">-${autoDiscount.toFixed(2)}</span>
                                 </div>
                             )}
-                            <div className="flex justify-between text-lg font-bold text-white border-t border-gray-600 pt-1.5">
+                            <div className="flex justify-between text-lg font-bold text-white border-t border-gray-600 pt-2">
                                 <span>Total{autoDiscount > 0 ? ' con promo' : ''}:</span>
                                 <span className={autoDiscount > 0 ? 'text-green-400' : ''}>
-                                    ${(calculatedTotal - autoDiscount).toFixed(2)}
+                                    ${(calculatedSubtotal - autoDiscount).toFixed(2)}
                                 </span>
                             </div>
                         </div>

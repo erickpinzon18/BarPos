@@ -551,8 +551,8 @@ export const getKitchenOrdersRealtime = (callback: (orders: Order[]) => void) =>
       .map(doc => convertTimestamps({ id: doc.id, ...doc.data() }) as Order)
       .filter(order => 
         order.items.some(item => 
-          // include any item that is pending, ready or delivered (exclude only deleted items)
-          ['pendiente', 'listo', 'entregado'].includes(item.status) && !item.isDeleted
+          // include orders that have any active (non-deleted) item
+          ['pendiente', 'entregado'].includes(item.status) && !item.isDeleted
         )
       );
     callback(orders);
@@ -679,6 +679,32 @@ export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>>
   } catch (error) {
     console.error('Error getting daily stats:', error);
     return { success: false, error: 'Error al obtener estadísticas diarias' };
+  }
+};
+
+// Get ALL orders created today (activo + pagado) for inventory/sales summary
+export const getTodayAllOrders = async (date: Date = new Date()): Promise<FirestoreResponse<Order[]>> => {
+  try {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    const q = query(
+      collection(db, 'orders'),
+      where('createdAt', '>=', Timestamp.fromDate(start)),
+      where('createdAt', '<=', Timestamp.fromDate(end)),
+      where('status', 'in', ['activo', 'pagado'])
+    );
+
+    const snapshot = await getDocs(q);
+    const orders = snapshot.docs.map(d =>
+      convertTimestamps({ id: d.id, ...d.data() }) as Order
+    );
+    return { success: true, data: orders };
+  } catch (error) {
+    console.error('Error getting today orders:', error);
+    return { success: false, error: 'Error al obtener órdenes de hoy' };
   }
 };
 

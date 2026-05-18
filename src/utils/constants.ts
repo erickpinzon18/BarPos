@@ -8,8 +8,6 @@ export const ORDER_STATUSES = {
 
 export const ORDER_ITEM_STATUSES = {
   PENDING: 'pendiente',
-  IN_PROGRESS: 'en_preparacion',
-  READY: 'listo',
   DELIVERED: 'entregado',
 } as const;
 
@@ -63,8 +61,6 @@ export const KANBAN_DELIVERED_RETENTION_MINUTES = 30;
 
 export const STATUS_COLORS = {
   [ORDER_ITEM_STATUSES.PENDING]: 'bg-yellow-600/20 text-yellow-400',
-  [ORDER_ITEM_STATUSES.IN_PROGRESS]: 'bg-blue-600/20 text-blue-400',
-  [ORDER_ITEM_STATUSES.READY]: 'bg-green-600/20 text-green-400',
   [ORDER_ITEM_STATUSES.DELIVERED]: 'bg-gray-600/20 text-gray-400',
   [TABLE_STATUSES.FREE]: 'bg-green-600/20 text-green-400',
   [TABLE_STATUSES.OCCUPIED]: 'bg-red-600/20 text-red-400',

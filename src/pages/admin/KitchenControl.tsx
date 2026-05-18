@@ -42,10 +42,9 @@ const KitchenControl: React.FC = () => {
     return stationMatch && statusMatch;
   });
 
-  // Agrupar por estado para mejor organización
+  // Agrupar por estado
   const groupedItems = {
     pendiente: filteredItems.filter(item => item.status === 'pendiente'),
-    listo: filteredItems.filter(item => item.status === 'listo'),
     entregado: filteredItems.filter(item => item.status === 'entregado')
   };
 
@@ -137,7 +136,7 @@ const KitchenControl: React.FC = () => {
 
           {/* Status Filter */}
           <div className="flex space-x-2">
-            {(['all', 'pendiente', 'listo', 'entregado'] as const).map((status) => (
+            {(['all', 'pendiente', 'entregado'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -148,8 +147,7 @@ const KitchenControl: React.FC = () => {
                 }`}
               >
                 {status === 'all' ? 'Todos los estados' : 
-                 status === 'pendiente' ? 'Pendiente' :
-                 status === 'listo' ? 'Listo' : 'Entregado'}
+                 status === 'pendiente' ? '⏳ Pendiente' : '✅ Entregado'}
               </button>
             ))}
           </div>
@@ -157,18 +155,14 @@ const KitchenControl: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-yellow-900/20 border border-yellow-600 p-4 rounded-lg">
           <div className="text-yellow-400 text-2xl font-bold">{groupedItems.pendiente.length}</div>
-          <div className="text-yellow-300 text-sm">Pendientes</div>
+          <div className="text-yellow-300 text-sm">⏳ Pendientes</div>
         </div>
         <div className="bg-green-900/20 border border-green-600 p-4 rounded-lg">
-          <div className="text-green-400 text-2xl font-bold">{groupedItems.listo.length}</div>
-          <div className="text-green-300 text-sm">Listos</div>
-        </div>
-        <div className="bg-blue-900/20 border border-blue-600 p-4 rounded-lg">
-          <div className="text-blue-400 text-2xl font-bold">{groupedItems.entregado.length}</div>
-          <div className="text-blue-300 text-sm">Entregados</div>
+          <div className="text-green-400 text-2xl font-bold">{groupedItems.entregado.length}</div>
+          <div className="text-green-300 text-sm">✅ Entregados</div>
         </div>
       </div>
 

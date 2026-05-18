@@ -27,12 +27,14 @@ import Analytics from "./pages/admin/Analytics";
 import WaiterHome from "./pages/waiter/Home";
 import WaiterOrderDetails from "./pages/waiter/OrderDetails";
 import WaiterCheckout from "./pages/waiter/Checkout";
+import WaiterKanban from "./pages/waiter/Kanban";
 
 // Kitchen Pages
 import KitchenKanban from "./pages/kitchen/Kanban";
 import KitchenHome from "./pages/kitchen/Home";
 import KitchenOrderDetails from "./pages/kitchen/OrderDetails";
 import KitchenCheckout from "./pages/kitchen/Checkout";
+import KitchenVentas from "./pages/kitchen/Ventas";
 
 function App() {
   return (
@@ -69,6 +71,7 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={["waiter"]} />}>
         <Route path="/waiter" element={<WaiterLayout />}>
           <Route path="home" element={<WaiterHome />} />
+          <Route path="kanban" element={<WaiterKanban />} />
           <Route path="order/:tableId" element={<WaiterOrderDetails />} />
           <Route path="checkout/:orderId" element={<WaiterCheckout />} />
         </Route>
@@ -80,6 +83,7 @@ function App() {
           <Route path="cocina" element={<KitchenKanban />} />
           <Route path="barra" element={<KitchenKanban />} />
           <Route path="mesas" element={<KitchenHome />} />
+          <Route path="ventas" element={<KitchenVentas />} />
           <Route path="order/:tableId" element={<KitchenOrderDetails />} />
           <Route path="checkout/:orderId" element={<KitchenCheckout />} />
         </Route>

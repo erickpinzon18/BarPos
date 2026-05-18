@@ -45,7 +45,7 @@ const WaiterLayout: React.FC = () => {
             </Link>
             <nav className="flex items-center gap-4 text-sm">
               <Link to="/waiter/home" className="hover:text-red-400">Mesas</Link>
-              {/* <Link to="/waiter/checkout" className="hover:text-red-400">Checkout</Link> */}
+              <Link to="/waiter/kanban" className="hover:text-green-400 font-medium">🍽️ Mis Pedidos</Link>
             </nav>
           </div>
         </div>

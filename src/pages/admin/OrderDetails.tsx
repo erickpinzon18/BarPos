@@ -18,6 +18,7 @@ import {
   updateOrderPeopleCount,
   updateOrderTableName,
   updateOrderAdminComments,
+  updateOrderStatusInKanban,
 } from "../../services/firestoreService";
 
 const OrderDetails: React.FC = () => {
@@ -120,7 +121,7 @@ const OrderDetails: React.FC = () => {
   };
 
   // Función para agregar item a la orden
-  const handleAddItem = async (productId: string, quantity: number) => {
+  const handleAddItem = async (productId: string, quantity: number, notes?: string) => {
     if (!order) return;
 
     setAddItemLoading(true);
@@ -136,7 +137,8 @@ const OrderDetails: React.FC = () => {
         product.name,
         product.price,
         product.category,
-        quantity
+        quantity,
+        notes
       );
 
       console.log("✅ Item agregado exitosamente");
@@ -321,16 +323,22 @@ const OrderDetails: React.FC = () => {
     );
   }
 
+  // Marcar item como entregado (recogido)
+  const handleMarkDelivered = async (itemId: string) => {
+    if (!order) return;
+    try {
+      await updateOrderStatusInKanban(order.id, itemId, 'entregado');
+    } catch (error) {
+      console.error('Error marcando item como entregado:', error);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pendiente":
         return "bg-yellow-500 text-yellow-100";
-      case "en_preparacion":
-        return "bg-blue-500 text-blue-100";
-      case "listo":
-        return "bg-green-500 text-green-100";
       case "entregado":
-        return "bg-gray-500 text-gray-100";
+        return "bg-green-600 text-green-100";
       default:
         return "bg-gray-500 text-gray-100";
     }
@@ -339,13 +347,9 @@ const OrderDetails: React.FC = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case "pendiente":
-        return "Pendiente";
-      case "en_preparacion":
-        return "En Preparación";
-      case "listo":
-        return "Listo";
+        return "⏳ Pendiente";
       case "entregado":
-        return "Entregado";
+        return "✅ Entregado";
       default:
         return status;
     }
@@ -399,10 +403,24 @@ const OrderDetails: React.FC = () => {
           if (diff > 0) total += diff * item.quantity;
         }
       }
-      break; // solo aplica la primera promo coincidente
+      break;
     }
     return total;
   })();
+
+  // Precio con descuento de un item individual (sólo si la promo es vigente)
+  const getItemDiscountedTotal = (item: OrderItem): number | null => {
+    const promo = getItemPromo(item);
+    if (!promo) return null;
+    const valid = isPromotionWithinSchedule(promo.cutoffTime, item.createdAt);
+    if (!valid) return null;
+    const original = item.productPrice * item.quantity;
+    if (promo.discountType === 'percentage') return original * (1 - promo.discountValue / 100);
+    if (promo.discountType === 'fixed') return Math.max(0, original - promo.discountValue);
+    if (promo.discountType === '2x1') return original - Math.floor(item.quantity / 2) * item.productPrice;
+    if (promo.discountType === 'fixedprice') return Math.min(promo.discountValue, item.productPrice) * item.quantity;
+    return null;
+  };
 
   return (
     <div className="p-4 md:p-8">
@@ -541,23 +559,17 @@ const OrderDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Estado de Preparación - Separado */}
+      {/* Estado de Items */}
       <div className="bg-gray-800 p-6 rounded-xl border border-gray-800 mb-8">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
           <div className="w-2 h-2 bg-red-500 rounded-full mr-3"></div>
-          Estado de Preparación
+          Estado de Items
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {(() => {
             const activeItems = order.items.filter((item) => !item.isDeleted);
             const pendingCount = activeItems
               .filter((item) => item.status === "pendiente")
-              .reduce((sum, item) => sum + item.quantity, 0);
-            const preparingCount = activeItems
-              .filter((item) => item.status === "en_preparacion")
-              .reduce((sum, item) => sum + item.quantity, 0);
-            const readyCount = activeItems
-              .filter((item) => item.status === "listo")
               .reduce((sum, item) => sum + item.quantity, 0);
             const deliveredCount = activeItems
               .filter((item) => item.status === "entregado")
@@ -566,28 +578,12 @@ const OrderDetails: React.FC = () => {
             return (
               <>
                 <div className="text-center p-3 bg-yellow-900/20 border border-yellow-600 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-400">
-                    {pendingCount}
-                  </div>
+                  <div className="text-2xl font-bold text-yellow-400">{pendingCount}</div>
                   <div className="text-xs text-yellow-300">⏳ Pendiente</div>
                 </div>
-                <div className="text-center p-3 bg-orange-900/20 border border-orange-600 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-400">
-                    {preparingCount}
-                  </div>
-                  <div className="text-xs text-orange-300">🔥 Preparando</div>
-                </div>
                 <div className="text-center p-3 bg-green-900/20 border border-green-600 rounded-lg">
-                  <div className="text-2xl font-bold text-green-400">
-                    {readyCount}
-                  </div>
-                  <div className="text-xs text-green-300">✅ Listo</div>
-                </div>
-                <div className="text-center p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-400">
-                    {deliveredCount}
-                  </div>
-                  <div className="text-xs text-blue-300">🍽️ Entregado</div>
+                  <div className="text-2xl font-bold text-green-400">{deliveredCount}</div>
+                  <div className="text-xs text-green-300">✅ Entregado</div>
                 </div>
               </>
             );
@@ -707,9 +703,18 @@ const OrderDetails: React.FC = () => {
 
                           {!isDeleted && (
                             <>
+                              {item.status === 'pendiente' && (
+                                <button
+                                  onClick={() => handleMarkDelivered(item.id)}
+                                  className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
+                                  title="Marcar como entregado"
+                                >
+                                  <span className="text-sm font-bold">✓</span>
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleAddAnother(item)}
-                                className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
+                                className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
                                 title="Agregar otro"
                               >
                                 <Plus className="w-4 h-4" />
@@ -774,22 +779,29 @@ const OrderDetails: React.FC = () => {
                     </div>
 
                     <div className="text-right ml-4">
-                      <p
-                        className={`text-xl font-bold ${
-                          isDeleted
-                            ? "text-gray-500 line-through"
-                            : "text-red-500"
-                        }`}
-                      >
-                        ${(item.productPrice * item.quantity).toFixed(2)}
-                      </p>
-                      <p
-                        className={`text-sm ${
-                          isDeleted ? "text-gray-600" : "text-gray-400"
-                        }`}
-                      >
-                        {isDeleted ? "No contabilizado" : "Subtotal"}
-                      </p>
+                      {(() => {
+                        const discounted = !isDeleted ? getItemDiscountedTotal(item) : null;
+                        const original = item.productPrice * item.quantity;
+                        return (
+                          <>
+                            {discounted !== null ? (
+                              <>
+                                <p className="text-sm text-gray-500 line-through">${original.toFixed(2)}</p>
+                                <p className="text-xl font-bold text-green-400">${discounted.toFixed(2)}</p>
+                              </>
+                            ) : (
+                              <p className={`text-xl font-bold ${
+                                isDeleted ? 'text-gray-500 line-through' : 'text-red-500'
+                              }`}>${original.toFixed(2)}</p>
+                            )}
+                            <p className={`text-xs ${
+                              isDeleted ? 'text-gray-600' : 'text-gray-400'
+                            }`}>
+                              {isDeleted ? 'No contabilizado' : `${item.quantity} × $${item.productPrice.toFixed(2)}`}
+                            </p>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -799,22 +811,22 @@ const OrderDetails: React.FC = () => {
         </div>
 
         {/* Order Summary */}
-        <div className="p-6 bg-gray-700/50 border-t border-gray-600">
+        <div className="p-6 bg-gray-800/80 border-t border-gray-700">
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-gray-400">
               <span>Subtotal:</span>
-              <span>${calculatedTotal.toFixed(2)}</span>
+              <span>${calculatedSubtotal.toFixed(2)}</span>
             </div>
             {autoDiscount > 0 && (
               <div className="flex justify-between text-sm text-green-400">
-                <span className="flex items-center gap-1"><Tag size={12} /> Promo estimada:</span>
-                <span>-${autoDiscount.toFixed(2)}</span>
+                <span className="flex items-center gap-1"><Tag size={12} /> Descuento promo:</span>
+                <span className="font-semibold">-${autoDiscount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-white border-t border-gray-600 pt-2">
               <span>Total{autoDiscount > 0 ? ' con promo' : ''}:</span>
               <span className={autoDiscount > 0 ? 'text-green-400' : ''}>
-                ${(calculatedTotal - autoDiscount).toFixed(2)}
+                ${(calculatedSubtotal - autoDiscount).toFixed(2)}
               </span>
             </div>
           </div>

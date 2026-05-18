@@ -55,7 +55,7 @@ const WaiterCheckout: React.FC = () => {
   }, [order]);
 
   // Tip and payment state (percentage)
-  const [tipPercent, setTipPercent] = useState<number>(0); // e.g. 0.15 for 15%
+  const [tipPercent, setTipPercent] = useState<number>(0.15);
   const [customTipPercent, setCustomTipPercent] = useState<string>(""); // user's input like '15' means 15%
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -69,9 +69,8 @@ const WaiterCheckout: React.FC = () => {
   const [mixedTransferencia, setMixedTransferencia] = useState<string>("");
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
   const [config, setConfig] = useState<any | null>(null);
-  const [showTicket, setShowTicket] = useState<boolean>(true); // Mobile: toggle ticket view
-  const [splitBetween, setSplitBetween] = useState<number>(1); // Número de personas para dividir la cuenta
-  const [selectedPromoId, setSelectedPromoId] = useState<string | null>(null); // Promoción seleccionada
+  const [showTicket, setShowTicket] = useState<boolean>(true);
+  const [splitBetween, setSplitBetween] = useState<number>(1);
 
   // Fetch active promotions
   const { promotions: activePromotions } = useActivePromotions();
@@ -111,11 +110,17 @@ const WaiterCheckout: React.FC = () => {
     [subtotal, tipPercent]
   );
 
-  // Promotion discount calculation
+  // Auto-apply the first promotion that is within schedule and applies to at least one item
   const selectedPromo = useMemo(() => {
-    if (!selectedPromoId) return null;
-    return activePromotions.find((p) => p.id === selectedPromoId) ?? null;
-  }, [selectedPromoId, activePromotions]);
+    return activePromotions.find(promo => {
+      if (!isPromotionWithinSchedule(promo.cutoffTime)) return false;
+      return activeItems.some(i => {
+        const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
+        const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
+        return catOk && prodOk;
+      });
+    }) ?? null;
+  }, [activePromotions, activeItems]);
 
   const discountAmount = useMemo(() => {
     if (!selectedPromo) return 0;
@@ -175,7 +180,7 @@ const WaiterCheckout: React.FC = () => {
   );
 
   const updateTotalWithPercent = (percent: number) => {
-    setTipPercent(percent);
+    setTipPercent(prev => prev === percent ? 0 : percent);
     setCustomTipPercent("");
   };
 
@@ -591,110 +596,21 @@ const WaiterCheckout: React.FC = () => {
               </div>
             </div>
 
-            {/* Promociones Section */}
-            <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-800">
-              <h3 className="font-semibold text-white mb-3 md:mb-4 flex items-center gap-2">
-                <Tag size={18} className="text-green-400" />
-                Promoción
-              </h3>
-              {activePromotions.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  No hay promociones activas disponibles.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {/* Option: No promotion */}
-                  <button
-                    disabled={isReadOnly}
-                    onClick={() => setSelectedPromoId(null)}
-                    className={`w-full text-left py-3 px-4 rounded-lg transition-colors text-sm ${
-                      !selectedPromoId
-                        ? "bg-gray-700 ring-2 ring-green-500 text-white"
-                        : "bg-gray-900 text-gray-400 hover:bg-gray-700"
-                    } ${isReadOnly ? "cursor-not-allowed opacity-60" : ""}`}
-                  >
-                    Sin promoción
-                  </button>
-                  {activePromotions.map((promo) => {
-                    const canApply = activeItems.some((i) => {
-                      const catOk =
-                        promo.categories.length === 0 ||
-                        promo.categories.includes(i.category);
-                      const prodOk =
-                        !promo.productIds ||
-                        promo.productIds.length === 0 ||
-                        promo.productIds.includes(i.productId);
-                      const timeOk = isPromotionWithinSchedule(
-                        promo.cutoffTime,
-                        i.createdAt
-                      );
-                      return catOk && prodOk && timeOk;
-                    });
-                    const isSelected = selectedPromoId === promo.id;
-                    return (
-                      <button
-                        key={promo.id}
-                        disabled={isReadOnly || !canApply}
-                        onClick={() =>
-                          setSelectedPromoId(isSelected ? null : promo.id)
-                        }
-                        className={`w-full text-left py-3 px-4 rounded-lg transition-all text-sm ${
-                          isSelected
-                            ? "bg-green-900/40 ring-2 ring-green-500 text-white"
-                            : canApply
-                            ? "bg-gray-900 text-gray-300 hover:bg-gray-700"
-                            : "bg-gray-900/50 text-gray-500 cursor-not-allowed opacity-60"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-semibold flex items-center gap-2">
-                              {promo.name}
-                              {!canApply && (
-                                <span className="inline-flex items-center gap-1 text-xs text-amber-400">
-                                  <AlertTriangle size={12} />
-                                  No aplicable
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs mt-0.5 text-gray-400">
-                              {promo.discountType === "percentage" &&
-                                `${promo.discountValue}% desc.`}
-                              {promo.discountType === "fixed" &&
-                                `$${promo.discountValue} desc.`}
-                              {promo.discountType === "2x1" && `2x1`}
-                              {promo.discountType === "nxprice" &&
-                                `N x $${promo.discountValue}`}
-                              {promo.discountType === "fixedprice" &&
-                                `Precio fijo $${promo.discountValue}/u`}
-                              {" · "}
-                              <Clock size={10} className="inline" /> Hasta{" "}
-                              {promo.cutoffTime} hrs
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <Check
-                              size={18}
-                              className="text-green-400 flex-shrink-0"
-                            />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {discountAmount > 0 && (
-                <div className="mt-3 p-3 bg-green-900/30 border border-green-700/50 rounded-lg">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-300">Descuento aplicado:</span>
-                    <span className="font-bold text-green-400">
-                      -${discountAmount.toFixed(2)}
-                    </span>
+            {/* Promoción auto-aplicada */}
+            {selectedPromo && (
+              <div className="bg-green-900/20 border border-green-700/50 p-4 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Tag size={16} className="text-green-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-300">{selectedPromo.name}</p>
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Clock size={10} /> Hasta {selectedPromo.cutoffTime} hrs
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
+                <span className="text-green-400 font-bold text-sm">-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
 
             {/* División de Cuenta Section */}
             <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-800">

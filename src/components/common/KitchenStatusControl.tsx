@@ -1,6 +1,6 @@
 // src/components/common/KitchenStatusControl.tsx
 import React, { useState } from 'react';
-import { ChefHat, Clock, CheckCircle, Truck } from 'lucide-react';
+import { Clock, Truck } from 'lucide-react';
 import type { OrderItemStatus } from '../../utils/types';
 import { getCategoryInfo, type CategoryKey } from '../../utils/categories';
 
@@ -44,28 +44,12 @@ const KitchenStatusControl: React.FC<KitchenStatusControlProps> = ({
           borderColor: 'border-yellow-600',
           label: 'Pendiente'
         };
-      case 'en_preparacion':
-        return {
-          icon: ChefHat,
-          color: 'text-orange-400',
-          bgColor: 'bg-orange-900/20',
-          borderColor: 'border-orange-600',
-          label: 'Preparando'
-        };
-      case 'listo':
-        return {
-          icon: CheckCircle,
-          color: 'text-green-400',
-          bgColor: 'bg-green-900/20',
-          borderColor: 'border-green-600',
-          label: 'Listo'
-        };
       case 'entregado':
         return {
           icon: Truck,
-          color: 'text-blue-400',
-          bgColor: 'bg-blue-900/20',
-          borderColor: 'border-blue-600',
+          color: 'text-green-400',
+          bgColor: 'bg-green-900/20',
+          borderColor: 'border-green-600',
           label: 'Entregado'
         };
       default:
@@ -79,7 +63,7 @@ const KitchenStatusControl: React.FC<KitchenStatusControlProps> = ({
     }
   };
 
-  const statuses: OrderItemStatus[] = ['pendiente', 'listo', 'entregado'];
+  const statuses: OrderItemStatus[] = ['pendiente', 'entregado'];
 
   // Determinar si es item de cocina o barra usando el diccionario de categorías
   const categoryInfo = getCategoryInfo(category as CategoryKey);
@@ -97,7 +81,7 @@ const KitchenStatusControl: React.FC<KitchenStatusControlProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {statuses.map((status) => {
           const config = getStatusConfig(status);
           const Icon = config.icon;

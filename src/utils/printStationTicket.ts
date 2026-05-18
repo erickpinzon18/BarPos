@@ -66,7 +66,17 @@ export const printStationTicket = (opts: StationTicketOptions): void => {
   for (const item of items) {
     wrap(`${item.quantity}x ${item.productName}`, W).forEach(l => lines.push(l));
     if (item.notes?.trim()) {
-      wrap(`-> ${item.notes.trim()}`, W - 3).forEach(l => lines.push(`   ${l}`));
+      const notes = item.notes.trim();
+      const serviciosMatch = notes.match(/^Servicios:\s*(.+)$/s);
+      if (serviciosMatch) {
+        lines.push(`   -> Servicios:`);
+        serviciosMatch[1].split(',').forEach(svc => {
+          const s = svc.trim();
+          if (s) wrap(s, W - 6).forEach(l => lines.push(`      ${l}`));
+        });
+      } else {
+        wrap(`-> ${notes}`, W - 3).forEach(l => lines.push(`   ${l}`));
+      }
     }
   }
 

@@ -41,7 +41,7 @@ export interface Table {
 }
 
 export type OrderStatus = 'activo' | 'pagado' | 'cancelado';
-export type OrderItemStatus = 'pendiente' | 'en_preparacion' | 'listo' | 'entregado';
+export type OrderItemStatus = 'pendiente' | 'entregado';
 
 export interface OrderItem {
   id: string;

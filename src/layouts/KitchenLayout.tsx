@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { getConfig } from '../services/firestoreService';
-import { User, LogOut, LayoutDashboard, Printer } from 'lucide-react';
+import { User, LogOut, LayoutDashboard, Printer, BarChart2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useAutoPrintTickets } from '../hooks/useAutoPrintTickets';
@@ -11,7 +11,7 @@ import { usePaperSize } from '../hooks/usePaperSize';
 const KitchenLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const [config, setConfig] = useState<any | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
@@ -26,6 +26,7 @@ const KitchenLayout: React.FC = () => {
   const isInCocina = location.pathname.includes('/cocina');
   const isInBarra = location.pathname.includes('/barra');
   const isInMesas = location.pathname.includes('/mesas') || location.pathname.includes('/order') || location.pathname.includes('/checkout');
+  const isInVentas = location.pathname.includes('/ventas');
 
   // Load business config (name, logo) from Firestore
   useEffect(() => {
@@ -69,10 +70,14 @@ const KitchenLayout: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('kitchenUserName');
-    toast.success('Sesión cerrada');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      localStorage.removeItem('kitchenUserName');
+      await logout();
+      navigate('/login');
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al cerrar sesión');
+    }
   };
 
   return (
@@ -176,6 +181,19 @@ const KitchenLayout: React.FC = () => {
                   </div>
                 )}
               </div>
+              {/* Ventas Button */}
+              <button
+                onClick={() => navigate('/kitchen/ventas')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${
+                  isInVentas
+                    ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-500/50'
+                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-emerald-400'
+                }`}
+              >
+                <BarChart2 size={20} />
+                <span className="font-bold">Ventas</span>
+              </button>
+
               {/* Mesas Button */}
               <button
                 onClick={() => navigate('/kitchen/mesas')}

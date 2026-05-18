@@ -51,7 +51,7 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
         productName: 'Flan Napolitano',
         productPrice: 45,
         quantity: 2,
-        status: 'listo',
+        status: 'entregado',
         category: 'Postre'
       }
     ];

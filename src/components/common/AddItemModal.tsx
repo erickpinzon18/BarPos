@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, Plus, Tag, Clock } from 'lucide-react';
 import QuantityModal from './QuantityModal';
+import BottleQuantityModal from './BottleQuantityModal';
 import type { Product, Promotion } from '../../utils/types';
 import { FILTER_CATEGORIES } from '../../utils/categories';
 import { isPromotionWithinSchedule } from '../../hooks/usePromotions';
@@ -9,7 +10,7 @@ import { isPromotionWithinSchedule } from '../../hooks/usePromotions';
 interface AddItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddItem: (productId: string, quantity: number) => Promise<void>;
+  onAddItem: (productId: string, quantity: number, notes?: string) => Promise<void>;
   products: Product[];
   loading?: boolean;
   activePromotions?: Promotion[];
@@ -25,14 +26,13 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  
-  // Estados para el modal de cantidad
+
   const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [showBottleModal, setShowBottleModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const categories = FILTER_CATEGORIES;
 
-  // Filtrar productos
   const filteredProducts = products.filter(product => {
     if (!product.available) return false;
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -54,14 +54,13 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
   // Promoción que aplica pero está EXPIRADA (fuera de horario)
   const getExpiredPromo = useMemo(() => (product: Product): Promotion | null => {
     return activePromotions.find(promo => {
-      if (isPromotionWithinSchedule(promo.cutoffTime)) return false; // solo expiradas
+      if (isPromotionWithinSchedule(promo.cutoffTime)) return false;
       const catOk = promo.categories.length === 0 || promo.categories.includes(product.category);
       const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(product.id);
       return catOk && prodOk;
     }) ?? null;
   }, [activePromotions]);
 
-  // Precio efectivo después de aplicar la promo (por unidad)
   const getEffectivePrice = (product: Product, promo: Promotion | null): number => {
     if (!promo) return product.price;
     switch (promo.discountType) {
@@ -76,18 +75,20 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
     }
   };
 
-
   const handleAddItem = (product: Product) => {
     setSelectedProduct(product);
-    setShowQuantityModal(true);
+    if (product.category === 'Botella') {
+      setShowBottleModal(true);
+    } else {
+      setShowQuantityModal(true);
+    }
   };
 
+  // Regular (non-bottle) confirm
   const handleConfirmQuantity = async (quantity: number) => {
     if (!selectedProduct) return;
-    
     try {
       await onAddItem(selectedProduct.id, quantity);
-      console.log('✅ Producto agregado:', selectedProduct.name, 'x', quantity);
     } catch (error) {
       console.error('Error adding item:', error);
       throw error;
@@ -96,6 +97,17 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 
   const handleCloseQuantityModal = () => {
     setShowQuantityModal(false);
+    setSelectedProduct(null);
+  };
+
+  // Bottle confirm: quantity + optional services notes
+  const handleConfirmBottle = async (quantity: number, notes: string) => {
+    if (!selectedProduct) return;
+    await onAddItem(selectedProduct.id, quantity, notes || undefined);
+  };
+
+  const handleCloseBottleModal = () => {
+    setShowBottleModal(false);
     setSelectedProduct(null);
   };
 
@@ -111,24 +123,20 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
     } else {
       document.body.style.overflow = 'auto';
     }
-
     return () => {
       document.body.style.overflow = 'auto';
     };
   }, [isOpen]);
 
-  // Cerrar modal con tecla Escape
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
         handleClose();
       }
     };
-
     if (isOpen) {
       document.addEventListener('keydown', handleEscapeKey);
     }
-
     return () => {
       document.removeEventListener('keydown', handleEscapeKey);
     };
@@ -137,11 +145,11 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50"
       onClick={handleClose}
     >
-      <div 
+      <div
         className="bg-gray-800 rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
@@ -171,7 +179,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
                 className="w-full bg-gray-900 border border-gray-800 placeholder-gray-500 text-white text-sm rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            
+
             <div className="flex space-x-2 overflow-x-auto pb-2">
               {categories.map((category) => (
                 <button
@@ -210,14 +218,12 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
                     <span className="text-gray-500 text-xs text-center px-2">
                       {product.name}
                     </span>
-                    {/* PROMO badge esquina */}
                     {hasDiscount && (
                       <div className="absolute top-1.5 right-1.5 bg-green-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide shadow-lg flex items-center gap-0.5">
                         <Tag size={9} />
                         PROMO
                       </div>
                     )}
-                    {/* EXPIRED badge */}
                     {hasExpired && (
                       <div className="absolute top-1.5 right-1.5 bg-amber-600 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wide shadow-lg flex items-center gap-0.5">
                         <Clock size={9} />
@@ -276,6 +282,8 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
                     className={`w-full font-bold py-2 px-3 rounded-lg transition-colors text-xs flex items-center justify-center disabled:opacity-50 ${
                       hasDiscount
                         ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : product.category === 'Botella'
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white'
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}
                   >
@@ -298,12 +306,24 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
           )}
         </div>
 
-        {/* Quantity Modal */}
+        {/* Regular Quantity Modal (non-bottle products) */}
         <QuantityModal
           isOpen={showQuantityModal}
           onClose={handleCloseQuantityModal}
           onConfirm={handleConfirmQuantity}
           product={selectedProduct}
+          loading={loading}
+        />
+
+        {/* Bottle Modal: quantity + services in one step */}
+        <BottleQuantityModal
+          isOpen={showBottleModal}
+          onClose={handleCloseBottleModal}
+          onConfirm={handleConfirmBottle}
+          product={selectedProduct}
+          maxServicesPerBottle={
+            selectedProduct ? (getProductPromo(selectedProduct) ? 3 : 5) : 5
+          }
           loading={loading}
         />
       </div>

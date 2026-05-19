@@ -62,6 +62,7 @@ function App() {
           <Route path="order/:tableId" element={<AdminOrderDetails />} />
           <Route path="panel" element={<AdminKitchenControl />} />
           <Route path="cierre" element={<DailySummary />} />
+          <Route path="ventas" element={<KitchenVentas />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="settings" element={<Settings />} />
         </Route>

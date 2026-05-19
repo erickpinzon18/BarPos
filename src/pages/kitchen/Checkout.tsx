@@ -7,15 +7,17 @@ import { closeTable, getConfig } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
 import { useAuth } from '../../contexts/AuthContext';
-import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
 import { Tag, Clock } from 'lucide-react';
+import { printTicket } from '../../utils/printTicket';
+import { usePaperSize } from '../../hooks/usePaperSize';
 
 const KitchenCheckout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams<{ orderId?: string }>();
   const state = (location.state || {}) as { orderId?: string; tableId?: string; tableNumber?: number };
-  useAuth();
+  const { currentUser } = useAuth();
+  const [paperSize] = usePaperSize(currentUser?.id);
 
   const paramOrderId = params.orderId;
   const propOrderId = paramOrderId ?? state.orderId;
@@ -132,6 +134,24 @@ const KitchenCheckout: React.FC = () => {
     }
   };
 
+  const handlePrint = (customOrder?: Order) => {
+    if (!order && !customOrder) return;
+    const orderToPrint = customOrder || order;
+    const perPerson = total / Math.max(1, orderToPrint!.peopleCount ?? 1);
+    printTicket({
+      order: orderToPrint as Order,
+      subtotal,
+      tipAmount,
+      tipPercent,
+      total,
+      perPerson,
+      paperSize,
+      businessName: config?.name,
+      businessAddress: config?.address,
+      businessPhone: config?.phone,
+    });
+  };
+
   const handleFinalize = async () => {
     if (!order) return;
     if (paymentMethod === 'mixto') {
@@ -173,6 +193,24 @@ const KitchenCheckout: React.FC = () => {
       const res = await closeTable(tableId, orderId, paymentMethod, peopleCount, paymentDetails);
       if (!res.success) throw new Error(res.error || 'Error al cerrar mesa');
       setIsReadOnly(true);
+
+      const finalPayments = paymentMethod === 'mixto'
+        ? paymentDetails.splitPayments
+        : [{
+            method: paymentMethod,
+            amount: total,
+            receivedAmount: paymentMethod === 'efectivo' ? paymentDetails.receivedAmount : undefined,
+            change: paymentMethod === 'efectivo' ? paymentDetails.change : undefined
+          }];
+
+      const updatedOrder = {
+        ...order,
+        status: "pagado",
+        paymentMethod,
+        payments: finalPayments
+      } as Order;
+
+      handlePrint(updatedOrder);
     } catch (err: any) {
       console.error('Error closing table:', err);
       alert(err.message || 'Error al cerrar la mesa');

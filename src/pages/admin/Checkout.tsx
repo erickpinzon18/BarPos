@@ -194,11 +194,12 @@ const AdminCheckout: React.FC = () => {
     }
   };
 
-  const handlePrint = () => {
-    if (!order) return;
-    const perPerson = total / Math.max(1, order.peopleCount ?? 1);
+  const handlePrint = (customOrder?: Order) => {
+    if (!order && !customOrder) return;
+    const orderToPrint = customOrder || order;
+    const perPerson = total / Math.max(1, orderToPrint!.peopleCount ?? 1);
     printTicket({
-      order: order as Order,
+      order: orderToPrint as Order,
       subtotal,
       tipAmount,
       tipPercent,
@@ -290,8 +291,25 @@ const AdminCheckout: React.FC = () => {
       if (!res.success) throw new Error(res.error || "Error al cerrar mesa");
       // Mark UI as read-only so the user can view/print the ticket but not change anything
       setIsReadOnly(true);
+
+      const finalPayments = paymentMethod === 'mixto'
+        ? paymentDetails.splitPayments
+        : [{
+            method: paymentMethod,
+            amount: total,
+            receivedAmount: paymentMethod === 'efectivo' ? paymentDetails.receivedAmount : undefined,
+            change: paymentMethod === 'efectivo' ? paymentDetails.change : undefined
+          }];
+
+      const updatedOrder = {
+        ...order,
+        status: "pagado",
+        paymentMethod,
+        payments: finalPayments
+      } as Order;
+
       // Auto-print the exit pass immediately after closing
-      handlePrint();
+      handlePrint(updatedOrder);
     } catch (err: any) {
       console.error("Error closing table:", err);
       // show a basic alert; project may have a toast util
@@ -920,7 +938,7 @@ const AdminCheckout: React.FC = () => {
             {/* Imprimir debe permanecer disponible incluso en modo solo-lectura; solo deshabilitamos mientras cerramos */}
             <button
               disabled={closing}
-              onClick={handlePrint}
+              onClick={() => handlePrint()}
               className={`w-full ${
                 closing
                   ? "bg-gray-800 text-gray-400 cursor-not-allowed"

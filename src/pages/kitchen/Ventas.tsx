@@ -164,7 +164,7 @@ function printInventoryTicket(groups: CategoryGroup[], services: ServiceLine[], 
 
 const Ventas: React.FC = () => {
   const { currentUser } = useAuth();
-  const [paperSize] = usePaperSize(currentUser?.id);
+  const [paperSize, setPaperSize] = usePaperSize(currentUser?.id);
 
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
   const [services, setServices] = useState<ServiceLine[]>([]);
@@ -228,6 +228,23 @@ const Ventas: React.FC = () => {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </button>
+          
+          <div className="hidden sm:flex bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+            {(['58mm', '80mm'] as const).map(size => (
+              <button
+                key={size}
+                onClick={() => setPaperSize(size)}
+                className={`px-3 py-2 text-xs font-semibold transition-colors ${
+                  paperSize === size
+                    ? 'bg-orange-600 text-white'
+                    : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={() => printInventoryTicket(groups, services, today, paperSize)}
             disabled={groups.length === 0}

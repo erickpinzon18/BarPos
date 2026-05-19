@@ -192,7 +192,7 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   lines.push(s());
 
   // ── Items ───────────────────────────────────────────────────
-  const activeItems = order.items.filter(i => !i.isDeleted);
+  const activeItems = (order.items || []).filter(i => !i.isDeleted);
   activeItems.forEach(item => {
     const qty = item.quantity;
     const lineTotal = item.productPrice * qty;

@@ -15,6 +15,7 @@ import {
   ClipboardCheck,
   Calculator,
   BarChart3,
+  BarChart2,
   Tag,
 } from "lucide-react";
 
@@ -121,6 +122,10 @@ export const AdminSidebar: React.FC = () => {
           <NavLink to="/admin/cierre" className={navLinkClass}>
             <Calculator size={20} />
             <span>Cierre de Caja</span>
+          </NavLink>
+          <NavLink to="/admin/ventas" className={navLinkClass}>
+            <BarChart2 size={20} />
+            <span>Corte Ventas</span>
           </NavLink>
           <NavLink to="/admin/analytics" className={navLinkClass}>
             <BarChart3 size={20} />

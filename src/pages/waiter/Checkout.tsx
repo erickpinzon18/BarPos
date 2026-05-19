@@ -8,10 +8,11 @@ import { verifyUserPin } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import { ArrowLeft, Check, Tag, Clock } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import {
   useActivePromotions,
   isPromotionWithinSchedule,
 } from "../../hooks/usePromotions";
+import { printTicket } from "../../utils/printTicket";
+import { usePaperSize } from "../../hooks/usePaperSize";
 
 const WaiterCheckout: React.FC = () => {
   const location = useLocation();
@@ -22,7 +23,8 @@ const WaiterCheckout: React.FC = () => {
     tableId?: string;
     tableNumber?: number;
   };
-  useAuth();
+  const { currentUser } = useAuth();
+  const [paperSize] = usePaperSize(currentUser?.id);
 
   // Prefer orderId from URL params, then fallback to location.state
   const paramOrderId = params.orderId;
@@ -197,6 +199,24 @@ const WaiterCheckout: React.FC = () => {
     }
   };
 
+  const handlePrint = (customOrder?: Order) => {
+    if (!order && !customOrder) return;
+    const orderToPrint = customOrder || order;
+    const perPerson = total / Math.max(1, orderToPrint!.peopleCount ?? 1);
+    printTicket({
+      order: orderToPrint as Order,
+      subtotal,
+      tipAmount,
+      tipPercent,
+      total,
+      perPerson,
+      paperSize,
+      businessName: config?.name,
+      businessAddress: config?.address,
+      businessPhone: config?.phone,
+    });
+  };
+
   const handleFinalize = async () => {
     // Instead of immediately finalizing, open PIN modal to verify cashier
     if (!order) return;
@@ -276,6 +296,25 @@ const WaiterCheckout: React.FC = () => {
       if (!res.success) throw new Error(res.error || "Error al cerrar mesa");
       // Mark UI as read-only so the user can view/print the ticket but not change anything
       setIsReadOnly(true);
+
+      const finalPayments = paymentMethod === 'mixto'
+        ? paymentDetails.splitPayments
+        : [{
+            method: paymentMethod,
+            amount: total,
+            receivedAmount: paymentMethod === 'efectivo' ? paymentDetails.receivedAmount : undefined,
+            change: paymentMethod === 'efectivo' ? paymentDetails.change : undefined
+          }];
+
+      const updatedOrder = {
+        ...order,
+        status: "pagado",
+        paymentMethod,
+        payments: finalPayments
+      } as Order;
+
+      // Auto-print the exit pass immediately after closing
+      handlePrint(updatedOrder);
     } catch (err: any) {
       console.error("Error closing table:", err);
       // show a basic alert; project may have a toast util

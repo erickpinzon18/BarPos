@@ -23,9 +23,11 @@ interface WaiterStats {
   totalSales: number;
   totalOrders: number;
   totalTips: number;
-  waiterShare: number; // 66% para el mesero
-  barShare: number; // 20% para barra
-  cashierShare: number; // 14% para caja
+  waiterShare: number; // 46.67% para el mesero
+  barShare: number; // 16.67% para barra
+  busserShare: number; // 16.67% para garrotero
+  managerShare: number; // 13.33% para encargado
+  cashierShare: number; // 6.67% para caja
 }
 
 interface ShiftSummary {
@@ -43,6 +45,8 @@ interface ShiftSummary {
   averageTipPercent: number;
   waiterStats: WaiterStats[];
   totalBarShare: number;
+  totalBusserShare: number;
+  totalManagerShare: number;
   totalCashierShare: number;
 }
 
@@ -129,6 +133,8 @@ const DailySummary: React.FC = () => {
         averageTipPercent: 0,
         waiterStats: [],
         totalBarShare: 0,
+        totalBusserShare: 0,
+        totalManagerShare: 0,
         totalCashierShare: 0,
       };
 
@@ -190,6 +196,8 @@ const DailySummary: React.FC = () => {
             totalTips: 0,
             waiterShare: 0,
             barShare: 0,
+            busserShare: 0,
+            managerShare: 0,
             cashierShare: 0,
           });
         }
@@ -206,14 +214,20 @@ const DailySummary: React.FC = () => {
       summary.averageTipPercent =
         ordersWithTip > 0 ? (totalTipPercent / ordersWithTip) * 100 : 0;
 
-      // Calcular 66%/20%/14% distribución por mesero
+      // Calcular distribución de propinas: Mesero 46.67%, Barra 16.67%, Garrotero 16.67%, Encargado 13.33%, Cajera 6.67%
       let totalBarShare = 0;
+      let totalBusserShare = 0;
+      let totalManagerShare = 0;
       let totalCashierShare = 0;
       waiterStatsMap.forEach((stats) => {
-        stats.waiterShare = stats.totalTips * 0.66;
-        stats.barShare = stats.totalTips * 0.20;
-        stats.cashierShare = stats.totalTips * 0.14;
+        stats.waiterShare = stats.totalTips * 0.4667;
+        stats.barShare = stats.totalTips * 0.1667;
+        stats.busserShare = stats.totalTips * 0.1667;
+        stats.managerShare = stats.totalTips * 0.1333;
+        stats.cashierShare = stats.totalTips * 0.0667;
         totalBarShare += stats.barShare;
+        totalBusserShare += stats.busserShare;
+        totalManagerShare += stats.managerShare;
         totalCashierShare += stats.cashierShare;
       });
 
@@ -221,6 +235,8 @@ const DailySummary: React.FC = () => {
         .filter((s) => s.totalSales > 0)
         .sort((a, b) => b.totalSales - a.totalSales);
       summary.totalBarShare = totalBarShare;
+      summary.totalBusserShare = totalBusserShare;
+      summary.totalManagerShare = totalManagerShare;
       summary.totalCashierShare = totalCashierShare;
 
       setSummary(summary);
@@ -453,15 +469,15 @@ const DailySummary: React.FC = () => {
                           {formatCurrency(waiter.waiterShare)}
                         </p>
                         <p className="text-xs text-gray-400">
-                          para mesero (66%)
+                          para mesero (46.67%)
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 pt-3 border-t border-green-500/20">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-3 border-t border-green-500/20">
                       <div className="bg-green-900/20 rounded-lg p-3 text-center border border-green-500/20">
                         <p className="text-gray-400 text-xs mb-1">
-                          💰 Propina Total
+                          💰 Total
                         </p>
                         <p className="text-white font-bold text-lg">
                           {formatCurrency(waiter.totalTips)}
@@ -469,15 +485,31 @@ const DailySummary: React.FC = () => {
                       </div>
                       <div className="bg-purple-900/20 rounded-lg p-3 text-center border border-purple-500/20">
                         <p className="text-gray-400 text-xs mb-1">
-                          🍺 Para Barra (20%)
+                          🍺 Barra
                         </p>
                         <p className="text-purple-400 font-bold text-lg">
                           {formatCurrency(waiter.barShare)}
                         </p>
                       </div>
+                      <div className="bg-orange-900/20 rounded-lg p-3 text-center border border-orange-500/20">
+                        <p className="text-gray-400 text-xs mb-1">
+                          🧹 Garrotero
+                        </p>
+                        <p className="text-orange-400 font-bold text-lg">
+                          {formatCurrency(waiter.busserShare)}
+                        </p>
+                      </div>
+                      <div className="bg-yellow-900/20 rounded-lg p-3 text-center border border-yellow-500/20">
+                        <p className="text-gray-400 text-xs mb-1">
+                          👔 Encargado
+                        </p>
+                        <p className="text-yellow-400 font-bold text-lg">
+                          {formatCurrency(waiter.managerShare)}
+                        </p>
+                      </div>
                       <div className="bg-blue-900/20 rounded-lg p-3 text-center border border-blue-500/20">
                         <p className="text-gray-400 text-xs mb-1">
-                          🧾 Para Caja (14%)
+                          🧾 Caja
                         </p>
                         <p className="text-blue-400 font-bold text-lg">
                           {formatCurrency(waiter.cashierShare)}
@@ -490,30 +522,22 @@ const DailySummary: React.FC = () => {
 
               {/* Resumen de distribución */}
               <div className="mt-4 pt-4 border-t border-gray-800">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                   {/* Totales de Meseros */}
                   <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="text-green-400" size={20} />
                       <h4 className="text-green-400 font-bold">
-                        Total Meseros
+                        Meseros
                       </h4>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-400 text-sm">
-                          Meseros activos:
+                          46.67%:
                         </span>
-                        <span className="text-white font-bold">
-                          {summary.waiterStats.length}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-400 text-sm">
-                          Total meseros (66%):
-                        </span>
-                        <span className="text-green-400 font-bold text-xl">
-                          {formatCurrency(summary.totalTips * 0.66)}
+                        <span className="text-green-400 font-bold text-lg">
+                          {formatCurrency(summary.totalTips * 0.4667)}
                         </span>
                       </div>
                     </div>
@@ -523,21 +547,51 @@ const DailySummary: React.FC = () => {
                   <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="text-purple-400" size={20} />
-                      <h4 className="text-purple-400 font-bold">Total Barra</h4>
+                      <h4 className="text-purple-400 font-bold">Barra</h4>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-400 text-sm">
-                          Suma de 20% de todos:
+                          16.67%:
                         </span>
-                        <span className="text-purple-400 font-bold text-xl">
+                        <span className="text-purple-400 font-bold text-lg">
                           {formatCurrency(summary.totalBarShare)}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Total propinas:</span>
-                        <span className="text-gray-400">
-                          {formatCurrency(summary.totalTips)}
+                    </div>
+                  </div>
+
+                  {/* Total Garrotero */}
+                  <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="text-orange-400" size={20} />
+                      <h4 className="text-orange-400 font-bold">Garrotero</h4>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">
+                          16.67%:
+                        </span>
+                        <span className="text-orange-400 font-bold text-lg">
+                          {formatCurrency(summary.totalBusserShare)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Total Encargado */}
+                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="text-yellow-400" size={20} />
+                      <h4 className="text-yellow-400 font-bold">Encargado</h4>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-sm">
+                          13.33%:
+                        </span>
+                        <span className="text-yellow-400 font-bold text-lg">
+                          {formatCurrency(summary.totalManagerShare)}
                         </span>
                       </div>
                     </div>
@@ -547,21 +601,15 @@ const DailySummary: React.FC = () => {
                   <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="text-blue-400" size={20} />
-                      <h4 className="text-blue-400 font-bold">Total Caja</h4>
+                      <h4 className="text-blue-400 font-bold">Caja</h4>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-400 text-sm">
-                          Suma de 14% de todos:
+                          6.67%:
                         </span>
-                        <span className="text-blue-400 font-bold text-xl">
+                        <span className="text-blue-400 font-bold text-lg">
                           {formatCurrency(summary.totalCashierShare)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Total propinas:</span>
-                        <span className="text-gray-400">
-                          {formatCurrency(summary.totalTips)}
                         </span>
                       </div>
                     </div>

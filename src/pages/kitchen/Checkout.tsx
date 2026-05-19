@@ -7,6 +7,7 @@ import { closeTable, getConfig } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
 import { Tag, Clock } from 'lucide-react';
 import { printTicket } from '../../utils/printTicket';
 import { usePaperSize } from '../../hooks/usePaperSize';

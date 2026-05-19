@@ -129,8 +129,6 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   const {
     order,
     subtotal,
-    tipAmount,
-    tipPercent,
     total,
     perPerson,
     paperSize = '80mm',

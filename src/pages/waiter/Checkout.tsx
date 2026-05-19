@@ -8,6 +8,7 @@ import { verifyUserPin } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import { ArrowLeft, Check, Tag, Clock } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import {
   useActivePromotions,
   isPromotionWithinSchedule,
 } from "../../hooks/usePromotions";

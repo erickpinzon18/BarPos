@@ -209,11 +209,6 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   // ── Totals ────────────────────────────────────────────────────────────────
   pushLabeledValue(lines, 'Subtotal:', formatMoney(subtotal), W);
 
-  const tipLabel = typeof tipPercent === 'number' && tipPercent > 0
-    ? `Propina (${(tipPercent * 100).toFixed(0)}%):`
-    : 'Propina:';
-  pushLabeledValue(lines, tipLabel, formatMoney(tipAmount), W);
-
   lines.push(s('='));
   pushLabeledValue(lines, 'TOTAL:', formatMoney(total), W);
   lines.push(s('='));

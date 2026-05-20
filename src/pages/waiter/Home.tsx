@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTables } from '../../hooks/useTables';
 import { useActiveOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../contexts/AuthContext';
-import { openTable } from '../../services/firestoreService';
+import { createEmptyOrder } from '../../services/orderService';
+import { VenueMap } from '../../components/common/VenueMap';
 import { LogOut, User } from 'lucide-react';
 import type { Table } from '../../utils/types';
 
@@ -15,6 +16,7 @@ const WaiterHome: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const [openingTableId, setOpeningTableId] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
 
   const loading = tablesLoading || ordersLoading;
   const error = tablesError || ordersError;
@@ -59,19 +61,18 @@ const WaiterHome: React.FC = () => {
 
     // Si es una mesa libre, abrirla y asignarla al mesero
     if (table.status === 'libre') {
+      if (openingTableId) return;
+      setOpeningTableId(table.id);
       try {
-        setOpeningTableId(table.id);
-        const response = await openTable(table.id, currentUser.id, currentUser.displayName || currentUser.email);
-        if (response.success && response.data) {
-          // Navegar a la orden recién creada
-          navigate(`/waiter/order/${table.id}`);
-        } else {
-          console.error('Error al abrir mesa:', response.error);
-          alert('No se pudo abrir la mesa. Intenta de nuevo.');
-        }
+        await createEmptyOrder(
+          table.id,
+          table.number,
+          currentUser.id,
+          currentUser.displayName || currentUser.email
+        );
+        navigate(`/waiter/order/${table.id}`);
       } catch (error) {
         console.error('Error al abrir mesa:', error);
-        alert('No se pudo abrir la mesa. Intenta de nuevo.');
       } finally {
         setOpeningTableId(null);
       }
@@ -276,26 +277,56 @@ const WaiterHome: React.FC = () => {
   };
 
   return (
-    <div className="p-4 md:p-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white">Mesas</h1>
-        <p className="text-gray-400 mt-2">
-          {myTables.length > 0 
-            ? `Tienes ${myTables.length} mesa${myTables.length === 1 ? '' : 's'} asignada${myTables.length === 1 ? '' : 's'}`
-            : 'No tienes mesas asignadas en este momento'}
-        </p>
+    <div className="p-2 md:p-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Mesas</h1>
+          <p className="text-gray-400 mt-1 text-sm">
+            {myTables.length > 0
+              ? `Tienes ${myTables.length} mesa${myTables.length === 1 ? '' : 's'} asignada${myTables.length === 1 ? '' : 's'}`
+              : 'No tienes mesas asignadas'}
+          </p>
+        </div>
+        <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
+          <button
+            onClick={() => setViewMode('map')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'map' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Mapa
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'list' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Lista
+          </button>
+        </div>
       </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {/* Ordenar: Barra (mesa 0) primero, luego mesas del mesero, luego libres, luego de otros */}
-        {sortedTables
-          .sort((a, b) => {
-            if (a.number === 0) return -1; // Barra siempre primero
-            if (b.number === 0) return 1;
-            return 0; // Mantener orden original (mis mesas, libres, otros)
-          })
-          .map((table) => getTableCard(table))}
-      </div>
+
+      {viewMode === 'map' ? (
+        <VenueMap
+          tables={tables}
+          orders={orders}
+          onTableClick={handleTableClick}
+          onCheckout={orderId => navigate(`/waiter/checkout/${orderId}`)}
+          accentColor="green"
+          currentUserId={currentUser?.id}
+        />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {sortedTables
+            .sort((a, b) => {
+              if (a.number === 0) return -1;
+              if (b.number === 0) return 1;
+              return 0;
+            })
+            .map((table) => getTableCard(table))}
+        </div>
+      )}
 
       {/* Floating User Button */}
       <div className="fixed bottom-6 left-6 z-50">

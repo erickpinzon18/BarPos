@@ -24,8 +24,8 @@ interface WaiterStats {
   totalOrders: number;
   totalTips: number;
   waiterShare: number; // 46.67% para el mesero
-  barShare: number; // 16.67% para barra
-  busserShare: number; // 16.67% para garrotero
+  barShare: number; // 20.00% para barra
+  busserShare: number; // 13.33% para garrotero
   managerShare: number; // 13.33% para encargado
   cashierShare: number; // 6.67% para caja
 }
@@ -214,15 +214,15 @@ const DailySummary: React.FC = () => {
       summary.averageTipPercent =
         ordersWithTip > 0 ? (totalTipPercent / ordersWithTip) * 100 : 0;
 
-      // Calcular distribución de propinas: Mesero 46.67%, Barra 16.67%, Garrotero 16.67%, Encargado 13.33%, Cajera 6.67%
+      // Calcular distribución de propinas: Mesero 46.67%, Barra 20.00%, Garrotero 13.33%, Encargado 13.33%, Cajera 6.67%
       let totalBarShare = 0;
       let totalBusserShare = 0;
       let totalManagerShare = 0;
       let totalCashierShare = 0;
       waiterStatsMap.forEach((stats) => {
         stats.waiterShare = stats.totalTips * 0.4667;
-        stats.barShare = stats.totalTips * 0.1667;
-        stats.busserShare = stats.totalTips * 0.1667;
+        stats.barShare = stats.totalTips * 0.20;
+        stats.busserShare = stats.totalTips * 0.1333;
         stats.managerShare = stats.totalTips * 0.1333;
         stats.cashierShare = stats.totalTips * 0.0667;
         totalBarShare += stats.barShare;
@@ -552,7 +552,7 @@ const DailySummary: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-400 text-sm">
-                          16.67%:
+                          20.00%:
                         </span>
                         <span className="text-purple-400 font-bold text-lg">
                           {formatCurrency(summary.totalBarShare)}
@@ -570,7 +570,7 @@ const DailySummary: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-400 text-sm">
-                          16.67%:
+                          13.33%:
                         </span>
                         <span className="text-orange-400 font-bold text-lg">
                           {formatCurrency(summary.totalBusserShare)}

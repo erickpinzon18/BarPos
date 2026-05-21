@@ -18,6 +18,7 @@ import {
   BarChart3,
   BarChart2,
   Tag,
+  CalendarDays,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -102,6 +103,14 @@ const AdminLayout: React.FC = () => {
                 >
                   <LayoutDashboard size={20} />
                   <span>Mesas</span>
+                </NavLink>
+                <NavLink
+                  to="/admin/reservations"
+                  className={navLinkClassMobile}
+                  onClick={closeMobileMenu}
+                >
+                  <CalendarDays size={20} />
+                  <span>Reservaciones</span>
                 </NavLink>
                 <NavLink
                   to="/admin/kanban/cocina"

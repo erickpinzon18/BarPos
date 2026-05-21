@@ -40,6 +40,25 @@ export interface Table {
   updatedAt: Date;
 }
 
+export type ReservationStatus = 'pendiente' | 'aceptada' | 'cancelada';
+export type ReservationPriority = 'baja' | 'media' | 'alta';
+
+export interface Reservation {
+  id: string;
+  customerName: string;
+  pax: number;
+  reservationDate: Date; // when is the reservation for
+  status: ReservationStatus;
+  priority: ReservationPriority;
+  notes?: string;
+  tableId?: string; // assigned table
+  tableName?: string; // name of the assigned table
+  createdBy: string; // user ID who made the reservation
+  createdByName: string; // name of the user who made the reservation
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export type OrderStatus = 'activo' | 'pagado' | 'cancelado';
 export type OrderItemStatus = 'pendiente' | 'entregado';
 

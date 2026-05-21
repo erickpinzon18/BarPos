@@ -35,6 +35,7 @@ import KitchenHome from "./pages/kitchen/Home";
 import KitchenOrderDetails from "./pages/kitchen/OrderDetails";
 import KitchenCheckout from "./pages/kitchen/Checkout";
 import KitchenVentas from "./pages/kitchen/Ventas";
+import Reservations from "./pages/admin/Reservations";
 
 function App() {
   return (
@@ -55,6 +56,7 @@ function App() {
           <Route path="kanban" element={<AdminKanban />} />
           <Route path="kanban/cocina" element={<AdminKanban />} />
           <Route path="kanban/barra" element={<AdminKanban />} />
+          <Route path="reservations" element={<Reservations />} />
           <Route path="tickets" element={<AdminTickets />} />
           <Route path="manage-products" element={<ManageProducts />} />
           <Route path="promotions" element={<Promotions />} />

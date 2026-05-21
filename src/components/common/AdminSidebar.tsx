@@ -17,6 +17,7 @@ import {
   BarChart3,
   BarChart2,
   Tag,
+  CalendarDays,
 } from "lucide-react";
 
 // Estilos para los enlaces de navegación, cambia el color si está activo
@@ -102,6 +103,10 @@ export const AdminSidebar: React.FC = () => {
           <NavLink to="/admin/home" className={navLinkClass}>
             <LayoutDashboard size={20} />
             <span>Mesas</span>
+          </NavLink>
+          <NavLink to="/admin/reservations" className={navLinkClass}>
+            <CalendarDays size={20} />
+            <span>Reservaciones</span>
           </NavLink>
           <NavLink to="/admin/kanban/cocina" className={navLinkClass}>
             <ChefHat size={20} />

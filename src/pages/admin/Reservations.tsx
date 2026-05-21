@@ -244,6 +244,34 @@ const Reservations: React.FC = () => {
     }
   };
 
+  const stats = React.useMemo(() => {
+    let today = 0;
+    let tomorrow = 0;
+    let upcoming = 0;
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    const dayAfterTomorrowStart = new Date(todayStart);
+    dayAfterTomorrowStart.setDate(dayAfterTomorrowStart.getDate() + 2);
+
+    reservations.forEach(res => {
+      if (res.status === 'cancelada') return;
+      
+      const resDate = new Date(res.reservationDate);
+      if (resDate >= todayStart && resDate < tomorrowStart) {
+        today += res.pax;
+      } else if (resDate >= tomorrowStart && resDate < dayAfterTomorrowStart) {
+        tomorrow += res.pax;
+      } else if (resDate >= dayAfterTomorrowStart) {
+        upcoming += res.pax;
+      }
+    });
+
+    return { today, tomorrow, upcoming };
+  }, [reservations]);
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -263,6 +291,45 @@ const Reservations: React.FC = () => {
           <Plus size={20} />
           Nueva Reservación
         </button>
+      </div>
+
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center gap-4">
+          <div className="bg-red-500/20 p-3 rounded-lg text-red-500">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-400 font-medium">Hoy</p>
+            <p className="text-2xl font-bold text-white">
+              {stats.today} <span className="text-sm font-normal text-gray-500">personas</span>
+            </p>
+          </div>
+        </div>
+        
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center gap-4">
+          <div className="bg-orange-500/20 p-3 rounded-lg text-orange-500">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-400 font-medium">Mañana</p>
+            <p className="text-2xl font-bold text-white">
+              {stats.tomorrow} <span className="text-sm font-normal text-gray-500">personas</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center gap-4">
+          <div className="bg-blue-500/20 p-3 rounded-lg text-blue-500">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-400 font-medium">Próximos días</p>
+            <p className="text-2xl font-bold text-white">
+              {stats.upcoming} <span className="text-sm font-normal text-gray-500">personas</span>
+            </p>
+          </div>
+        </div>
       </div>
 
       {loading ? (

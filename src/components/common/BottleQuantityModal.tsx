@@ -11,7 +11,7 @@ interface MixerDef {
 const MIXERS: MixerDef[] = [
   { label: 'Agua Mineral', emoji: '💧' },
   { label: 'Coca Cola',   emoji: '🥤' },
-  { label: 'Sprite',      emoji: '🍋' },
+  { label: 'Squirt',      emoji: '🍋' },
   { label: 'Manzanita',   emoji: '🍎' },
 ];
 

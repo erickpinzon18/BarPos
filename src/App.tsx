@@ -71,10 +71,11 @@ function App() {
       </Route>
 
       {/* Waiter Routes */}
-      <Route element={<ProtectedRoute allowedRoles={["waiter"]} />}>
+      <Route element={<ProtectedRoute allowedRoles={["waiter", "capitan"]} />}>
         <Route path="/waiter" element={<WaiterLayout />}>
           <Route path="home" element={<WaiterHome />} />
           <Route path="kanban" element={<WaiterKanban />} />
+          <Route path="reservations" element={<Reservations />} />
           <Route path="order/:tableId" element={<WaiterOrderDetails />} />
           <Route path="checkout/:orderId" element={<WaiterCheckout />} />
         </Route>

@@ -1,9 +1,10 @@
 import React from 'react';
-import type { Table, Order } from '../../utils/types';
+import type { Table, Order, Reservation } from '../../utils/types';
 
 interface TableGridProps {
   tables: Table[];
   orders: Order[];
+  reservations?: Reservation[];
   onTableClick: (table: Table) => void;
   onViewOrder: (tableId: string) => void;
   onCheckout: (orderId: string) => void;
@@ -37,6 +38,7 @@ function sortTables(a: Table, b: Table): number {
 interface CardProps {
   table: Table;
   order: Order | undefined;
+  reservation?: Reservation;
   accentColor: 'red' | 'orange';
   onTableClick: () => void;
   onViewOrder: (e: React.MouseEvent) => void;
@@ -45,7 +47,7 @@ interface CardProps {
 }
 
 const TableCard: React.FC<CardProps> = ({
-  table, order, accentColor, onTableClick, onViewOrder, onCheckout, wide,
+  table, order, reservation, accentColor, onTableClick, onViewOrder, onCheckout, wide,
 }) => {
   const isActive = table.status === 'ocupada' && !!order;
   const accent = accentColor;
@@ -79,17 +81,24 @@ const TableCard: React.FC<CardProps> = ({
         onClick={onTableClick}
       >
         {/* Header */}
-        <div className={`flex justify-between items-start ${wide ? 'flex-shrink-0 w-32' : 'mb-3'}`}>
-          <div>
-            <p className="font-bold text-white text-base leading-tight">{label}</p>
-            {order.tableName && (
-              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[100px]">🏷️ {order.tableName}</p>
-            )}
+          <div className={`flex justify-between items-start ${wide ? 'flex-shrink-0 w-32' : 'mb-3'}`}>
+            <div>
+              <p className="font-bold text-white text-base leading-tight">{label}</p>
+              {order.tableName && (
+                <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[100px]">🏷️ {order.tableName}</p>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className={`text-xs font-bold text-white ${accentBadgeBg} px-2 py-0.5 rounded-full ml-2 flex-shrink-0`}>
+                Activa
+              </span>
+              {reservation && (
+                <span className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full flex-shrink-0">
+                  📌 Resv.
+                </span>
+              )}
+            </div>
           </div>
-          <span className={`text-xs font-bold text-white ${accentBadgeBg} px-2 py-0.5 rounded-full ml-2 flex-shrink-0`}>
-            Activa
-          </span>
-        </div>
 
         {/* Info */}
         <div className={`${wide ? 'flex-1 flex items-center gap-8' : ''}`}>
@@ -124,18 +133,40 @@ const TableCard: React.FC<CardProps> = ({
     );
   }
 
-  // Libre
+  // Libre (or reserved but free)
   return (
     <div
-      className="bg-gray-800/50 border border-gray-700 rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:bg-gray-700/60 hover:border-gray-500 hover:scale-[1.02] group flex flex-col"
+      className={`rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:scale-[1.02] group flex flex-col ${
+        reservation
+          ? 'bg-amber-900/20 border-2 border-amber-500/60 hover:border-amber-400'
+          : 'bg-gray-800/50 border border-gray-700 hover:bg-gray-700/60 hover:border-gray-500'
+      }`}
       onClick={onTableClick}
     >
       <div className="flex justify-between items-center mb-4">
         <p className="font-bold text-white text-base">{label}</p>
-        <span className="text-xs font-medium text-gray-500 bg-gray-700 px-2 py-0.5 rounded-full">
-          Libre
-        </span>
+        <div className="flex items-center gap-1">
+          {reservation && (
+            <span className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
+              📌 Reservada
+            </span>
+          )}
+          <span className="text-xs font-medium text-gray-500 bg-gray-700 px-2 py-0.5 rounded-full">
+            Libre
+          </span>
+        </div>
       </div>
+      {reservation && (
+        <div className="mb-3 bg-amber-500/5 border border-amber-500/20 rounded-lg p-2">
+          <p className="text-xs text-amber-300 font-semibold truncate">{reservation.customerName}</p>
+          <p className="text-xs text-gray-500">
+            {reservation.pax} personas • {reservation.reservationDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          {reservation.notes && (
+            <p className="text-xs text-gray-600 truncate mt-1">{reservation.notes}</p>
+          )}
+        </div>
+      )}
       <div className="flex-1 flex flex-col items-center justify-center py-4 text-gray-600 group-hover:text-gray-400 transition-colors">
         <svg className="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -147,7 +178,7 @@ const TableCard: React.FC<CardProps> = ({
 };
 
 const TableGrid: React.FC<TableGridProps> = ({
-  tables, orders, onTableClick, onViewOrder, onCheckout, accentColor,
+  tables, orders, reservations = [], onTableClick, onViewOrder, onCheckout, accentColor,
 }) => {
   return (
     <div className="space-y-8">
@@ -166,11 +197,13 @@ const TableGrid: React.FC<TableGridProps> = ({
             <div className={`grid ${section.cols} gap-4`}>
               {sectionTables.map(table => {
                 const order = orders.find(o => o.tableId === table.id);
+                const reservation = reservations.find(r => r.tableId === table.id);
                 return (
                   <TableCard
                     key={table.id}
                     table={table}
                     order={order}
+                    reservation={reservation}
                     accentColor={accentColor}
                     wide={section.wide}
                     onTableClick={() => onTableClick(table)}

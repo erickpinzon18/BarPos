@@ -6,6 +6,7 @@ import { useActiveOrders } from '../../hooks/useOrders';
 import { useAuth } from '../../contexts/AuthContext';
 import { createEmptyOrder } from '../../services/orderService';
 import { VenueMap } from '../../components/common/VenueMap';
+import { useTodayReservations } from '../../hooks/useTodayReservations';
 import { LogOut, User } from 'lucide-react';
 import type { Table } from '../../utils/types';
 
@@ -14,6 +15,7 @@ const WaiterHome: React.FC = () => {
   const { tables, loading: tablesLoading, error: tablesError } = useTables();
   const { orders, loading: ordersLoading, error: ordersError } = useActiveOrders();
   const { currentUser, logout } = useAuth();
+  const { reservations } = useTodayReservations();
   const [openingTableId, setOpeningTableId] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
@@ -22,15 +24,15 @@ const WaiterHome: React.FC = () => {
   const error = tablesError || ordersError;
 
   // Separar mesas en categorías
-  const myTables = tables.filter(table => 
+  const myTables = tables.filter(table =>
     table.status === 'ocupada' && table.waiterId === currentUser?.id
   );
-  
-  const freeTables = tables.filter(table => 
+
+  const freeTables = tables.filter(table =>
     table.status === 'libre'
   );
-  
-  const otherWaiterTables = tables.filter(table => 
+
+  const otherWaiterTables = tables.filter(table =>
     table.status === 'ocupada' && table.waiterId !== currentUser?.id
   );
 
@@ -83,7 +85,7 @@ const WaiterHome: React.FC = () => {
     if (table.status === 'ocupada' && table.waiterId !== currentUser?.id) {
       return;
     }
-    
+
     // Si es mi mesa, navegar a la orden
     if (table.waiterId === currentUser?.id) {
       const currentOrder = orders.find(order => order.tableId === table.id);
@@ -96,35 +98,37 @@ const WaiterHome: React.FC = () => {
   const getTableCard = (table: Table) => {
     // Buscar la orden activa para esta mesa
     const currentOrder = orders.find(order => order.tableId === table.id);
-    
+    // Reservación para esta mesa hoy
+    const tableReservation = reservations.find(r => r.tableId === table.id);
+
     // Determinar si la mesa pertenece al mesero actual
     const isMyTable = table.status === 'ocupada' && table.waiterId === currentUser?.id;
     const isFreeTable = table.status === 'libre';
-    
+
     // Determinar si es la barra (mesa 0)
     const isBar = table.number === 0;
-    
+
     // Una mesa está activa solo si tiene una orden activa
     const isActive = table.status === 'ocupada' && !!currentOrder;
-    
+
     // Contar cantidad total de items (suma de todas las cantidades, excluyendo eliminados)
-    const itemCount = currentOrder ? 
+    const itemCount = currentOrder ?
       currentOrder.items
         .filter(item => !item.isDeleted)
         .reduce((total, item) => total + item.quantity, 0) : 0;
-    
+
     // Calcular total dinámicamente basado en items activos
-    const totalAmount = currentOrder ? 
+    const totalAmount = currentOrder ?
       (() => {
         const activeItems = currentOrder.items.filter(item => !item.isDeleted);
         const total = activeItems.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
         return total.toFixed(2);
       })() : '0.00';
-    
+
     // Calcular tiempo transcurrido desde la creación de la orden
-    const timeMinutes = currentOrder ? 
+    const timeMinutes = currentOrder ?
       Math.floor((new Date().getTime() - currentOrder.createdAt.getTime()) / (1000 * 60)) : 0;
-    
+
     const handleViewOrder = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (currentOrder) {
@@ -138,20 +142,19 @@ const WaiterHome: React.FC = () => {
         navigate(`/waiter/checkout/${currentOrder.id}`);
       }
     };
-    
+
     const isOpening = openingTableId === table.id;
 
     return (
       <div
         key={table.id}
         onClick={() => handleTableClick(table)}
-        className={`bg-gray-800 p-6 rounded-2xl shadow-lg transition-transform duration-200 min-h-[200px] ${
-          isMyTable
-            ? `border-2 ${isBar ? 'border-purple-500' : 'border-green-500'} cursor-pointer hover:scale-105` 
-            : isFreeTable
+        className={`bg-gray-800 p-6 rounded-2xl shadow-lg transition-transform duration-200 min-h-[200px] ${isMyTable
+          ? `border-2 ${isBar ? 'border-purple-500' : 'border-green-500'} cursor-pointer hover:scale-105`
+          : isFreeTable
             ? `border-2 ${isBar ? 'border-purple-600' : 'border-green-600'} cursor-pointer hover:scale-105 ${isBar ? 'hover:border-purple-400' : 'hover:border-green-400'}`
             : 'border border-gray-800 opacity-40 cursor-not-allowed'
-        }`}
+          }`}
       >
         {isMyTable && isActive ? (
           // Mesa Activa del Mesero
@@ -185,7 +188,7 @@ const WaiterHome: React.FC = () => {
             {currentOrder && (
               <>
                 <div className="space-y-3 mb-4">
-                  <button 
+                  <button
                     onClick={handleViewOrder}
                     className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-lg text-base transition-colors"
                   >
@@ -224,6 +227,13 @@ const WaiterHome: React.FC = () => {
                 Libre
               </span>
             </div>
+            {tableReservation && (
+              <div className="mb-3 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2">
+                <p className="text-xs text-amber-400 font-semibold">📌 Reservada hoy</p>
+                <p className="text-xs text-amber-300 font-medium">{tableReservation.customerName} • {tableReservation.pax} pax</p>
+                <p className="text-xs text-gray-500">{tableReservation.reservationDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            )}
             {isOpening ? (
               <div className={`flex flex-col items-center justify-center flex-1 ${isBar ? 'text-purple-400' : 'text-green-400'} py-10`}>
                 <div className={`animate-spin rounded-full h-16 w-16 border-b-2 ${isBar ? 'border-purple-400' : 'border-green-400'} mb-4`}></div>
@@ -290,17 +300,15 @@ const WaiterHome: React.FC = () => {
         <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
           <button
             onClick={() => setViewMode('map')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'map' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'map' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
+              }`}
           >
             Mapa
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'list' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-white'
+              }`}
           >
             Lista
           </button>
@@ -311,6 +319,7 @@ const WaiterHome: React.FC = () => {
         <VenueMap
           tables={tables}
           orders={orders}
+          reservations={reservations}
           onTableClick={handleTableClick}
           onCheckout={orderId => navigate(`/waiter/checkout/${orderId}`)}
           accentColor="green"

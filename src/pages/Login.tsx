@@ -20,6 +20,7 @@ const Login: React.FC = () => {
           navigate('/admin/home', { replace: true });
           break;
         case 'waiter':
+        case 'capitan':
           navigate('/waiter/home', { replace: true });
           break;
         case 'kitchen':
@@ -65,6 +66,7 @@ const Login: React.FC = () => {
           navigate('/admin/home');
           break;
         case 'waiter':
+        case 'capitan':
           navigate('/waiter/home');
           break;
         case 'kitchen':
@@ -236,7 +238,7 @@ const Login: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                <span>Mesero</span>
+                <span>Mesero / Capitán</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-orange-500 rounded-full"></span>

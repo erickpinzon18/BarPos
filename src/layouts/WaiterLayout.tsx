@@ -2,9 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { getConfig } from '../services/firestoreService';
+import { useAuth } from '../contexts/AuthContext';
+import { CalendarDays } from 'lucide-react';
 
 const WaiterLayout: React.FC = () => {
   const [config, setConfig] = useState<any | null>(null);
+  const { currentUser } = useAuth();
 
   // Load business config (name, logo) from Firestore
   useEffect(() => {
@@ -46,6 +49,12 @@ const WaiterLayout: React.FC = () => {
             <nav className="flex items-center gap-4 text-sm">
               <Link to="/waiter/home" className="hover:text-red-400">Mesas</Link>
               <Link to="/waiter/kanban" className="hover:text-green-400 font-medium">🍽️ Mis Pedidos</Link>
+              {(currentUser?.role === 'capitan' || currentUser?.role === 'admin') && (
+                <Link to="/waiter/reservations" className="hover:text-blue-400 font-medium flex items-center gap-1">
+                  <CalendarDays size={16} />
+                  Reservaciones
+                </Link>
+              )}
             </nav>
           </div>
         </div>

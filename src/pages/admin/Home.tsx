@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { createEmptyOrder } from '../../services/orderService';
 import { VenueMap } from '../../components/common/VenueMap';
 import TableGrid from '../../components/common/TableGrid';
+import { useTodayReservations } from '../../hooks/useTodayReservations';
 import '../../utils/addUserPins';
 import '../../utils/createSampleProducts';
 import type { Table } from '../../utils/types';
@@ -16,6 +17,7 @@ const AdminHome: React.FC = () => {
   const { tables, loading: tablesLoading, error: tablesError } = useTables();
   const { orders, loading: ordersLoading, error: ordersError } = useActiveOrders();
   const { currentUser } = useAuth();
+  const { reservations } = useTodayReservations();
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
 
   const loading = tablesLoading || ordersLoading;
@@ -88,6 +90,7 @@ const AdminHome: React.FC = () => {
         <VenueMap
           tables={tables}
           orders={orders}
+          reservations={reservations}
           onTableClick={handleTableClick}
           onCheckout={orderId => navigate(`/admin/checkout/${orderId}`)}
           accentColor="red"
@@ -96,6 +99,7 @@ const AdminHome: React.FC = () => {
         <TableGrid
           tables={tables}
           orders={orders}
+          reservations={reservations}
           onTableClick={handleTableClick}
           onViewOrder={tableId => navigate(`/admin/order/${tableId}`)}
           onCheckout={orderId => navigate(`/admin/checkout/${orderId}`)}

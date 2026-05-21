@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import type { Table, Order } from '../../utils/types';
+import type { Table, Order, Reservation } from '../../utils/types';
 
 interface VenueMapProps {
   tables: Table[];
   orders: Order[];
+  reservations?: Reservation[];
   onTableClick: (table: Table) => void;
   onCheckout: (orderId: string) => void;
   accentColor: 'red' | 'orange' | 'green';
@@ -107,6 +108,7 @@ const TABLE_LAYOUT: TablePos[] = [
 interface PopupProps {
   table: Table;
   order?: Order;
+  reservation?: Reservation;
   accentColor: 'red' | 'orange' | 'green';
   flipLeft: boolean;
   flipUp: boolean;
@@ -117,7 +119,7 @@ interface PopupProps {
 }
 
 const Popup: React.FC<PopupProps> = ({
-  table, order, accentColor, flipLeft, flipUp, isOtherWaiter, onOpen, onViewOrder, onCheckout,
+  table, order, reservation, accentColor, flipLeft, flipUp, isOtherWaiter, onOpen, onViewOrder, onCheckout,
 }) => {
   const isActive = table.status === 'ocupada' && !!order;
   const isBar    = table.number === 0;
@@ -165,6 +167,14 @@ const Popup: React.FC<PopupProps> = ({
           {order.tableName && (
             <p className="text-xs text-gray-500 mb-2 truncate">🏷️ {order.tableName}</p>
           )}
+          {/* Reservation notice inside active popup */}
+          {reservation && (
+            <div className="mb-2 bg-amber-500/10 border border-amber-500/30 rounded-lg p-1.5">
+              <p className="text-xs text-amber-400 font-semibold">📌 Reservada</p>
+              <p className="text-xs text-amber-300">{reservation.customerName}</p>
+              <p className="text-xs text-gray-500">{reservation.reservationDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          )}
           <div className="space-y-0.5 mb-3">
             <p className="text-xs text-gray-400">{order.waiterName || 'Sin asignar'}</p>
             <p className="text-xs text-gray-500">{itemCount} items · {timeMin} min</p>
@@ -192,6 +202,14 @@ const Popup: React.FC<PopupProps> = ({
         </>
       ) : (
         <>
+          {/* Reservation notice on free table */}
+          {reservation && (
+            <div className="mb-2 bg-amber-500/10 border border-amber-500/30 rounded-lg p-1.5">
+              <p className="text-xs text-amber-400 font-semibold">📌 Reservada hoy</p>
+              <p className="text-xs text-amber-300">{reservation.customerName} • {reservation.pax} personas</p>
+              <p className="text-xs text-gray-500">{reservation.reservationDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+            </div>
+          )}
           <p className="text-xs text-gray-600 mb-3">Disponible</p>
           <button
             onClick={onOpen}
@@ -210,7 +228,7 @@ const Popup: React.FC<PopupProps> = ({
 const MAP_MIN_W = 680; // px — keeps tables readable on mobile (≈59px per table)
 
 export const VenueMap: React.FC<VenueMapProps> = ({
-  tables, orders, onTableClick, onCheckout, accentColor, currentUserId,
+  tables, orders, reservations = [], onTableClick, onCheckout, accentColor, currentUserId,
 }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -244,6 +262,8 @@ export const VenueMap: React.FC<VenueMapProps> = ({
           const order    = orders.find(o => o.tableId === table.id);
           const isActive = table.status === 'ocupada' && !!order;
           const isOtherWaiter = !!currentUserId && isActive && !!order && order.waiterId !== currentUserId;
+          const reservation = reservations.find(r => r.tableId === table.id);
+          const isReserved = !!reservation && !isActive; // Show reservation color only when not occupied
           const isSel    = selectedId === table.id;
           const isCircle = pos.shape === 'circle';
           const isBar    = pos.number === 0;
@@ -261,10 +281,12 @@ export const VenueMap: React.FC<VenueMapProps> = ({
 
           const bgColor = isOtherWaiter ? 'rgba(31,41,55,0.55)'
             : isActive  ? ac.bg
+            : isReserved ? 'rgba(120,83,0,0.55)'
             : isSel ? 'rgba(255,255,255,0.08)'
             : 'rgba(31,41,55,0.95)';
           const border  = isOtherWaiter ? '1px solid rgba(75,85,99,0.3)'
             : isActive  ? `2px solid ${ac.border}`
+            : isReserved ? '2px solid #f59e0b'
             : isSel ? '1.5px solid rgba(255,255,255,0.35)'
             : '1px solid rgba(75,85,99,0.55)';
 
@@ -284,7 +306,8 @@ export const VenueMap: React.FC<VenueMapProps> = ({
                 borderRadius: isCircle ? '50%' : isBar ? '10px' : '8px',
                 backgroundColor: bgColor,
                 border,
-                boxShadow: isActive && !isOtherWaiter ? ac.glow : undefined,
+                boxShadow: isActive && !isOtherWaiter ? ac.glow
+                  : isReserved ? '0 0 12px rgba(245,158,11,0.4)' : undefined,
                 opacity: isOtherWaiter ? 0.4 : 1,
                 cursor: isOtherWaiter ? 'default' : 'pointer',
               }}
@@ -313,11 +336,22 @@ export const VenueMap: React.FC<VenueMapProps> = ({
                 </span>
               )}
 
+              {/* Reservation label on reserved free tables */}
+              {isReserved && !isBar && (
+                <span
+                  className="font-semibold leading-none pointer-events-none"
+                  style={{ fontSize: '8px', color: '#fbbf24' }}
+                >
+                  📌 Resv
+                </span>
+              )}
+
               {/* Popup */}
               {isSel && !isOtherWaiter && (
                 <Popup
                   table={table}
                   order={order}
+                  reservation={reservation}
                   accentColor={accentColor}
                   flipLeft={pos.x > 62}
                   flipUp={pos.y > 55}

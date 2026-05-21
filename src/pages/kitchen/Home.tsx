@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { createEmptyOrder } from '../../services/orderService';
 import { VenueMap } from '../../components/common/VenueMap';
 import TableGrid from '../../components/common/TableGrid';
+import { useTodayReservations } from '../../hooks/useTodayReservations';
 import toast from 'react-hot-toast';
 import type { Table } from '../../utils/types';
 
@@ -15,6 +16,7 @@ const KitchenHome: React.FC = () => {
   const { tables, loading: tablesLoading, error: tablesError } = useTables();
   const { orders, loading: ordersLoading, error: ordersError } = useActiveOrders();
   const { currentUser } = useAuth();
+  const { reservations } = useTodayReservations();
   const [openingTableId, setOpeningTableId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
 
@@ -97,6 +99,7 @@ const KitchenHome: React.FC = () => {
         <VenueMap
           tables={tables}
           orders={orders}
+          reservations={reservations}
           onTableClick={handleTableClick}
           onCheckout={orderId => navigate(`/kitchen/checkout/${orderId}`)}
           accentColor="orange"
@@ -105,6 +108,7 @@ const KitchenHome: React.FC = () => {
         <TableGrid
           tables={tables}
           orders={orders}
+          reservations={reservations}
           onTableClick={handleTableClick}
           onViewOrder={tableId => navigate(`/kitchen/order/${tableId}`)}
           onCheckout={orderId => navigate(`/kitchen/checkout/${orderId}`)}

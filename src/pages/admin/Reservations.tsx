@@ -66,7 +66,7 @@ const Reservations: React.FC = () => {
 
   // Form states
   const [customerName, setCustomerName] = useState("");
-  const [pax, setPax] = useState<number>(2);
+  const [pax, setPax] = useState<string>("2");
   const [reservationDate, setReservationDate] = useState("");
   const [reservationTime, setReservationTime] = useState("");
   const [status, setStatus] = useState<ReservationStatus>("pendiente");
@@ -126,7 +126,7 @@ const Reservations: React.FC = () => {
 
   const resetForm = () => {
     setCustomerName("");
-    setPax(2);
+    setPax("2");
 
     // Set default date to today, default time to 19:00
     const now = new Date();
@@ -144,7 +144,7 @@ const Reservations: React.FC = () => {
     if (res) {
       setEditingId(res.id);
       setCustomerName(res.customerName);
-      setPax(res.pax);
+      setPax(String(res.pax));
 
       const dateObj = new Date(res.reservationDate);
       // Format to YYYY-MM-DD
@@ -174,7 +174,7 @@ const Reservations: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerName || !reservationDate || !reservationTime || pax < 1) {
+    if (!customerName || !reservationDate || !reservationTime || !pax || parseInt(pax) < 1) {
       toast.error("Por favor completa los campos requeridos");
       return;
     }
@@ -188,7 +188,7 @@ const Reservations: React.FC = () => {
 
       const reservationData = {
         customerName,
-        pax,
+        pax: parseInt(pax) || 1,
         reservationDate: Timestamp.fromDate(finalReservationDate),
         status,
         priority,
@@ -426,7 +426,7 @@ const Reservations: React.FC = () => {
                     min="1"
                     required
                     value={pax}
-                    onChange={(e) => setPax(parseInt(e.target.value) || 1)}
+                    onChange={(e) => setPax(e.target.value)}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500 text-center"
                   />
                 </div>

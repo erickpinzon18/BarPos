@@ -51,20 +51,20 @@ interface ShiftSummary {
 }
 
 const DailySummary: React.FC = () => {
-  // Función para obtener la fecha del turno actual (ayer si estamos antes de las 3 AM, hoy si estamos después de las 5 PM)
+  // Función para obtener la fecha del turno actual (ayer si estamos antes de las 5 AM, hoy si estamos después de las 5 PM)
   const getCurrentShiftDate = () => {
     const now = new Date();
     const currentHour = now.getHours();
 
-    // Si son entre las 12 AM y las 3 AM, el turno empezó ayer
-    if (currentHour >= 0 && currentHour < 3) {
+    // Si son entre las 12 AM y las 5 AM, el turno empezó ayer
+    if (currentHour >= 0 && currentHour < 5) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       return yesterday;
     }
 
-    // Si son entre las 3 AM y las 5 PM, el turno de ayer ya terminó, mostrar el de anteayer
-    if (currentHour >= 3 && currentHour < 17) {
+    // Si son entre las 5 AM y las 5 PM, el turno de ayer ya terminó, mostrar el de anteayer
+    if (currentHour >= 5 && currentHour < 17) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       return yesterday;
@@ -78,14 +78,14 @@ const DailySummary: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentShiftDate());
 
-  // Calcular inicio y fin del turno (5 PM a 3 AM del día siguiente)
+  // Calcular inicio y fin del turno (5 PM a 5 AM del día siguiente)
   const getShiftRange = (date: Date) => {
     const shiftStart = new Date(date);
     shiftStart.setHours(17, 0, 0, 0); // 5 PM
 
     const shiftEnd = new Date(date);
     shiftEnd.setDate(shiftEnd.getDate() + 1);
-    shiftEnd.setHours(3, 0, 0, 0); // 3 AM del día siguiente
+    shiftEnd.setHours(5, 0, 0, 0); // 5 AM del día siguiente
 
     return { shiftStart, shiftEnd };
   };
@@ -297,7 +297,7 @@ const DailySummary: React.FC = () => {
                 day: "numeric",
                 month: "short",
               })}{" "}
-              3:00 AM
+              5:00 AM
             </span>
           </div>
         </div>
@@ -655,7 +655,7 @@ const DailySummary: React.FC = () => {
               </p>
               <p className="text-gray-500 text-sm mt-2">
                 Turno: {shiftStart.toLocaleDateString("es-ES")} 5:00 PM -{" "}
-                {shiftEnd.toLocaleDateString("es-ES")} 3:00 AM
+                {shiftEnd.toLocaleDateString("es-ES")} 5:00 AM
               </p>
             </div>
           )}

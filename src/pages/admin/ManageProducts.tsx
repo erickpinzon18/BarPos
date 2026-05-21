@@ -206,6 +206,15 @@ const ManageProducts: React.FC = () => {
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
+                      {form.category === 'Botella' && !form.name.toLowerCase().includes('promo') && (
+                         <button
+                           type="button"
+                           onClick={() => setForm(f => ({ ...f, name: f.name ? `${f.name} Promo` : 'Promo' }))}
+                           className="mt-2 text-xs bg-purple-600 hover:bg-purple-700 text-white px-2 py-1.5 rounded font-medium shadow-sm transition-colors w-full"
+                         >
+                           + Hacer Promo x2 (2 botellas)
+                         </button>
+                      )}
                     </div>
                     <div>
                       <label htmlFor="product-price" className="block mb-2 text-sm font-medium text-gray-300">Precio ($)</label>

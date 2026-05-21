@@ -321,8 +321,13 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
           onClose={handleCloseBottleModal}
           onConfirm={handleConfirmBottle}
           product={selectedProduct}
+          isPromoX2={selectedProduct?.category === 'Botella' && selectedProduct.name.toLowerCase().includes('promo')}
           maxServicesPerBottle={
-            selectedProduct ? (getProductPromo(selectedProduct) ? 3 : 5) : 5
+            selectedProduct 
+              ? (selectedProduct.category === 'Botella' && selectedProduct.name.toLowerCase().includes('promo') 
+                  ? 10 
+                  : (getProductPromo(selectedProduct) ? 3 : 5)) 
+              : 5
           }
           loading={loading}
         />

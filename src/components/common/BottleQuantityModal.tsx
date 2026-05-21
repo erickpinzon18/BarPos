@@ -24,6 +24,7 @@ interface BottleQuantityModalProps {
   /** 5 for regular price, 3 for promo */
   maxServicesPerBottle: number;
   loading?: boolean;
+  isPromoX2?: boolean;
 }
 
 const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
@@ -33,6 +34,7 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
   product,
   maxServicesPerBottle,
   loading = false,
+  isPromoX2 = false,
 }) => {
   const [quantity, setQuantity] = useState(1);
   const [mixerQty, setMixerQty] = useState<number[]>([0, 0, 0, 0]);
@@ -81,6 +83,11 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
     const parts = MIXERS
       .map((m, i) => (mixerQty[i] > 0 ? `${mixerQty[i]}x ${m.label}` : ''))
       .filter(Boolean);
+      
+    if (isPromoX2) {
+      parts.unshift('¡ENTREGAR 2 BOTELLAS!');
+    }
+    
     return parts.length > 0 ? `Servicios: ${parts.join(', ')}` : '';
   };
 
@@ -157,7 +164,7 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
               <Minus className="w-5 h-5" />
             </button>
             <div className="text-center">
-              <div className="text-3xl font-bold text-white">{quantity}</div>
+              <div className="text-3xl font-bold text-white">{isPromoX2 ? quantity * 2 : quantity}</div>
               <div className="text-xs text-gray-400">botellas</div>
             </div>
             <button
@@ -172,7 +179,7 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
 
         {/* Total price */}
         <div className="mb-5 px-3 py-2.5 bg-red-900/20 border border-red-700 rounded-lg flex justify-between items-center">
-          <span className="text-red-400 font-medium text-sm">Total botella{quantity > 1 ? 's' : ''}:</span>
+          <span className="text-red-400 font-medium text-sm">Total {isPromoX2 ? 'paquete' : 'botella'}{quantity > 1 ? 's' : ''}:</span>
           <span className="text-xl font-bold text-red-500">${(product.price * quantity).toFixed(2)} MXN</span>
         </div>
 
@@ -198,15 +205,24 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
               style={{ width: `${Math.min(100, (totalUsed / maxTotal) * 100)}%` }}
             />
           </div>
+          <h3 className="text-gray-200 text-sm font-medium">
+            Selecciona los servicios
+          </h3>
+          <p className="text-gray-400 text-sm mt-1">
+            Puedes elegir hasta {maxTotal} servicios ({maxServicesPerBottle} por {isPromoX2 ? 'paquete' : 'botella'})
+          </p>
         </div>
 
-        {!barFull && (
-          <p className="text-xs text-orange-400 mb-3">
-            Selecciona {remaining} servicio{remaining !== 1 ? 's' : ''} más para continuar
-          </p>
+        {/* Banner Promo x2 */}
+        {isPromoX2 && (
+          <div className="bg-purple-900/40 border border-purple-500 rounded-lg p-3 mb-6 text-center">
+            <p className="text-purple-300 font-bold text-sm">
+              🍾 Promo: Paquete de 2 botellas y 10 servicios.
+            </p>
+          </div>
         )}
 
-        <div className="space-y-2 mb-5">
+        <div className="space-y-4 mb-8">
           {MIXERS.map((mixer, idx) => (
             <div key={idx} className="flex items-center justify-between bg-gray-700 rounded-lg px-3 py-2.5">
               <span className="text-sm text-white">{mixer.emoji} {mixer.label}</span>

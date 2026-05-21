@@ -11,22 +11,23 @@ interface TableGridProps {
   accentColor: 'red' | 'orange';
 }
 
-interface SectionDef {
+export interface SectionDef {
   title: string;
   filter: (n: string) => boolean;
   cols: string;
   wide?: boolean;
 }
 
-const SECTIONS: SectionDef[] = [
+export const SECTIONS: SectionDef[] = [
   { title: 'Barra',           filter: n => n === '0',                          cols: 'grid-cols-1',               wide: true },
   { title: 'VIP',             filter: n => n.startsWith('V'),                  cols: 'grid-cols-2 sm:grid-cols-4' },
+  { title: 'Extras',          filter: n => n.startsWith('Extra'),              cols: 'grid-cols-2 sm:grid-cols-4' },
   { title: 'Pista Principal', filter: n => /^\d+$/.test(n) && Number(n) >= 1,  cols: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' },
   { title: 'Spots',           filter: n => n.startsWith('P'),                  cols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-7' },
   { title: 'Salas',           filter: n => n.startsWith('Sala'),               cols: 'grid-cols-1 sm:grid-cols-2' },
 ];
 
-function sortTables(a: Table, b: Table): number {
+export function sortTables(a: Table, b: Table): number {
   const na = String(a.number);
   const nb = String(b.number);
   const ia = parseInt(na, 10);

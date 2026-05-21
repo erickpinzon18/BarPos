@@ -9,6 +9,7 @@ import { VenueMap } from '../../components/common/VenueMap';
 import { useTodayReservations } from '../../hooks/useTodayReservations';
 import { LogOut, User } from 'lucide-react';
 import type { Table } from '../../utils/types';
+import { SECTIONS, sortTables } from '../../components/common/TableGrid';
 
 const WaiterHome: React.FC = () => {
   const navigate = useNavigate();
@@ -326,14 +327,23 @@ const WaiterHome: React.FC = () => {
           currentUserId={currentUser?.id}
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {sortedTables
-            .sort((a, b) => {
-              if (a.number === 0) return -1;
-              if (b.number === 0) return 1;
-              return 0;
-            })
-            .map((table) => getTableCard(table))}
+        <div className="space-y-8">
+          {SECTIONS.map(section => {
+            const sectionTables = sortedTables
+              .filter(t => section.filter(String(t.number)))
+              .sort(sortTables);
+            if (sectionTables.length === 0) return null;
+            return (
+              <div key={section.title}>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
+                  {section.title}
+                </p>
+                <div className={`grid ${section.cols} gap-4`}>
+                  {sectionTables.map(table => getTableCard(table))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

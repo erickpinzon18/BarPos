@@ -91,6 +91,12 @@ const TABLE_LAYOUT: TablePos[] = [
   { number: 'V1',      x: VA,  y: VR2,     w: VW, h: TH },
   { number: 'V2',      x: VB,  y: VR2,     w: VW, h: TH },
 
+  // ── Extras (Below VIPs) ───────────────────────────────
+  { number: 'Extra 1', x: VA,  y: 38,      w: VW, h: TH },
+  { number: 'Extra 2', x: VB,  y: 38,      w: VW, h: TH },
+  { number: 'Extra 3', x: VA,  y: 55,      w: VW, h: TH },
+  { number: 'Extra 4', x: VB,  y: 55,      w: VW, h: TH },
+
   // ── P circles — vertical column, aligned with rows ────
   { number: 'P1',      x: PX,  y: pcy(R1), w: CW, h: CH, shape: 'circle' },
   { number: 'P2',      x: PX,  y: pcy(R2), w: CW, h: CH, shape: 'circle' },

@@ -15,9 +15,9 @@ export interface StationTicketOptions {
   paperSize?: PaperSize;
 }
 
-const CHARS_80MM = 25;
+const CHARS_80MM = 22;
 const CHARS_58MM = 20;
-const FONT_80MM = '18px';
+const FONT_80MM = '20px';
 const FONT_58MM = '16px';
 
 const center = (text: string, W: number): string => {

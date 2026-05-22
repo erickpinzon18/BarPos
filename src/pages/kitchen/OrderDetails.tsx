@@ -11,6 +11,9 @@ import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
 import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag } from "lucide-react";
 import { getCategoryInfo } from "../../utils/categories";
+import { printStationTicket } from "../../utils/printStationTicket";
+import { usePaperSize } from "../../hooks/usePaperSize";
+import { useAuth } from "../../contexts/AuthContext";
 import type { OrderItem, Product } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
@@ -29,6 +32,8 @@ const KitchenOrderDetails: React.FC = () => {
   const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
   const { products } = useProducts();
   const { promotions: activePromotions } = useActivePromotions();
+  const { currentUser } = useAuth();
+  const [paperSize] = usePaperSize(currentUser?.id);
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -79,7 +84,22 @@ const KitchenOrderDetails: React.FC = () => {
           "PIN válido, pero el usuario no tiene permisos. Solo administradores pueden eliminar items."
         );
       }
+      const itemToCancel = order.items.find(i => i.id === itemToDelete);
       await deleteOrderItem(order.id, itemToDelete, authorizedUser);
+
+      if (itemToCancel) {
+        const ws = getCategoryInfo(itemToCancel.category as any)?.workstation ?? 'cocina';
+        printStationTicket({
+          station: ws,
+          tableNumber: order.tableNumber,
+          tableName: order.tableName,
+          waiterName: order.waiterName,
+          items: [{ productName: itemToCancel.productName, quantity: itemToCancel.quantity, notes: itemToCancel.notes }],
+          paperSize,
+          isCancellation: true,
+        });
+      }
+
       setShowPinModal(false);
       setItemToDelete(null);
     } catch (error: any) {

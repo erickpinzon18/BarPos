@@ -107,8 +107,25 @@ const OrderDetails: React.FC = () => {
         );
       }
 
+      // Obtener info del item antes de eliminarlo para el ticket
+      const itemToCancel = order.items.find(i => i.id === itemToDelete);
+
       // Eliminar item
       await deleteOrderItem(order.id, itemToDelete, authorizedUser);
+
+      // Imprimir ticket de cancelación a la estación correspondiente
+      if (itemToCancel) {
+        const ws = getCategoryInfo(itemToCancel.category as any)?.workstation ?? 'cocina';
+        printStationTicket({
+          station: ws,
+          tableNumber: order.tableNumber,
+          tableName: order.tableName,
+          waiterName: order.waiterName,
+          items: [{ productName: itemToCancel.productName, quantity: itemToCancel.quantity, notes: itemToCancel.notes }],
+          paperSize,
+          isCancellation: true,
+        });
+      }
 
       console.log("✅ Item eliminado exitosamente");
       setShowPinModal(false);

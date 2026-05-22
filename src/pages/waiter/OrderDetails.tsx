@@ -11,6 +11,9 @@ import PinModal from '../../components/common/PinModal';
 import AddItemModal from '../../components/common/AddItemModal';
 import QuantityModal from '../../components/common/QuantityModal';
 import { getCategoryInfo } from '../../utils/categories';
+import { printStationTicket } from '../../utils/printStationTicket';
+import { usePaperSize } from '../../hooks/usePaperSize';
+import { useAuth } from '../../contexts/AuthContext';
 import type { OrderItem, Product } from '../../utils/types';
 
 const WaiterOrderDetails: React.FC = () => {
@@ -19,6 +22,8 @@ const WaiterOrderDetails: React.FC = () => {
     const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
     const { products } = useProducts();
     const { promotions: activePromotions } = useActivePromotions();
+    const { currentUser } = useAuth();
+    const [paperSize] = usePaperSize(currentUser?.id);
 
     // Estados para el modal de PIN
     const [showPinModal, setShowPinModal] = useState(false);
@@ -80,8 +85,24 @@ const WaiterOrderDetails: React.FC = () => {
                 throw new Error('PIN válido, pero el usuario no tiene permisos. Solo administradores pueden eliminar items.');
             }
 
+            const itemToCancel = order.items.find(i => i.id === itemToDelete);
+
             // Eliminar item
             await deleteOrderItem(order.id, itemToDelete, authorizedUser);
+
+            // Imprimir ticket de cancelación
+            if (itemToCancel) {
+                const ws = getCategoryInfo(itemToCancel.category as any)?.workstation ?? 'cocina';
+                printStationTicket({
+                    station: ws,
+                    tableNumber: order.tableNumber,
+                    tableName: order.tableName,
+                    waiterName: order.waiterName,
+                    items: [{ productName: itemToCancel.productName, quantity: itemToCancel.quantity, notes: itemToCancel.notes }],
+                    paperSize,
+                    isCancellation: true,
+                });
+            }
 
             console.log('✅ Item eliminado exitosamente');
             setShowPinModal(false);

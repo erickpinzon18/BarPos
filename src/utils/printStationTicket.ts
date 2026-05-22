@@ -13,6 +13,7 @@ export interface StationTicketOptions {
   waiterName: string;
   items: StationTicketItem[];
   paperSize?: PaperSize;
+  isCancellation?: boolean;
 }
 
 const CHARS_80MM = 22;
@@ -41,13 +42,18 @@ const wrap = (text: string, W: number): string[] => {
 };
 
 export const printStationTicket = (opts: StationTicketOptions): void => {
-  const { station, tableNumber, tableName, waiterName, items, paperSize = '58mm' } = opts;
+  const { station, tableNumber, tableName, waiterName, items, paperSize = '58mm', isCancellation = false } = opts;
   const W = paperSize === '58mm' ? CHARS_58MM : CHARS_80MM;
   const stationLabel = station === 'cocina' ? 'COCINA' : 'BARRA';
   const lines: string[] = [];
 
   lines.push(sep('=', W));
-  lines.push(center(stationLabel, W));
+  if (isCancellation) {
+    lines.push(center('*** CANCELACIÓN ***', W));
+    lines.push(center(stationLabel, W));
+  } else {
+    lines.push(center(stationLabel, W));
+  }
   lines.push(sep('=', W));
 
   const mesaLabel = tableNumber === 0
@@ -66,7 +72,8 @@ export const printStationTicket = (opts: StationTicketOptions): void => {
   lines.push(sep('-', W));
 
   for (const item of items) {
-    wrap(`${item.quantity}x ${item.productName}`, W).forEach(l => lines.push(l));
+    const prefix = isCancellation ? `- CANCELADO: ${item.quantity}x` : `${item.quantity}x`;
+    wrap(`${prefix} ${item.productName}`, W).forEach(l => lines.push(l));
     if (item.notes?.trim()) {
       const notes = item.notes.trim();
       const serviciosMatch = notes.match(/^Servicios:\s*(.+)$/s);

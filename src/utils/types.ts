@@ -111,6 +111,7 @@ export interface Payment {
   tipPercent?: number; // Percentage as decimal (e.g., 0.15 for 15%)
   cashierId?: string;
   cashierName?: string;
+  closedAt?: Date;
   createdAt: Date;
 }
 

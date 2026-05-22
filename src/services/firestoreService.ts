@@ -397,6 +397,7 @@ export const closeTable = async (
           tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
           cashierId: paymentDetails.cashierId ?? null,
           cashierName: paymentDetails.cashierName ?? null,
+          closedAt: Timestamp.now(),
           createdAt: Timestamp.now()
         }));
       } else {
@@ -409,6 +410,7 @@ export const closeTable = async (
           tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
           cashierId: paymentDetails.cashierId ?? null,
           cashierName: paymentDetails.cashierName ?? null,
+          closedAt: Timestamp.now(),
           createdAt: Timestamp.now()
         }];
       }

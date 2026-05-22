@@ -137,6 +137,9 @@ const AdminTickets: React.FC = () => {
                               <p className="text-sm text-red-400"><span className="font-semibold">🏷️</span> {order.tableName}</p>
                             )}
                             <p className="text-sm text-gray-300"><span className="font-semibold">Mesero:</span> {order.waiterName ?? '-'}</p>
+                            {order.payments?.[0]?.cashierName && (
+                              <p className="text-sm text-gray-400"><span className="font-semibold">Cajero:</span> {order.payments[0].cashierName}</p>
+                            )}
                           </div>
                             <div className="mt-4 pt-4 border-t border-gray-800 flex justify-between items-center">
                             <p className="text-xl font-bold text-red-500">${(order.total ?? 0).toFixed(2)}</p>
@@ -169,6 +172,18 @@ const AdminTickets: React.FC = () => {
                 {selected.payments && selected.payments.length > 0 && (
                   <div className="text-xs text-gray-400 mt-1">Pago: {selected.payments[0].id} — {selected.payments[0].method} ${selected.payments[0].receivedAmount ?? selected.payments[0].change ?? ''}</div>
                 )}
+                {(() => {
+                  const pmt = selected.payments?.[0];
+                  if (!pmt?.cashierName && !pmt?.closedAt) return null;
+                  const closedDate = pmt?.closedAt ? (typeof (pmt.closedAt as any).toDate === 'function' ? (pmt.closedAt as any).toDate() : new Date(pmt.closedAt as any)) : null;
+                  return (
+                    <div className="text-xs text-gray-400 mt-1">
+                      {pmt?.cashierName && <span>Cajero: <span className="text-white font-semibold">{pmt.cashierName}</span></span>}
+                      {pmt?.cashierName && closedDate && ' · '}
+                      {closedDate && <span>Cerrado: <span className="text-white font-semibold">{closedDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })}</span></span>}
+                    </div>
+                  );
+                })()}
               </div>
               <div className="grid grid-cols-3 gap-4 mb-6 text-center">
                 <div><p className="text-sm text-gray-400">{selected.tableNumber === 0 ? 'Barra' : 'Mesa'}</p><p className="font-bold text-white text-lg">{selected.tableNumber === 0 ? 'Principal' : (selected.tableNumber ?? '-')}</p></div>

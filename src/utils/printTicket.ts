@@ -249,9 +249,9 @@ export const generateTicketContent = (opts: PrintOptions): string => {
  * Send pre-formatted monospaced text content to the printer via a hidden iframe.
  * The iframe approach avoids popup-blocker issues on mobile browsers.
  */
-export const sendToPrinter = (ticketContent: string, paperSize: PaperSize = '80mm', title = 'Pase de Salida'): void => {
+export const sendToPrinter = (ticketContent: string, paperSize: PaperSize = '80mm', title = 'Pase de Salida', fontSize?: string): void => {
   const sizeMm = paperSize === '58mm' ? '58mm' : '80mm';
-  const fontSize = paperSize === '58mm' ? '13px' : '15px';
+  const fontSize_ = fontSize ?? (paperSize === '58mm' ? '13px' : '15px');
   const lineHeight = '1.4';
   const padding = paperSize === '58mm' ? '2mm' : '3mm';
 
@@ -269,7 +269,7 @@ export const sendToPrinter = (ticketContent: string, paperSize: PaperSize = '80m
         width: ${sizeMm};
         box-sizing: border-box;
         font-family: 'Courier New', 'Courier', monospace;
-        font-size: ${fontSize};
+        font-size: ${fontSize_};
         font-weight: bold;
         line-height: ${lineHeight};
         margin: 0;

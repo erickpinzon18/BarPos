@@ -15,8 +15,10 @@ export interface StationTicketOptions {
   paperSize?: PaperSize;
 }
 
-const CHARS_80MM = 30;
-const CHARS_58MM = 24;
+const CHARS_80MM = 25;
+const CHARS_58MM = 20;
+const FONT_80MM = '18px';
+const FONT_58MM = '16px';
 
 const center = (text: string, W: number): string => {
   const pad = Math.max(0, Math.floor((W - text.length) / 2));
@@ -82,5 +84,6 @@ export const printStationTicket = (opts: StationTicketOptions): void => {
 
   lines.push(sep('-', W));
 
-  sendToPrinter(lines.join('\n'), paperSize, stationLabel);
+  const fontSize = paperSize === '58mm' ? FONT_58MM : FONT_80MM;
+  sendToPrinter(lines.join('\n'), paperSize, stationLabel, fontSize);
 };

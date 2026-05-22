@@ -6,6 +6,8 @@ import KanbanColumn from '../../components/common/KanbanColumn';
 import type { Order } from '../../utils/types';
 import { getCategoriesByWorkstation } from '../../utils/categories';
 import { playNotificationSound } from '../../utils/notificationSound';
+import { printStationTicket } from '../../utils/printStationTicket';
+import type { PaperSize } from '../../utils/printTicket';
 
 const KitchenKanban: React.FC = () => {
   const { orders, loading } = useKitchenOrders();
@@ -178,6 +180,31 @@ const KitchenKanban: React.FC = () => {
                 ></path>
               </svg>
               <span className="text-sm font-medium">Sonido Activo</span>
+            </div>
+          )}
+
+          {/* Test print button — barra only */}
+          {station === 'barra' && (
+            <div className="flex gap-2">
+              {(['58mm', '80mm'] as PaperSize[]).map(size => (
+                <button
+                  key={size}
+                  onClick={() => printStationTicket({
+                    station: 'barra',
+                    tableNumber: 5,
+                    tableName: 'VIP',
+                    waiterName: 'Mesero Prueba',
+                    items: [
+                      { productName: 'Whisky Jack Daniels', quantity: 1, notes: 'Servicios: 3x Coca Cola, 2x Agua Mineral' },
+                      { productName: 'Vodka Absolut', quantity: 2 },
+                    ],
+                    paperSize: size,
+                  })}
+                  className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-3 py-2 rounded-lg border border-purple-500 transition-colors"
+                >
+                  🖨️ Probar {size}
+                </button>
+              ))}
             </div>
           )}
 

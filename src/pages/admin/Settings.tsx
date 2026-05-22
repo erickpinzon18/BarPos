@@ -3,6 +3,8 @@ import { getConfig, saveConfig, requestDisableUser, getUsers, addUserClient } fr
 import { auth } from '../../services/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import toast from 'react-hot-toast';
+import { printStationTicket } from '../../utils/printStationTicket';
+import type { PaperSize } from '../../utils/printTicket';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'info' | 'users' | 'roles'>('info');
@@ -90,7 +92,35 @@ const Settings: React.FC = () => {
 
       <div>
         {activeTab === 'info' && (
-          <div className="tab-content bg-gray-800 rounded-2xl border border-gray-800 p-8 max-w-4xl">
+          <div className="tab-content space-y-6 max-w-4xl">
+          <div className="bg-gray-800 rounded-2xl border border-gray-800 p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-white font-semibold">Prueba de Ticket de Barra</p>
+              <p className="text-gray-400 text-sm">Imprime un ticket de muestra para verificar el tamaño de letra.</p>
+            </div>
+            <div className="flex gap-2">
+              {(['58mm', '80mm'] as PaperSize[]).map(size => (
+                <button
+                  key={size}
+                  onClick={() => printStationTicket({
+                    station: 'barra',
+                    tableNumber: 5,
+                    tableName: 'VIP',
+                    waiterName: 'Mesero Prueba',
+                    items: [
+                      { productName: 'Whisky Jack Daniels', quantity: 1, notes: 'Servicios: 3x Coca Cola, 2x Agua Mineral' },
+                      { productName: 'Vodka Absolut', quantity: 2 },
+                    ],
+                    paperSize: size,
+                  })}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition"
+                >
+                  Probar {size}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="bg-gray-800 rounded-2xl border border-gray-800 p-8">
             <h2 className="text-2xl font-bold text-white mb-6">Detalles del Bar</h2>
             <form className="space-y-6" onSubmit={async (e) => {
               e.preventDefault();
@@ -126,6 +156,7 @@ const Settings: React.FC = () => {
                 <button type="submit" disabled={loading} className={`text-gray-900 bg-red-600 hover:bg-red-700 font-bold rounded-lg text-sm px-6 py-2.5 transition transform hover:-translate-y-px disabled:opacity-60`}>{loading ? 'Guardando...' : 'Guardar Cambios'}</button>
               </div>
             </form>
+          </div>
           </div>
         )}
 

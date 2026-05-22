@@ -29,6 +29,7 @@ import {
   PartyPopper,
   ChevronDown,
   ChevronUp,
+  Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -65,6 +66,8 @@ const Reservations: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [dayFilter, setDayFilter] = useState<"todos" | "hoy" | "mañana" | "semana">("todos");
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -338,6 +341,43 @@ const Reservations: React.FC = () => {
         </div>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por cliente o mesa..."
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {(["todos", "hoy", "mañana", "semana"] as const).map((d) => (
+            <button
+              key={d}
+              onClick={() => setDayFilter(d)}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                dayFilter === d
+                  ? "bg-red-600 text-white"
+                  : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700"
+              }`}
+            >
+              {d === "todos" ? "Todos" : d === "hoy" ? "Hoy" : d === "mañana" ? "Mañana" : "Esta semana"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
@@ -359,12 +399,55 @@ const Reservations: React.FC = () => {
           </button>
         </div>
       ) : (() => {
-        const activeReservations = reservations.filter(r => r.status !== 'llegó' && r.status !== 'cancelada');
-        const archivedReservations = reservations.filter(r => r.status === 'llegó' || r.status === 'cancelada');
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const tomorrowStart = new Date(todayStart.getTime() + 86400000);
+        const weekEnd = new Date(todayStart.getTime() + 7 * 86400000);
+
+        const q = search.trim().toLowerCase();
+
+        const matchesSearch = (r: Reservation) => {
+          if (!q) return true;
+          return (
+            r.customerName.toLowerCase().includes(q) ||
+            (r.tableName ?? "").toLowerCase().includes(q)
+          );
+        };
+
+        const matchesDay = (r: Reservation) => {
+          const d = new Date(r.reservationDate);
+          if (dayFilter === "hoy") return d >= todayStart && d < tomorrowStart;
+          if (dayFilter === "mañana") return d >= tomorrowStart && d < new Date(tomorrowStart.getTime() + 86400000);
+          if (dayFilter === "semana") return d >= todayStart && d < weekEnd;
+          return true;
+        };
+
+        const sortByDateTodayFirst = (a: Reservation, b: Reservation) => {
+          const aDate = new Date(a.reservationDate);
+          const bDate = new Date(b.reservationDate);
+          const aIsToday = aDate >= todayStart && aDate < tomorrowStart;
+          const bIsToday = bDate >= todayStart && bDate < tomorrowStart;
+          if (aIsToday && !bIsToday) return -1;
+          if (!aIsToday && bIsToday) return 1;
+          return aDate.getTime() - bDate.getTime();
+        };
+
+        const activeReservations = reservations
+          .filter(r => r.status !== 'llegó' && r.status !== 'cancelada')
+          .filter(matchesSearch)
+          .filter(matchesDay)
+          .sort(sortByDateTodayFirst);
+
+        const archivedReservations = reservations
+          .filter(r => r.status === 'llegó' || r.status === 'cancelada')
+          .filter(matchesSearch)
+          .sort((a, b) => new Date(b.reservationDate).getTime() - new Date(a.reservationDate).getTime());
 
         const ReservationCard = ({ res, archived = false }: { res: Reservation; archived?: boolean }) => {
           const assignedTable = res.tableId ? tables.find(t => t.id === res.tableId) : null;
           const tableOccupied = assignedTable?.status === 'ocupada';
+          const resDate = new Date(res.reservationDate);
+          const isToday = resDate >= todayStart && resDate < tomorrowStart;
 
           return (
           <div
@@ -390,9 +473,14 @@ const Reservations: React.FC = () => {
 
             {/* Header: Name and Actions */}
             <div className="flex justify-between items-start mb-3">
-              <h3 className="text-xl font-bold text-white line-clamp-1 flex-1 pr-2">
-                {res.customerName}
-              </h3>
+              <div className="flex-1 pr-2 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-xl font-bold text-white line-clamp-1">{res.customerName}</h3>
+                  {isToday && !archived && (
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-red-600 text-white uppercase tracking-wide flex-shrink-0">HOY</span>
+                  )}
+                </div>
+              </div>
               <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 {!archived && (
                   <>
@@ -509,14 +597,31 @@ const Reservations: React.FC = () => {
             {activeReservations.length === 0 ? (
               <div className="bg-gray-800/50 border border-gray-800 rounded-xl p-12 text-center">
                 <CalendarDays className="mx-auto h-16 w-16 text-gray-600 mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">No hay reservaciones activas</h3>
-                <p className="text-gray-400">Todas las reservaciones han sido atendidas o canceladas.</p>
-                <button
-                  onClick={() => handleOpenModal()}
-                  className="mt-6 text-red-500 hover:text-red-400 font-medium"
-                >
-                  + Crear nueva reservación
-                </button>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  {search || dayFilter !== "todos" ? "Sin resultados" : "No hay reservaciones activas"}
+                </h3>
+                <p className="text-gray-400">
+                  {search
+                    ? `No se encontraron reservaciones para "${search}".`
+                    : dayFilter !== "todos"
+                      ? "No hay reservaciones para el período seleccionado."
+                      : "Todas las reservaciones han sido atendidas o canceladas."}
+                </p>
+                {(search || dayFilter !== "todos") ? (
+                  <button
+                    onClick={() => { setSearch(""); setDayFilter("todos"); }}
+                    className="mt-6 text-red-500 hover:text-red-400 font-medium"
+                  >
+                    Limpiar filtros
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleOpenModal()}
+                    className="mt-6 text-red-500 hover:text-red-400 font-medium"
+                  >
+                    + Crear nueva reservación
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -708,6 +708,34 @@ export const getTodayAllOrders = async (date: Date = new Date()): Promise<Firest
   }
 };
 
+// Get orders within a shift range (5 PM → 5 AM next day) using createdAt
+export const getOrdersByShift = async (shiftDate: Date): Promise<FirestoreResponse<Order[]>> => {
+  try {
+    const start = new Date(shiftDate);
+    start.setHours(17, 0, 0, 0); // 5 PM
+
+    const end = new Date(shiftDate);
+    end.setDate(end.getDate() + 1);
+    end.setHours(5, 0, 0, 0); // 5 AM next day
+
+    const q = query(
+      collection(db, 'orders'),
+      where('createdAt', '>=', Timestamp.fromDate(start)),
+      where('createdAt', '<=', Timestamp.fromDate(end)),
+      where('status', 'in', ['activo', 'pagado'])
+    );
+
+    const snapshot = await getDocs(q);
+    const orders = snapshot.docs.map(d =>
+      convertTimestamps({ id: d.id, ...d.data() }) as Order
+    );
+    return { success: true, data: orders };
+  } catch (error) {
+    console.error('Error getting shift orders:', error);
+    return { success: false, error: 'Error al obtener órdenes del turno' };
+  }
+};
+
 // PROMOTION MANAGEMENT
 export const getPromotions = async (): Promise<FirestoreResponse<Promotion[]>> => {
   try {

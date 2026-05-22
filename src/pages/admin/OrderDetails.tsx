@@ -9,11 +9,15 @@ import {
 } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, Printer } from "lucide-react";
 import type { OrderItem, Product } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
 import { useActivePromotions, isPromotionWithinSchedule } from "../../hooks/usePromotions";
+import { printStationTicket } from "../../utils/printStationTicket";
+import { getCategoryInfo } from "../../utils/categories";
+import { usePaperSize } from "../../hooks/usePaperSize";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   updateOrderPeopleCount,
   updateOrderTableName,
@@ -28,6 +32,8 @@ const OrderDetails: React.FC = () => {
   const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
   const { products } = useProducts();
   const { promotions: activePromotions } = useActivePromotions();
+  const { currentUser } = useAuth();
+  const [paperSize] = usePaperSize(currentUser?.id);
 
   // Estados para el modal de PIN
   const [showPinModal, setShowPinModal] = useState(false);
@@ -277,6 +283,19 @@ const OrderDetails: React.FC = () => {
 
   const handleAdminCommentsBlur = () => {
     void saveAdminCommentsToDB(adminComments);
+  };
+
+  const handleReprintItem = (item: OrderItem) => {
+    if (!order) return;
+    const ws = getCategoryInfo(item.category as any)?.workstation ?? 'cocina';
+    printStationTicket({
+      station: ws,
+      tableNumber: order.tableNumber,
+      tableName: order.tableName,
+      waiterName: order.waiterName,
+      items: [{ productName: item.productName, quantity: item.quantity, notes: item.notes }],
+      paperSize,
+    });
   };
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -734,6 +753,17 @@ const OrderDetails: React.FC = () => {
                                   <span className="text-sm font-bold">✓</span>
                                 </button>
                               )}
+                              <button
+                                onClick={() => handleReprintItem(item)}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  item.printedAt
+                                    ? "text-gray-500 hover:text-gray-300 hover:bg-gray-700"
+                                    : "text-orange-400 hover:text-orange-300 hover:bg-orange-900/20"
+                                }`}
+                                title={item.printedAt ? "Reimprimir ticket de cocina" : "Imprimir ticket de cocina (no impreso)"}
+                              >
+                                <Printer className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => handleAddAnother(item)}
                                 className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"

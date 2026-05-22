@@ -1,7 +1,7 @@
 // src/pages/kitchen/Ventas.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Printer, Package, ChevronDown, ChevronUp } from 'lucide-react';
-import { getTodayAllOrders } from '../../services/firestoreService';
+import { RefreshCw, Printer, Package, ChevronDown, ChevronUp, Calendar, Clock } from 'lucide-react';
+import { getOrdersByShift } from '../../services/firestoreService';
 import { sendToPrinter } from '../../utils/printTicket';
 import { usePaperSize } from '../../hooks/usePaperSize';
 import { useAuth } from '../../contexts/AuthContext';
@@ -28,11 +28,38 @@ interface ServiceLine {
   quantity: number;
 }
 
-// ── Aggregate items from orders ───────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getDefaultShiftDate(): Date {
+  const now = new Date();
+  const h = now.getHours();
+  // Before 5 AM → shift started yesterday
+  if (h < 5) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 1);
+    return d;
+  }
+  // Between 5 AM and 5 PM → yesterday's shift already ended
+  if (h < 17) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 1);
+    return d;
+  }
+  // After 5 PM → current shift started today
+  return now;
+}
+
+function getShiftRange(date: Date): { shiftStart: Date; shiftEnd: Date } {
+  const shiftStart = new Date(date);
+  shiftStart.setHours(17, 0, 0, 0);
+  const shiftEnd = new Date(date);
+  shiftEnd.setDate(shiftEnd.getDate() + 1);
+  shiftEnd.setHours(5, 0, 0, 0);
+  return { shiftStart, shiftEnd };
+}
 
 function buildGroups(orders: Order[]): CategoryGroup[] {
   const byCategory = new Map<CategoryKey, Map<string, number>>();
-
   for (const order of orders) {
     for (const item of order.items ?? []) {
       if (item.isDeleted) continue;
@@ -42,7 +69,6 @@ function buildGroups(orders: Order[]): CategoryGroup[] {
       prod.set(item.productName, (prod.get(item.productName) ?? 0) + item.quantity);
     }
   }
-
   return CATEGORIES
     .filter(c => byCategory.has(c.key))
     .map(c => {
@@ -84,7 +110,12 @@ function buildServices(orders: Order[]): ServiceLine[] {
 
 // ── Print ─────────────────────────────────────────────────────────────────────
 
-function printInventoryTicket(groups: CategoryGroup[], services: ServiceLine[], date: Date, paperSize: '58mm' | '80mm') {
+function printInventoryTicket(
+  groups: CategoryGroup[],
+  services: ServiceLine[],
+  shiftDate: Date,
+  paperSize: '58mm' | '80mm'
+) {
   const W = paperSize === '58mm' ? 24 : 30;
   const sep = (c: string) => c.repeat(W);
   const center = (t: string) => {
@@ -105,19 +136,19 @@ function printInventoryTicket(groups: CategoryGroup[], services: ServiceLine[], 
     return lines;
   };
 
-  const lines: string[] = [];
-  const dateStr = date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const { shiftStart, shiftEnd } = getShiftRange(shiftDate);
+  const fmt = (d: Date) => d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' });
   const timeStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
 
+  const lines: string[] = [];
   lines.push(sep('='));
   lines.push(center('CORTE DE VENTAS'));
   lines.push(sep('='));
-  lines.push(`Fecha: ${dateStr}`);
-  lines.push(`Hora:  ${timeStr}`);
+  lines.push(`Turno: ${fmt(shiftStart)} 17:00 - ${fmt(shiftEnd)} 05:00`);
+  lines.push(`Impreso: ${timeStr}`);
   lines.push(sep('-'));
 
   let grandTotal = 0;
-
   for (const group of groups) {
     if (group.items.length === 0) continue;
     lines.push('');
@@ -125,10 +156,8 @@ function printInventoryTicket(groups: CategoryGroup[], services: ServiceLine[], 
     for (const item of group.items) {
       const qtyStr = `${item.quantity}x`;
       const maxName = W - qtyStr.length - 1;
-      const nameLines = wrap(item.name, maxName);
-      nameLines.forEach((l, i) => {
-        if (i === 0) lines.push(`${qtyStr} ${l}`);
-        else lines.push(`   ${l}`);
+      wrap(item.name, maxName).forEach((l, i) => {
+        lines.push(i === 0 ? `${qtyStr} ${l}` : `   ${l}`);
       });
     }
     lines.push(`Total: ${group.total} und`);
@@ -140,15 +169,11 @@ function printInventoryTicket(groups: CategoryGroup[], services: ServiceLine[], 
     lines.push('[SERVICIOS / MEZCLADORES]');
     for (const svc of services) {
       const qtyStr = `${svc.quantity}x`;
-      const maxName = W - qtyStr.length - 1;
-      const nameLines = wrap(svc.label, maxName);
-      nameLines.forEach((l, i) => {
-        if (i === 0) lines.push(`${qtyStr} ${l}`);
-        else lines.push(`   ${l}`);
+      wrap(svc.label, W - qtyStr.length - 1).forEach((l, i) => {
+        lines.push(i === 0 ? `${qtyStr} ${l}` : `   ${l}`);
       });
     }
-    const totalSvc = services.reduce((s, sv) => s + sv.quantity, 0);
-    lines.push(`Total: ${totalSvc} und`);
+    lines.push(`Total: ${services.reduce((s, sv) => s + sv.quantity, 0)} und`);
   }
 
   lines.push('');
@@ -166,6 +191,7 @@ const Ventas: React.FC = () => {
   const { currentUser } = useAuth();
   const [paperSize, setPaperSize] = usePaperSize(currentUser?.id);
 
+  const [selectedDate, setSelectedDate] = useState<Date>(getDefaultShiftDate());
   const [groups, setGroups] = useState<CategoryGroup[]>([]);
   const [services, setServices] = useState<ServiceLine[]>([]);
   const [loading, setLoading] = useState(false);
@@ -173,13 +199,13 @@ const Ventas: React.FC = () => {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [collapsed, setCollapsed] = useState<Set<CategoryKey>>(new Set());
 
-  const today = new Date();
+  const { shiftStart, shiftEnd } = getShiftRange(selectedDate);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (date: Date) => {
     setLoading(true);
     setError('');
     try {
-      const res = await getTodayAllOrders(today);
+      const res = await getOrdersByShift(date);
       if (!res.success || !res.data) throw new Error(res.error ?? 'Error');
       setGroups(buildGroups(res.data));
       setServices(buildServices(res.data));
@@ -191,28 +217,25 @@ const Ventas: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(selectedDate); }, [load, selectedDate]);
 
   const toggleCollapse = (cat: CategoryKey) => {
     setCollapsed(prev => {
       const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
       return next;
     });
   };
 
   const grandTotal = groups.reduce((s, g) => s + g.total, 0);
+  const dateInputValue = selectedDate.toISOString().split('T')[0];
 
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Corte de Ventas</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
-            {today.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
           {lastRefresh && (
             <p className="text-gray-600 text-xs mt-0.5">
               Actualizado a las {lastRefresh.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
@@ -221,14 +244,14 @@ const Ventas: React.FC = () => {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={load}
+            onClick={() => load(selectedDate)}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 text-sm"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Actualizar
           </button>
-          
+
           <div className="hidden sm:flex bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
             {(['58mm', '80mm'] as const).map(size => (
               <button
@@ -246,7 +269,7 @@ const Ventas: React.FC = () => {
           </div>
 
           <button
-            onClick={() => printInventoryTicket(groups, services, today, paperSize)}
+            onClick={() => printInventoryTicket(groups, services, selectedDate, paperSize)}
             disabled={groups.length === 0}
             className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
           >
@@ -256,10 +279,34 @@ const Ventas: React.FC = () => {
         </div>
       </div>
 
+      {/* Shift selector */}
+      <div className="bg-gray-800 rounded-xl p-4 mb-4 border border-gray-700">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Calendar size={16} className="text-orange-400 flex-shrink-0" />
+            <label className="text-sm font-semibold text-white whitespace-nowrap">Turno:</label>
+          </div>
+          <input
+            type="date"
+            value={dateInputValue}
+            onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
+            className="bg-gray-700 text-white rounded-lg px-3 py-1.5 border border-gray-600 focus:border-orange-500 focus:outline-none text-sm [color-scheme:dark]"
+          />
+          <div className="flex items-center gap-1.5 text-sm text-gray-400">
+            <Clock size={14} className="flex-shrink-0" />
+            <span>
+              {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} 5:00 PM
+              {' → '}
+              {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} 5:00 AM
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Summary pill */}
       {grandTotal > 0 && (
         <div className="mb-4 px-4 py-3 bg-gray-800 rounded-xl flex items-center justify-between">
-          <span className="text-gray-400 text-sm">Total de artículos vendidos</span>
+          <span className="text-gray-400 text-sm">Total de artículos en el turno</span>
           <span className="text-2xl font-bold text-white">{grandTotal}</span>
         </div>
       )}
@@ -279,7 +326,12 @@ const Ventas: React.FC = () => {
       {!loading && groups.length === 0 && !error && (
         <div className="text-center py-16">
           <Package className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400">No hay ventas registradas hoy</p>
+          <p className="text-gray-400">No hay ventas en este turno</p>
+          <p className="text-gray-600 text-sm mt-1">
+            {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} 5:00 PM
+            {' → '}
+            {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} 5:00 AM
+          </p>
         </div>
       )}
 
@@ -317,7 +369,6 @@ const Ventas: React.FC = () => {
           const isCollapsed = collapsed.has(group.category);
           return (
             <div key={group.category} className="bg-gray-800 rounded-xl overflow-hidden">
-              {/* Category header */}
               <button
                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-750 transition-colors"
                 onClick={() => toggleCollapse(group.category)}
@@ -329,14 +380,11 @@ const Ventas: React.FC = () => {
                     {group.total} und
                   </span>
                 </div>
-                {isCollapsed ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                )}
+                {isCollapsed
+                  ? <ChevronDown className="w-4 h-4 text-gray-400" />
+                  : <ChevronUp className="w-4 h-4 text-gray-400" />
+                }
               </button>
-
-              {/* Items */}
               {!isCollapsed && (
                 <div className="border-t border-gray-700">
                   {group.items.map((item, idx) => (

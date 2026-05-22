@@ -128,7 +128,7 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
       onClick={handleClose}
     >
       <div
-        className="bg-gray-800 rounded-xl p-6 w-full max-w-sm mx-4 border border-gray-700"
+        className="bg-gray-800 rounded-xl p-6 w-full max-w-sm mx-4 border border-gray-700 max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

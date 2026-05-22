@@ -174,7 +174,7 @@ const OrderDetails: React.FC = () => {
   };
 
   // Función para confirmar cantidad de item adicional
-  const handleConfirmQuantity = async (quantity: number) => {
+  const handleConfirmQuantity = async (quantity: number, notes?: string) => {
     if (!order || !selectedItemForMore) return;
 
     try {
@@ -184,7 +184,8 @@ const OrderDetails: React.FC = () => {
         selectedItemForMore.productName,
         selectedItemForMore.productPrice,
         selectedItemForMore.category,
-        quantity
+        quantity,
+        notes
       );
 
       console.log(
@@ -1019,6 +1020,7 @@ const OrderDetails: React.FC = () => {
           onClose={handleCloseQuantityModal}
           onConfirm={handleConfirmQuantity}
           title="Agregar Más Items"
+          showNotes={getCategoryInfo(selectedItemForMore?.category as any)?.workstation === 'barra'}
           product={
             selectedItemForMore
               ? {

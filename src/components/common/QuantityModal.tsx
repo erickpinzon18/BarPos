@@ -6,10 +6,11 @@ import type { Product } from "../../utils/types";
 interface QuantityModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (quantity: number) => Promise<void>;
+  onConfirm: (quantity: number, notes?: string) => Promise<void>;
   product: Product | null;
   loading?: boolean;
   title?: string;
+  showNotes?: boolean;
 }
 
 const QuantityModal: React.FC<QuantityModalProps> = ({
@@ -19,8 +20,10 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
   product,
   loading = false,
   title = "Agregar Producto",
+  showNotes = false,
 }) => {
   const [quantity, setQuantity] = useState(1);
+  const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
 
   const handleQuantityChange = (change: number) => {
@@ -36,7 +39,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
 
     try {
       setError("");
-      await onConfirm(quantity);
+      await onConfirm(quantity, notes.trim() || undefined);
       handleClose();
     } catch (error: any) {
       setError(error.message || "Error al agregar el producto");
@@ -45,6 +48,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
 
   const handleClose = () => {
     setQuantity(1);
+    setNotes("");
     setError("");
     onClose();
   };
@@ -70,6 +74,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setQuantity(1);
+      setNotes("");
       setError("");
     }
   }, [isOpen]);
@@ -154,6 +159,23 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Notes (barra drinks) */}
+        {showNotes && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Cómo lo quiere <span className="text-gray-500 font-normal">(opcional)</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Ej: divorciado, campechano, agua mineral, pura coca..."
+              rows={2}
+              disabled={loading}
+              className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none disabled:opacity-50"
+            />
+          </div>
+        )}
 
         {/* Total */}
         <div className="mb-6 p-4 bg-red-900/20 border border-red-700 rounded-lg">

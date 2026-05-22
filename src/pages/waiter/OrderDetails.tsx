@@ -10,6 +10,7 @@ import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments,
 import PinModal from '../../components/common/PinModal';
 import AddItemModal from '../../components/common/AddItemModal';
 import QuantityModal from '../../components/common/QuantityModal';
+import { getCategoryInfo } from '../../utils/categories';
 import type { OrderItem, Product } from '../../utils/types';
 
 const WaiterOrderDetails: React.FC = () => {
@@ -146,7 +147,7 @@ const WaiterOrderDetails: React.FC = () => {
     };
 
     // Función para confirmar cantidad de item adicional
-    const handleConfirmQuantity = async (quantity: number) => {
+    const handleConfirmQuantity = async (quantity: number, notes?: string) => {
         if (!order || !selectedItemForMore) return;
 
         try {
@@ -156,7 +157,8 @@ const WaiterOrderDetails: React.FC = () => {
                 selectedItemForMore.productName,
                 selectedItemForMore.productPrice,
                 selectedItemForMore.category,
-                quantity
+                quantity,
+                notes
             );
 
             console.log('✅ Item adicional agregado:', selectedItemForMore.productName, 'x', quantity);
@@ -818,6 +820,7 @@ const WaiterOrderDetails: React.FC = () => {
                 onClose={handleCloseQuantityModal}
                 onConfirm={handleConfirmQuantity}
                 title="Agregar Más"
+                showNotes={getCategoryInfo(selectedItemForMore?.category as any)?.workstation === 'barra'}
                 product={selectedItemForMore ? {
                     id: selectedItemForMore.productId,
                     name: selectedItemForMore.productName,

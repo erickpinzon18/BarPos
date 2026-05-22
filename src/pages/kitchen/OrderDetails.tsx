@@ -10,6 +10,7 @@ import {
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
 import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag } from "lucide-react";
+import { getCategoryInfo } from "../../utils/categories";
 import type { OrderItem, Product } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
@@ -120,7 +121,7 @@ const KitchenOrderDetails: React.FC = () => {
     setShowQuantityModal(true);
   };
 
-  const handleConfirmQuantity = async (quantity: number) => {
+  const handleConfirmQuantity = async (quantity: number, notes?: string) => {
     if (!order || !selectedItemForMore) return;
     try {
       await addItemToOrder(
@@ -129,7 +130,8 @@ const KitchenOrderDetails: React.FC = () => {
         selectedItemForMore.productName,
         selectedItemForMore.productPrice,
         selectedItemForMore.category,
-        quantity
+        quantity,
+        notes
       );
       setShowQuantityModal(false);
       setSelectedItemForMore(null);
@@ -802,6 +804,7 @@ const KitchenOrderDetails: React.FC = () => {
           }}
           onConfirm={handleConfirmQuantity}
           title="Agregar Más Items"
+          showNotes={getCategoryInfo(selectedItemForMore?.category as any)?.workstation === 'barra'}
           product={
             selectedItemForMore
               ? {

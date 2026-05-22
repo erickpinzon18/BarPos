@@ -4,7 +4,7 @@ import { X, Search, Plus, Tag, Clock } from 'lucide-react';
 import QuantityModal from './QuantityModal';
 import BottleQuantityModal from './BottleQuantityModal';
 import type { Product, Promotion } from '../../utils/types';
-import { FILTER_CATEGORIES } from '../../utils/categories';
+import { FILTER_CATEGORIES, getCategoryInfo } from '../../utils/categories';
 import { isPromotionWithinSchedule } from '../../hooks/usePromotions';
 
 interface AddItemModalProps {
@@ -85,10 +85,10 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
   };
 
   // Regular (non-bottle) confirm
-  const handleConfirmQuantity = async (quantity: number) => {
+  const handleConfirmQuantity = async (quantity: number, notes?: string) => {
     if (!selectedProduct) return;
     try {
-      await onAddItem(selectedProduct.id, quantity);
+      await onAddItem(selectedProduct.id, quantity, notes);
     } catch (error) {
       console.error('Error adding item:', error);
       throw error;
@@ -313,6 +313,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
           onConfirm={handleConfirmQuantity}
           product={selectedProduct}
           loading={loading}
+          showNotes={getCategoryInfo(selectedProduct?.category as any)?.workstation === 'barra'}
         />
 
         {/* Bottle Modal: quantity + services in one step */}

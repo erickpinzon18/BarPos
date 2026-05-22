@@ -251,6 +251,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           cashierId: authorizedUser?.id,
+          cashierName: authorizedUser?.displayName || authorizedUser?.email,
         };
       } else if (paymentMethod === "mixto") {
         const efe = Number(mixedEfectivo || 0);
@@ -271,6 +272,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           cashierId: authorizedUser?.id,
+          cashierName: authorizedUser?.displayName || authorizedUser?.email,
           splitPayments,
         };
       } else {
@@ -278,6 +280,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           cashierId: authorizedUser?.id,
+          cashierName: authorizedUser?.displayName || authorizedUser?.email,
         };
       }
 

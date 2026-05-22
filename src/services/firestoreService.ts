@@ -331,7 +331,7 @@ export const closeTable = async (
   orderId: string,
   paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto',
   peopleCount?: number,
-  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string; splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number }[] }
+  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string; cashierName?: string; splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number }[] }
 ): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);
@@ -396,6 +396,7 @@ export const closeTable = async (
           tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
           tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
           cashierId: paymentDetails.cashierId ?? null,
+          cashierName: paymentDetails.cashierName ?? null,
           createdAt: Timestamp.now()
         }));
       } else {
@@ -407,6 +408,7 @@ export const closeTable = async (
           tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
           tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
           cashierId: paymentDetails.cashierId ?? null,
+          cashierName: paymentDetails.cashierName ?? null,
           createdAt: Timestamp.now()
         }];
       }

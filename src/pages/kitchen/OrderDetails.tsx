@@ -19,6 +19,7 @@ import {
   updateOrderTableName,
   updateOrderAdminComments,
   updateOrderStatusInKanban,
+  cancelEmptyOrder,
 } from "../../services/firestoreService";
 
 const KitchenOrderDetails: React.FC = () => {
@@ -175,6 +176,27 @@ const KitchenOrderDetails: React.FC = () => {
     updateOrderAdminComments(order.id, adminComments).catch((err) =>
       console.error("Error saving comments:", err)
     );
+  };
+
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    setCancelLoading(true);
+    try {
+      const res = await cancelEmptyOrder(order.tableId, order.id);
+      if (res.success) {
+        navigate("/kitchen/mesas");
+      } else {
+        console.error("Error cerrando mesa:", res.error);
+      }
+    } catch (err) {
+      console.error("Error cerrando mesa:", err);
+    } finally {
+      setCancelLoading(false);
+      setShowCancelConfirm(false);
+    }
   };
 
   if (loading) {
@@ -687,37 +709,69 @@ const KitchenOrderDetails: React.FC = () => {
               Agregar Items
             </button>
 
-            {(() => {
-              const activeItemUnits = order.items
-                .filter((i) => !i.isDeleted)
-                .reduce((sum, i) => sum + i.quantity, 0);
-              const hasUndelivered = order.items
-                .filter((i) => !i.isDeleted)
-                .some((i) => i.status !== "entregado");
-              const canCheckout = activeItemUnits > 0 && !hasUndelivered;
-              return (
-                <div className="flex-1">
-                  <button
-                    onClick={handleProceedToCheckout}
-                    disabled={!canCheckout}
-                    className={`w-full font-medium py-3 px-6 rounded-lg transition-colors ${
-                      canCheckout
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    }`}
-                  >
-                    Proceder al Pago
-                  </button>
-                  {hasUndelivered && (
-                    <p className="text-xs text-yellow-300 mt-2">
-                      No puedes proceder al pago: la orden tiene ítems
-                      pendientes, en preparación o listos (no entregados).
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
+            {activeItems.length === 0 ? (
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              >
+                Cerrar Mesa
+              </button>
+            ) : (
+              (() => {
+                const activeItemUnits = activeItems.reduce((sum, i) => sum + i.quantity, 0);
+                const hasUndelivered = activeItems.some((i) => i.status !== "entregado");
+                const canCheckout = activeItemUnits > 0 && !hasUndelivered;
+                return (
+                  <div className="flex-1">
+                    <button
+                      onClick={handleProceedToCheckout}
+                      disabled={!canCheckout}
+                      className={`w-full font-medium py-3 px-6 rounded-lg transition-colors ${
+                        canCheckout
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-gray-600 text-gray-300 cursor-not-allowed"
+                      }`}
+                    >
+                      Proceder al Pago
+                    </button>
+                    {hasUndelivered && (
+                      <p className="text-xs text-yellow-300 mt-2">
+                        No puedes proceder al pago: la orden tiene ítems
+                        pendientes, en preparación o listos (no entregados).
+                      </p>
+                    )}
+                  </div>
+                );
+              })()
+            )}
           </div>
+
+          {showCancelConfirm && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+              <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-gray-700">
+                <h3 className="text-lg font-bold text-white mb-2">¿Cerrar mesa?</h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  Se eliminará la orden vacía y la mesa quedará disponible.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCancelConfirm(false)}
+                    disabled={cancelLoading}
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCancelOrder}
+                    disabled={cancelLoading}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition-colors"
+                  >
+                    {cancelLoading ? "Cerrando..." : "Cerrar Mesa"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <PinModal

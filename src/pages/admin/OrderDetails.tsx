@@ -19,6 +19,7 @@ import {
   updateOrderTableName,
   updateOrderAdminComments,
   updateOrderStatusInKanban,
+  cancelEmptyOrder,
 } from "../../services/firestoreService";
 
 const OrderDetails: React.FC = () => {
@@ -276,6 +277,27 @@ const OrderDetails: React.FC = () => {
 
   const handleAdminCommentsBlur = () => {
     void saveAdminCommentsToDB(adminComments);
+  };
+
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    setCancelLoading(true);
+    try {
+      const res = await cancelEmptyOrder(order.tableId, order.id);
+      if (res.success) {
+        navigate("/admin/home");
+      } else {
+        console.error("Error cerrando mesa:", res.error);
+      }
+    } catch (err) {
+      console.error("Error cerrando mesa:", err);
+    } finally {
+      setCancelLoading(false);
+      setShowCancelConfirm(false);
+    }
   };
 
   if (loading) {
@@ -901,11 +923,42 @@ const OrderDetails: React.FC = () => {
               );
             })()}
 
-            {/* Botón de cancelar (si aplica lógica futura) */}
-            <button className="hidden bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-              Cancelar Orden
-            </button>
+            {activeItems.length === 0 && (
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+              >
+                Cerrar Mesa
+              </button>
+            )}
           </div>
+
+          {showCancelConfirm && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+              <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-gray-700">
+                <h3 className="text-lg font-bold text-white mb-2">¿Cerrar mesa?</h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  Se eliminará la orden vacía y la mesa quedará disponible.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCancelConfirm(false)}
+                    disabled={cancelLoading}
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCancelOrder}
+                    disabled={cancelLoading}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition-colors"
+                  >
+                    {cancelLoading ? "Cerrando..." : "Cerrar Mesa"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* PIN Modal */}

@@ -803,3 +803,22 @@ export const deletePromotion = async (promotionId: string): Promise<FirestoreRes
   }
 };
 
+export const cancelEmptyOrder = async (tableId: string, orderId: string): Promise<FirestoreResponse<void>> => {
+  try {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'orders', orderId));
+    batch.update(doc(db, 'tables', tableId), {
+      status: 'disponible',
+      currentOrderId: null,
+      waiterId: null,
+      waiterName: null,
+      updatedAt: Timestamp.now(),
+    });
+    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    return { success: false, error: 'Error al cerrar mesa' };
+  }
+};
+

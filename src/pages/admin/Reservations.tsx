@@ -9,7 +9,6 @@ import {
   doc,
   deleteDoc,
   Timestamp,
-  getDocs,
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { useAuth } from "../../contexts/AuthContext";
@@ -26,7 +25,10 @@ import {
   MapPin,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  PartyPopper,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -34,12 +36,14 @@ const statusColors: Record<ReservationStatus, string> = {
   pendiente: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
   aceptada: "text-green-400 bg-green-500/10 border-green-500/20",
   cancelada: "text-red-400 bg-red-500/10 border-red-500/20",
+  "llegó": "text-purple-400 bg-purple-500/10 border-purple-500/20",
 };
 
 const statusLabels: Record<ReservationStatus, string> = {
   pendiente: "Pendiente",
   aceptada: "Aceptada",
   cancelada: "Cancelada",
+  "llegó": "Llegó ✓",
 };
 
 const priorityColors: Record<ReservationPriority, string> = {
@@ -59,6 +63,8 @@ const Reservations: React.FC = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
+  const [confirmArchiveId, setConfirmArchiveId] = useState<string | null>(null);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,21 +81,18 @@ const Reservations: React.FC = () => {
   const [tableId, setTableId] = useState("");
 
   useEffect(() => {
-    // Load Tables
-    const loadTables = async () => {
-      try {
-        const q = query(collection(db, "tables"));
-        const snapshot = await getDocs(q);
+    // Listen to Tables in real-time so occupied status updates live
+    const unsubTables = onSnapshot(
+      query(collection(db, "tables")),
+      (snapshot) => {
         const loadedTables = snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() } as Table)
+          (d) => ({ id: d.id, ...d.data() } as Table)
         );
         loadedTables.sort((a, b) => a.number - b.number);
         setTables(loadedTables);
-      } catch (error) {
-        console.error("Error loading tables:", error);
-      }
-    };
-    loadTables();
+      },
+      (error) => console.error("Error loading tables:", error)
+    );
 
     // Listen to Reservations
     const qReservations = query(
@@ -121,7 +124,10 @@ const Reservations: React.FC = () => {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubTables();
+      unsubscribe();
+    };
   }, []);
 
   const resetForm = () => {
@@ -257,7 +263,7 @@ const Reservations: React.FC = () => {
     dayAfterTomorrowStart.setDate(dayAfterTomorrowStart.getDate() + 2);
 
     reservations.forEach(res => {
-      if (res.status === 'cancelada') return;
+      if (res.status === 'cancelada' || res.status === 'llegó') return;
       
       const resDate = new Date(res.reservationDate);
       if (resDate >= todayStart && resDate < tomorrowStart) {
@@ -352,80 +358,125 @@ const Reservations: React.FC = () => {
             + Crear tu primera reservación
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reservations.map((res) => (
-            <div
-              key={res.id}
-              className="bg-gray-800 border border-gray-700 rounded-xl p-5 hover:border-gray-600 transition-colors relative group"
-            >
-              {/* Header: Name and Actions */}
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="text-xl font-bold text-white line-clamp-1 flex-1 pr-2">
-                  {res.customerName}
-                </h3>
-                <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleOpenModal(res)}
-                    className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 hover:text-white transition-colors"
-                    title="Editar"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(res.id)}
-                    className="p-1.5 bg-gray-700 hover:bg-red-900/30 rounded text-gray-300 hover:text-red-500 transition-colors"
-                    title="Eliminar"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+      ) : (() => {
+        const activeReservations = reservations.filter(r => r.status !== 'llegó' && r.status !== 'cancelada');
+        const archivedReservations = reservations.filter(r => r.status === 'llegó' || r.status === 'cancelada');
+
+        const ReservationCard = ({ res, archived = false }: { res: Reservation; archived?: boolean }) => {
+          const assignedTable = res.tableId ? tables.find(t => t.id === res.tableId) : null;
+          const tableOccupied = assignedTable?.status === 'ocupada';
+
+          return (
+          <div
+            key={res.id}
+            className={`border rounded-xl p-5 transition-colors relative group ${
+              archived
+                ? 'bg-gray-800/40 border-gray-700/50 opacity-70'
+                : tableOccupied
+                  ? 'bg-green-950/30 border-green-600/60 hover:border-green-500'
+                  : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+            }`}
+          >
+            {/* "Ya llegaron" banner */}
+            {tableOccupied && !archived && (
+              <div className="flex items-center gap-2 bg-green-500/15 border border-green-500/30 rounded-lg px-3 py-2 mb-3">
+                <span className="text-lg">🍽️</span>
+                <div>
+                  <p className="text-green-400 text-xs font-bold uppercase tracking-wide">¡Ya están en mesa!</p>
+                  <p className="text-green-300/70 text-xs">La mesa está ocupada y ya pidieron</p>
                 </div>
               </div>
+            )}
 
-              {/* Status & Priority Badges */}
-              <div className="flex items-center gap-2 mb-4">
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${statusColors[res.status]}`}>
-                  {statusLabels[res.status]}
-                </span>
+            {/* Header: Name and Actions */}
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-xl font-bold text-white line-clamp-1 flex-1 pr-2">
+                {res.customerName}
+              </h3>
+              <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                {!archived && (
+                  <>
+                    <button
+                      onClick={() => handleOpenModal(res)}
+                      className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 hover:text-white transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmArchiveId(res.id)}
+                      className="p-1.5 bg-gray-700 hover:bg-purple-900/40 rounded text-gray-300 hover:text-purple-400 transition-colors"
+                      title="Marcar como Llegó (archivar)"
+                    >
+                      <PartyPopper size={16} />
+                    </button>
+                  </>
+                )}
+                {archived && (
+                  <button
+                    onClick={() => handleStatusChange(res.id, 'pendiente')}
+                    className="p-1.5 bg-gray-700 hover:bg-blue-900/40 rounded text-gray-300 hover:text-blue-400 transition-colors"
+                    title="Desarchivar (volver a pendiente)"
+                  >
+                    <CheckCircle2 size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDelete(res.id)}
+                  className="p-1.5 bg-gray-700 hover:bg-red-900/30 rounded text-gray-300 hover:text-red-500 transition-colors"
+                  title="Eliminar"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Status & Priority Badges */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${statusColors[res.status]}`}>
+                {statusLabels[res.status]}
+              </span>
+              {!archived && (
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${priorityColors[res.priority]} flex items-center gap-1`}>
                   <AlertCircle size={12} />
                   {priorityLabels[res.priority]}
                 </span>
-              </div>
-
-              {/* Details grid */}
-              <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-gray-300">
-                <div className="flex items-center gap-2">
-                  <CalendarDays size={16} className="text-gray-500" />
-                  <span>{res.reservationDate.toLocaleDateString("es-ES", { day: 'numeric', month: 'short' })}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={16} className="text-gray-500" />
-                  <span>{res.reservationDate.toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users size={16} className="text-gray-500" />
-                  <span>{res.pax} Personas</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={16} className="text-gray-500" />
-                  <span>{res.tableName || "Mesa sin asignar"}</span>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {res.notes && (
-                <div className="mb-4 bg-gray-900/50 p-3 rounded-lg text-sm text-gray-400 flex items-start gap-2">
-                  <AlignLeft size={16} className="mt-0.5 flex-shrink-0" />
-                  <p className="line-clamp-2">{res.notes}</p>
-                </div>
               )}
+            </div>
 
-              {/* Footer: User and Quick Status */}
-              <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-700 text-xs text-gray-500">
-                <span>Por: {res.createdByName}</span>
+            {/* Details grid */}
+            <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-gray-300">
+              <div className="flex items-center gap-2">
+                <CalendarDays size={16} className="text-gray-500" />
+                <span>{res.reservationDate.toLocaleDateString("es-ES", { day: 'numeric', month: 'short' })}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-gray-500" />
+                <span>{res.reservationDate.toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users size={16} className="text-gray-500" />
+                <span>{res.pax} Personas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-gray-500" />
+                <span>{res.tableName || "Mesa sin asignar"}</span>
+              </div>
+            </div>
 
-                {/* Quick actions for status */}
+            {/* Notes */}
+            {res.notes && (
+              <div className="mb-4 bg-gray-900/50 p-3 rounded-lg text-sm text-gray-400 flex items-start gap-2">
+                <AlignLeft size={16} className="mt-0.5 flex-shrink-0" />
+                <p className="line-clamp-2">{res.notes}</p>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-700 text-xs text-gray-500">
+              <span>Por: {res.createdByName}</span>
+
+              {!archived && (
                 <div className="flex items-center gap-1">
                   {res.status !== 'aceptada' && (
                     <button
@@ -446,11 +497,58 @@ const Reservations: React.FC = () => {
                     </button>
                   )}
                 </div>
-              </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+          );
+        };
+
+        return (
+          <div className="space-y-8">
+            {/* Active reservations */}
+            {activeReservations.length === 0 ? (
+              <div className="bg-gray-800/50 border border-gray-800 rounded-xl p-12 text-center">
+                <CalendarDays className="mx-auto h-16 w-16 text-gray-600 mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">No hay reservaciones activas</h3>
+                <p className="text-gray-400">Todas las reservaciones han sido atendidas o canceladas.</p>
+                <button
+                  onClick={() => handleOpenModal()}
+                  className="mt-6 text-red-500 hover:text-red-400 font-medium"
+                >
+                  + Crear nueva reservación
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeReservations.map((res) => (
+                  <ReservationCard key={res.id} res={res} />
+                ))}
+              </div>
+            )}
+
+            {/* Archived section */}
+            {archivedReservations.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowArchived(v => !v)}
+                  className="flex items-center gap-2 text-gray-400 hover:text-gray-300 text-sm font-medium mb-4 transition-colors"
+                >
+                  {showArchived ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  Archivo ({archivedReservations.length} reservación{archivedReservations.length !== 1 ? 'es' : ''})
+                </button>
+
+                {showArchived && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {archivedReservations.map((res) => (
+                      <ReservationCard key={res.id} res={res} archived />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Modal */}
       {isModalOpen && (
@@ -541,6 +639,7 @@ const Reservations: React.FC = () => {
                     <option value="pendiente">Pendiente</option>
                     <option value="aceptada">Aceptada</option>
                     <option value="cancelada">Cancelada</option>
+                    <option value="llegó">Llegó ✓</option>
                   </select>
                 </div>
                 <div>
@@ -608,6 +707,40 @@ const Reservations: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Archive Modal */}
+      {confirmArchiveId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-gray-900 rounded-xl w-full max-w-sm shadow-2xl border border-gray-800 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-purple-500/20 p-2 rounded-lg">
+                <PartyPopper size={20} className="text-purple-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">¿Marcar como llegó?</h3>
+            </div>
+            <p className="text-gray-400 text-sm mb-6">
+              La reservación se archivará con el estado <span className="text-purple-400 font-semibold">Llegó ✓</span>. Podrás verla y desarchivarla en cualquier momento.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmArchiveId(null)}
+                className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  await handleStatusChange(confirmArchiveId, 'llegó');
+                  setConfirmArchiveId(null);
+                }}
+                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Sí, archivar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -40,7 +40,7 @@ export interface Table {
   updatedAt: Date;
 }
 
-export type ReservationStatus = 'pendiente' | 'aceptada' | 'cancelada';
+export type ReservationStatus = 'pendiente' | 'aceptada' | 'cancelada' | 'llegó';
 export type ReservationPriority = 'baja' | 'media' | 'alta';
 
 export interface Reservation {

@@ -31,6 +31,8 @@ interface BottleQuantityModalProps {
   initialMixers?: number[];
 }
 
+const DEFAULT_MIXERS = [0, 0, 0, 0, 0];
+
 const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
   isOpen,
   onClose,
@@ -41,7 +43,7 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
   isPromoX2 = false,
   isEditMode = false,
   initialQuantity = 1,
-  initialMixers = [0, 0, 0, 0, 0],
+  initialMixers = DEFAULT_MIXERS,
 }) => {
   const [quantity, setQuantity] = useState(initialQuantity);
   const [mixerQty, setMixerQty] = useState<number[]>(initialMixers);

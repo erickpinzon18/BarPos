@@ -147,6 +147,16 @@ const WaiterOrderDetails: React.FC = () => {
                 notes
             );
 
+            const ws = getCategoryInfo(product.category as any)?.workstation ?? 'cocina';
+            printStationTicket({
+                station: ws,
+                tableNumber: order.tableNumber,
+                tableName: order.tableName,
+                waiterName: order.waiterName,
+                items: [{ productName: product.name, quantity, ...(notes ? { notes } : {}) }],
+                paperSize,
+            });
+
             console.log('✅ Item agregado exitosamente');
         } catch (error: any) {
             console.error('❌ Error agregando item:', error);
@@ -186,6 +196,16 @@ const WaiterOrderDetails: React.FC = () => {
                 quantity,
                 notes
             );
+
+            const ws = getCategoryInfo(selectedItemForMore.category as any)?.workstation ?? 'cocina';
+            printStationTicket({
+                station: ws,
+                tableNumber: order.tableNumber,
+                tableName: order.tableName,
+                waiterName: order.waiterName,
+                items: [{ productName: selectedItemForMore.productName, quantity, ...(notes ? { notes } : {}) }],
+                paperSize,
+            });
 
             console.log('✅ Item adicional agregado:', selectedItemForMore.productName, 'x', quantity);
             setShowQuantityModal(false);

@@ -135,6 +135,15 @@ const KitchenOrderDetails: React.FC = () => {
         quantity,
         notes
       );
+      const ws = getCategoryInfo(product.category as any)?.workstation ?? 'cocina';
+      printStationTicket({
+        station: ws,
+        tableNumber: order.tableNumber,
+        tableName: order.tableName,
+        waiterName: order.waiterName,
+        items: [{ productName: product.name, quantity, ...(notes ? { notes } : {}) }],
+        paperSize,
+      });
     } catch (error: any) {
       throw error;
     } finally {
@@ -159,6 +168,15 @@ const KitchenOrderDetails: React.FC = () => {
         quantity,
         notes
       );
+      const ws = getCategoryInfo(selectedItemForMore.category as any)?.workstation ?? 'cocina';
+      printStationTicket({
+        station: ws,
+        tableNumber: order.tableNumber,
+        tableName: order.tableName,
+        waiterName: order.waiterName,
+        items: [{ productName: selectedItemForMore.productName, quantity, ...(notes ? { notes } : {}) }],
+        paperSize,
+      });
       setShowQuantityModal(false);
       setSelectedItemForMore(null);
     } catch (error: any) {

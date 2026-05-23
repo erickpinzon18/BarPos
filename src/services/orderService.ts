@@ -1,7 +1,7 @@
 // src/services/orderService.ts
 import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Order, OrderItem, User, OrderItemStatus, CreateData } from '../utils/types';
+import type { Order, OrderItem, User, OrderItemStatus, CreateData, Table } from '../utils/types';
 
 /**
  * Verifica el PIN de un usuario
@@ -329,6 +329,119 @@ export const restoreOrderItem = async (
     console.log('✅ Item restaurado exitosamente');
   } catch (error) {
     console.error('❌ Error restaurando item:', error);
+    throw error;
+  }
+};
+
+export interface SplitItemReq {
+  originalItemId: string;
+  quantityToMove: number;
+}
+
+/**
+ * Mueve items de una orden a una mesa nueva (creando una nueva orden)
+ */
+export const splitOrderItemsToNewTable = async (
+  sourceOrderId: string,
+  splitItems: SplitItemReq[],
+  targetTableId: string,
+  adminUser: User
+): Promise<string> => {
+  try {
+    console.log('✂️ Separando cuenta a nueva mesa:', { sourceOrderId, targetTableId, splitItems });
+
+    // 1. Obtener la orden de origen
+    const sourceOrderRef = doc(db, 'orders', sourceOrderId);
+    const sourceOrderDoc = await getDoc(sourceOrderRef);
+    if (!sourceOrderDoc.exists()) throw new Error('Orden origen no encontrada');
+    const sourceOrderData = sourceOrderDoc.data() as Order;
+
+    // 2. Verificar la mesa destino
+    const targetTableRef = doc(db, 'tables', targetTableId);
+    const targetTableDoc = await getDoc(targetTableRef);
+    if (!targetTableDoc.exists()) throw new Error('Mesa destino no encontrada');
+    const targetTableData = targetTableDoc.data() as Table;
+
+    if (targetTableData.status !== 'libre') {
+      throw new Error('La mesa destino no está libre');
+    }
+
+    // 3. Crear items para la nueva orden y actualizar los de la origen
+    const newOrderItems: OrderItem[] = [];
+    const updatedSourceItems = sourceOrderData.items.map(item => {
+      const splitReq = splitItems.find(req => req.originalItemId === item.id);
+      if (!splitReq || splitReq.quantityToMove <= 0) return item;
+      
+      const qtyToMove = Math.min(splitReq.quantityToMove, item.quantity);
+      
+      // Crear el item para la nueva mesa
+      newOrderItems.push({
+        ...item,
+        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        quantity: qtyToMove,
+        updatedAt: new Date()
+      });
+
+      // Actualizar item de la orden origen
+      const remainingQty = item.quantity - qtyToMove;
+      if (remainingQty <= 0) {
+        return {
+          ...item,
+          isDeleted: true,
+          deletedBy: adminUser.id,
+          deletedByName: `Separado a mesa ${targetTableData.number} por ${adminUser.displayName || adminUser.email}`,
+          deletedAt: new Date(),
+          pendingCancelPrint: false
+        };
+      } else {
+        return {
+          ...item,
+          quantity: remainingQty,
+          updatedAt: new Date()
+        };
+      }
+    });
+
+    if (newOrderItems.length === 0) {
+      throw new Error('No se seleccionaron items válidos para separar');
+    }
+
+    // 4. Actualizar orden origen
+    await updateDoc(sourceOrderRef, {
+      items: updatedSourceItems,
+      updatedAt: Timestamp.now()
+    });
+
+    // 5. Crear la nueva orden
+    const newOrderData: CreateData<Order> = {
+      tableId: targetTableId,
+      tableNumber: targetTableData.number,
+      waiterId: sourceOrderData.waiterId,
+      waiterName: sourceOrderData.waiterName,
+      items: newOrderItems,
+      status: 'activo'
+    };
+
+    const newOrderRef = await addDoc(collection(db, 'orders'), {
+      ...newOrderData,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    });
+
+    // 6. Actualizar la nueva mesa
+    await updateDoc(targetTableRef, {
+      status: 'ocupada',
+      currentOrderId: newOrderRef.id,
+      waiterId: sourceOrderData.waiterId,
+      waiterName: sourceOrderData.waiterName,
+      updatedAt: Timestamp.now()
+    });
+
+    console.log('✅ Separación completada exitosamente a la orden:', newOrderRef.id);
+    return newOrderRef.id;
+
+  } catch (error) {
+    console.error('❌ Error separando cuenta:', error);
     throw error;
   }
 };

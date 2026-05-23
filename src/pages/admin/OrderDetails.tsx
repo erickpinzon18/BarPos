@@ -11,11 +11,12 @@ import {
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
 import SwapServiceModal from "../../components/common/SwapServiceModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Printer } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Printer, Scissors } from "lucide-react";
 import type { Product } from "../../utils/types";
 import type { OrderItem } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
+import SplitOrderModal from "../../components/common/SplitOrderModal";
 import { useActivePromotions, isPromotionWithinSchedule } from "../../hooks/usePromotions";
 import { getCategoryInfo } from "../../utils/categories";
 import { printStationTicket } from "../../utils/printStationTicket";
@@ -42,6 +43,9 @@ const OrderDetails: React.FC = () => {
   const [showPinModal, setShowPinModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [pinLoading, setPinLoading] = useState(false);
+
+  // Estados para el modal de separar cuenta
+  const [showSplitModal, setShowSplitModal] = useState(false);
 
   // Estados para el modal de agregar items
   const [showAddItemModal, setShowAddItemModal] = useState(false);
@@ -953,6 +957,14 @@ const OrderDetails: React.FC = () => {
             >
               Agregar Items
             </button>
+            <button
+              onClick={() => setShowSplitModal(true)}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+              disabled={activeItems.length === 0}
+            >
+              <Scissors className="w-5 h-5" />
+              Separar Cuenta
+            </button>
 
             {(() => {
               const activeItemUnits = order.items
@@ -1051,6 +1063,15 @@ const OrderDetails: React.FC = () => {
           loading={addItemLoading}
           activePromotions={activePromotions}
         />
+
+        {showSplitModal && (
+          <SplitOrderModal
+            isOpen={showSplitModal}
+            onClose={() => setShowSplitModal(false)}
+            order={order}
+            onSuccess={() => setShowSplitModal(false)}
+          />
+        )}
 
         {/* Quantity Modal for Adding More */}
         <QuantityModal

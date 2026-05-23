@@ -11,11 +11,12 @@ import {
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
 import SwapServiceModal from "../../components/common/SwapServiceModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Scissors } from "lucide-react";
 import { getCategoryInfo } from "../../utils/categories";
 import type { OrderItem, Product } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
+import SplitOrderModal from "../../components/common/SplitOrderModal";
 import { useActivePromotions, isPromotionWithinSchedule } from "../../hooks/usePromotions";
 import {
   updateOrderPeopleCount,
@@ -46,6 +47,9 @@ const KitchenOrderDetails: React.FC = () => {
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [itemToSwap, setItemToSwap] = useState<OrderItem | null>(null);
   const [swapLoading, setSwapLoading] = useState(false);
+
+  // Estados para el modal de separar cuenta
+  const [showSplitModal, setShowSplitModal] = useState(false);
 
   const [peopleCount, setPeopleCount] = useState<number>(
     order?.peopleCount ?? 1
@@ -745,6 +749,14 @@ const KitchenOrderDetails: React.FC = () => {
             >
               Agregar Items
             </button>
+            <button
+              onClick={() => setShowSplitModal(true)}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+              disabled={activeItems.length === 0}
+            >
+              <Scissors className="w-5 h-5" />
+              Separar Cuenta
+            </button>
 
             {activeItems.length === 0 ? (
               <button
@@ -830,6 +842,15 @@ const KitchenOrderDetails: React.FC = () => {
           loading={addItemLoading}
           activePromotions={activePromotions}
         />
+
+        {showSplitModal && (
+          <SplitOrderModal
+            isOpen={showSplitModal}
+            onClose={() => setShowSplitModal(false)}
+            order={order}
+            onSuccess={() => setShowSplitModal(false)}
+          />
+        )}
 
         <QuantityModal
           isOpen={showQuantityModal}

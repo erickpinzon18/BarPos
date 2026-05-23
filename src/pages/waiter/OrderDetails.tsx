@@ -1,9 +1,10 @@
 // src/pages/waiter/OrderDetails.tsx
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Package, User, Plus, Trash2, Tag, ArrowLeftRight } from 'lucide-react';
+import { ArrowLeft, Clock, Package, User, Plus, Trash2, Tag, ArrowLeftRight, Scissors } from 'lucide-react';
 import { useOrderByTableId } from '../../hooks/useOrders';
 import { useProducts } from '../../hooks/useProducts';
+import SplitOrderModal from '../../components/common/SplitOrderModal';
 import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
 import { deleteOrderItem, addItemToOrder, verifyUserPin, swapOrderItem } from '../../services/orderService';
 import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments, updateOrderStatusInKanban, cancelEmptyOrder } from '../../services/firestoreService';
@@ -37,6 +38,9 @@ const WaiterOrderDetails: React.FC = () => {
     const [showSwapModal, setShowSwapModal] = useState(false);
     const [itemToSwap, setItemToSwap] = useState<OrderItem | null>(null);
     const [swapLoading, setSwapLoading] = useState(false);
+
+    // Estados para el modal de separar cuenta
+    const [showSplitModal, setShowSplitModal] = useState(false);
 
     // Local state to edit people count (saved via +/- clicks)
     const [peopleCount, setPeopleCount] = useState<number>(order?.peopleCount ?? 1);
@@ -763,6 +767,15 @@ const WaiterOrderDetails: React.FC = () => {
                         Agregar
                     </button>
 
+                    <button
+                        onClick={() => setShowSplitModal(true)}
+                        className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        disabled={activeItems.length === 0}
+                        title="Separar Cuenta"
+                    >
+                        <Scissors className="w-5 h-5" />
+                    </button>
+
                     {activeItems.length === 0 ? (
                         <button
                             onClick={() => setShowCancelConfirm(true)}
@@ -837,15 +850,26 @@ const WaiterOrderDetails: React.FC = () => {
                 message={`¿Eliminar "${order.items.find(i => i.id === itemToDelete)?.productName}"? Requiere PIN de administrador.`}
             />
 
-            {/* Add Item Modal */}
-            <AddItemModal
-                isOpen={showAddItemModal}
-                onClose={handleCloseAddItemModal}
-                onAddItem={handleAddItem}
-                products={products}
-                loading={addItemLoading}
-                activePromotions={activePromotions}
-            />
+            {/* Modals */}
+            {showAddItemModal && (
+                <AddItemModal
+                    isOpen={showAddItemModal}
+                    onClose={handleCloseAddItemModal}
+                    onAddItem={handleAddItem}
+                    products={products}
+                    loading={addItemLoading}
+                    activePromotions={activePromotions}
+                />
+            )}
+
+            {showSplitModal && (
+                <SplitOrderModal
+                    isOpen={showSplitModal}
+                    onClose={() => setShowSplitModal(false)}
+                    order={order!}
+                    onSuccess={() => setShowSplitModal(false)}
+                />
+            )}
 
             {/* Quantity Modal for Adding More */}
             <QuantityModal

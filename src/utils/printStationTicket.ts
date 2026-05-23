@@ -1,5 +1,4 @@
-import { type PaperSize } from './printTicket';
-import { addPrintJob } from '../services/printQueueService';
+import { sendToPrinter, type PaperSize } from './printTicket';
 
 export interface StationTicketItem {
   productName: string;
@@ -44,10 +43,6 @@ const wrap = (text: string, W: number): string[] => {
 };
 
 export const printStationTicket = (opts: StationTicketOptions): void => {
-  void _buildAndQueue(opts);
-};
-
-const _buildAndQueue = async (opts: StationTicketOptions): Promise<void> => {
   const { station, tableNumber, tableName, waiterName, items, paperSize = '58mm', isCancellation = false } = opts;
   const W = paperSize === '58mm' ? CHARS_58MM : CHARS_80MM;
   const stationLabel = station === 'cocina' ? 'COCINA' : 'BARRA';
@@ -87,7 +82,7 @@ const _buildAndQueue = async (opts: StationTicketOptions): Promise<void> => {
     }
     lines.push(sep('-', W));
     const fontSize = paperSize === '58mm' ? FONT_58MM : FONT_80MM;
-    await addPrintJob(station, lines.join('\n'), paperSize, stationLabel, fontSize);
+    sendToPrinter(lines.join('\n'), paperSize, stationLabel, fontSize);
     return;
   }
 
@@ -112,5 +107,5 @@ const _buildAndQueue = async (opts: StationTicketOptions): Promise<void> => {
   lines.push(sep('-', W));
 
   const fontSize = paperSize === '58mm' ? FONT_58MM : FONT_80MM;
-  await addPrintJob(station, lines.join('\n'), paperSize, stationLabel, fontSize);
+  sendToPrinter(lines.join('\n'), paperSize, stationLabel, fontSize);
 };

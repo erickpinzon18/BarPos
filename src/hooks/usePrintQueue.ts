@@ -32,8 +32,9 @@ export const usePrintQueue = (station: 'barra' | 'cocina'): void => {
             ? data.createdAt.toMillis()
             : Date.now();
 
-        // Skip jobs that existed before this device opened the Kanban
-        if (createdMs <= mountedAt) {
+        // Skip jobs older than 60 s before mount — covers clock skew and brief page transitions
+        const GRACE_MS = 60_000;
+        if (createdMs < mountedAt - GRACE_MS) {
           processingRef.current.add(jobId);
           await markJobDone(jobId).catch(() => {});
           return;

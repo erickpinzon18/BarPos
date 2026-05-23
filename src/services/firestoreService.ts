@@ -553,10 +553,11 @@ export const getKitchenOrdersRealtime = (callback: (orders: Order[]) => void) =>
   return onSnapshot(ordersQuery, (snapshot) => {
     const orders = snapshot.docs
       .map(doc => convertTimestamps({ id: doc.id, ...doc.data() }) as Order)
-      .filter(order => 
-        order.items.some(item => 
-          // include orders that have any active (non-deleted) item
-          ['pendiente', 'entregado'].includes(item.status) && !item.isDeleted
+      .filter(order =>
+        order.items.some(item =>
+          // include orders with any active item OR any item pending a cancellation print
+          (['pendiente', 'entregado'].includes(item.status) && !item.isDeleted) ||
+          item.pendingCancelPrint
         )
       );
     callback(orders);
@@ -584,6 +585,27 @@ export const markItemsAsPrinted = async (orderId: string, itemIds: string[]): Pr
   } catch (error) {
     console.error('Error marking items as printed:', error);
     return { success: false, error: 'Error al marcar items como impresos' };
+  }
+};
+
+export const clearPendingCancelPrint = async (orderId: string, itemIds: string[]): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    if (!orderDoc.exists()) return { success: false, error: 'Pedido no encontrado' };
+
+    const orderData = orderDoc.data() as Order;
+    const updatedItems = orderData.items.map(item => {
+      if (!itemIds.includes(item.id) || !item.pendingCancelPrint) return item;
+      const { pendingCancelPrint: _omit, ...rest } = item;
+      return rest;
+    });
+
+    await updateDoc(orderRef, { items: updatedItems });
+    return { success: true };
+  } catch (error) {
+    console.error('Error clearing pendingCancelPrint:', error);
+    return { success: false, error: 'Error al limpiar pendingCancelPrint' };
   }
 };
 

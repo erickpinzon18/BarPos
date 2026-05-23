@@ -76,9 +76,9 @@ export const printStationTicket = (opts: StationTicketOptions): void => {
   lines.push(sep('-', W));
 
   if (opts.swapFrom) {
-    wrap(`De: ${opts.swapFrom}`, W).forEach(l => lines.push(l));
     for (const item of items) {
-      wrap(`A:  ${item.productName}`, W).forEach(l => lines.push(l));
+      wrap(`${item.quantity}x ${item.productName}`, W).forEach(l => lines.push(l));
+      wrap(`(cambio de: ${opts.swapFrom})`, W).forEach(l => lines.push(`   ${l}`));
     }
     lines.push(sep('-', W));
     const fontSize = paperSize === '58mm' ? FONT_58MM : FONT_80MM;

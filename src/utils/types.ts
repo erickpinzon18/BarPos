@@ -76,6 +76,8 @@ export interface OrderItem {
   deletedByName?: string; // Nombre del usuario que lo eliminó
   deletedAt?: Date; // Fecha de eliminación
   printedAt?: Date; // Timestamp de cuando se imprimió la comanda automáticamente
+  swapFromName?: string; // Nombre del producto anterior cuando se cambió por swap (para reimprimir ticket de cambio)
+  pendingCancelPrint?: boolean; // Marca un item recién cancelado para que se imprima ticket de cancelación en barra/cocina
   createdAt: Date;
   updatedAt: Date;
 }

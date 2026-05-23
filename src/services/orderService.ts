@@ -83,7 +83,8 @@ export const deleteOrderItem = async (
           isDeleted: true,
           deletedBy: authorizedUser.id,
           deletedByName: authorizedUser.displayName || authorizedUser.email,
-          deletedAt: new Date()
+          deletedAt: new Date(),
+          pendingCancelPrint: true,
         };
       }
       return item;
@@ -270,7 +271,14 @@ export const swapOrderItem = async (
     const orderData = orderDoc.data() as Order;
     const updatedItems = orderData.items.map((item: OrderItem) => {
       if (item.id === itemId) {
-        return { ...item, productId: newProductId, productName: newProductName, updatedAt: new Date() };
+        const { printedAt: _omit, ...rest } = item;
+        return {
+          ...rest,
+          productId: newProductId,
+          productName: newProductName,
+          swapFromName: item.productName,
+          updatedAt: new Date(),
+        };
       }
       return item;
     });

@@ -6,11 +6,14 @@ import {
   deleteOrderItem,
   verifyUserPin,
   addItemToOrder,
+  swapOrderItem,
 } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, Printer } from "lucide-react";
-import type { OrderItem, Product } from "../../utils/types";
+import SwapServiceModal from "../../components/common/SwapServiceModal";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, Printer, ArrowLeftRight } from "lucide-react";
+import type { Product } from "../../utils/types";
+import type { OrderItem } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
 import { useActivePromotions, isPromotionWithinSchedule } from "../../hooks/usePromotions";
@@ -48,6 +51,11 @@ const OrderDetails: React.FC = () => {
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedItemForMore, setSelectedItemForMore] =
     useState<OrderItem | null>(null);
+
+  // Estado para el modal de cambio de servicio
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [itemToSwap, setItemToSwap] = useState<OrderItem | null>(null);
+  const [swapLoading, setSwapLoading] = useState(false);
 
   // 'order' now comes directly from the optimized hook
 
@@ -223,6 +231,34 @@ const OrderDetails: React.FC = () => {
   const handleCloseQuantityModal = () => {
     setShowQuantityModal(false);
     setSelectedItemForMore(null);
+  };
+
+  const handleOpenSwap = (item: OrderItem) => {
+    setItemToSwap(item);
+    setShowSwapModal(true);
+  };
+
+  const handleConfirmSwap = async (newProduct: Product) => {
+    if (!order || !itemToSwap) return;
+    setSwapLoading(true);
+    try {
+      await swapOrderItem(order.id, itemToSwap.id, newProduct.id, newProduct.name);
+      printStationTicket({
+        station: 'barra',
+        tableNumber: order.tableNumber,
+        tableName: order.tableName,
+        waiterName: order.waiterName,
+        items: [{ productName: newProduct.name, quantity: itemToSwap.quantity }],
+        paperSize,
+        swapFrom: itemToSwap.productName,
+      });
+      setShowSwapModal(false);
+      setItemToSwap(null);
+    } catch (err) {
+      console.error('Error cambiando servicio:', err);
+    } finally {
+      setSwapLoading(false);
+    }
   };
 
   // Proceder al pago (Checkout) - navegar a /admin/checkout/:orderId
@@ -789,6 +825,15 @@ const OrderDetails: React.FC = () => {
                               >
                                 <Plus className="w-4 h-4" />
                               </button>
+                              {item.category === 'Servicio' && (
+                                <button
+                                  onClick={() => handleOpenSwap(item)}
+                                  className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-colors"
+                                  title="Cambiar servicio"
+                                >
+                                  <ArrowLeftRight className="w-4 h-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
                                 className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
@@ -1054,6 +1099,16 @@ const OrderDetails: React.FC = () => {
               : null
           }
           loading={addItemLoading}
+        />
+
+        {/* Swap Service Modal */}
+        <SwapServiceModal
+          isOpen={showSwapModal}
+          onClose={() => { setShowSwapModal(false); setItemToSwap(null); }}
+          onConfirm={handleConfirmSwap}
+          currentItem={itemToSwap}
+          products={products}
+          loading={swapLoading}
         />
       </div>
     </div>

@@ -1,4 +1,5 @@
-import { sendToPrinter, type PaperSize } from './printTicket';
+import { type PaperSize } from './printTicket';
+import { addPrintJob } from '../services/printQueueService';
 
 export interface StationTicketItem {
   productName: string;
@@ -14,6 +15,7 @@ export interface StationTicketOptions {
   items: StationTicketItem[];
   paperSize?: PaperSize;
   isCancellation?: boolean;
+  swapFrom?: string; // nombre del producto que se reemplaza
 }
 
 const CHARS_80MM = 22;
@@ -42,6 +44,10 @@ const wrap = (text: string, W: number): string[] => {
 };
 
 export const printStationTicket = (opts: StationTicketOptions): void => {
+  void _buildAndQueue(opts);
+};
+
+const _buildAndQueue = async (opts: StationTicketOptions): Promise<void> => {
   const { station, tableNumber, tableName, waiterName, items, paperSize = '58mm', isCancellation = false } = opts;
   const W = paperSize === '58mm' ? CHARS_58MM : CHARS_80MM;
   const stationLabel = station === 'cocina' ? 'COCINA' : 'BARRA';
@@ -51,6 +57,9 @@ export const printStationTicket = (opts: StationTicketOptions): void => {
   if (isCancellation) {
     lines.push(center('*** CANCELACIÓN ***', W));
     lines.push(center(stationLabel, W));
+  } else if (opts.swapFrom) {
+    lines.push(center(stationLabel, W));
+    lines.push(center('CAMBIO SERVICIO', W));
   } else {
     lines.push(center(stationLabel, W));
   }
@@ -70,6 +79,17 @@ export const printStationTicket = (opts: StationTicketOptions): void => {
   lines.push(`${date}  ${time}`);
 
   lines.push(sep('-', W));
+
+  if (opts.swapFrom) {
+    wrap(`De: ${opts.swapFrom}`, W).forEach(l => lines.push(l));
+    for (const item of items) {
+      wrap(`A:  ${item.productName}`, W).forEach(l => lines.push(l));
+    }
+    lines.push(sep('-', W));
+    const fontSize = paperSize === '58mm' ? FONT_58MM : FONT_80MM;
+    await addPrintJob(station, lines.join('\n'), paperSize, stationLabel, fontSize);
+    return;
+  }
 
   for (const item of items) {
     const prefix = isCancellation ? `- CANCELADO: ${item.quantity}x` : `${item.quantity}x`;
@@ -92,5 +112,5 @@ export const printStationTicket = (opts: StationTicketOptions): void => {
   lines.push(sep('-', W));
 
   const fontSize = paperSize === '58mm' ? FONT_58MM : FONT_80MM;
-  sendToPrinter(lines.join('\n'), paperSize, stationLabel, fontSize);
+  await addPrintJob(station, lines.join('\n'), paperSize, stationLabel, fontSize);
 };

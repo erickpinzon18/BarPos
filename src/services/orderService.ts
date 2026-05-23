@@ -254,6 +254,35 @@ export const createEmptyOrder = async (
 };
 
 /**
+ * Cambia el producto de un item de tipo Servicio por otro Servicio
+ */
+export const swapOrderItem = async (
+  orderId: string,
+  itemId: string,
+  newProductId: string,
+  newProductName: string
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    if (!orderDoc.exists()) throw new Error('Orden no encontrada');
+
+    const orderData = orderDoc.data() as Order;
+    const updatedItems = orderData.items.map((item: OrderItem) => {
+      if (item.id === itemId) {
+        return { ...item, productId: newProductId, productName: newProductName, updatedAt: new Date() };
+      }
+      return item;
+    });
+
+    await updateDoc(orderRef, { items: updatedItems, updatedAt: Timestamp.now() });
+  } catch (error) {
+    console.error('❌ Error cambiando servicio:', error);
+    throw error;
+  }
+};
+
+/**
  * Restaura un item eliminado
  */
 export const restoreOrderItem = async (

@@ -6,10 +6,12 @@ import {
   deleteOrderItem,
   verifyUserPin,
   addItemToOrder,
+  swapOrderItem,
 } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag } from "lucide-react";
+import SwapServiceModal from "../../components/common/SwapServiceModal";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight } from "lucide-react";
 import { getCategoryInfo } from "../../utils/categories";
 import { printStationTicket } from "../../utils/printStationTicket";
 import { usePaperSize } from "../../hooks/usePaperSize";
@@ -45,6 +47,10 @@ const KitchenOrderDetails: React.FC = () => {
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedItemForMore, setSelectedItemForMore] =
     useState<OrderItem | null>(null);
+
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [itemToSwap, setItemToSwap] = useState<OrderItem | null>(null);
+  const [swapLoading, setSwapLoading] = useState(false);
 
   const [peopleCount, setPeopleCount] = useState<number>(
     order?.peopleCount ?? 1
@@ -157,6 +163,34 @@ const KitchenOrderDetails: React.FC = () => {
       setSelectedItemForMore(null);
     } catch (error: any) {
       throw error;
+    }
+  };
+
+  const handleOpenSwap = (item: OrderItem) => {
+    setItemToSwap(item);
+    setShowSwapModal(true);
+  };
+
+  const handleConfirmSwap = async (newProduct: Product) => {
+    if (!order || !itemToSwap) return;
+    setSwapLoading(true);
+    try {
+      await swapOrderItem(order.id, itemToSwap.id, newProduct.id, newProduct.name);
+      printStationTicket({
+        station: 'barra',
+        tableNumber: order.tableNumber,
+        tableName: order.tableName,
+        waiterName: order.waiterName,
+        items: [{ productName: newProduct.name, quantity: itemToSwap.quantity }],
+        paperSize,
+        swapFrom: itemToSwap.productName,
+      });
+      setShowSwapModal(false);
+      setItemToSwap(null);
+    } catch (err) {
+      console.error('Error cambiando servicio:', err);
+    } finally {
+      setSwapLoading(false);
     }
   };
 
@@ -594,6 +628,15 @@ const KitchenOrderDetails: React.FC = () => {
                               >
                                 <Plus className="w-4 h-4" />
                               </button>
+                              {item.category === 'Servicio' && (
+                                <button
+                                  onClick={() => handleOpenSwap(item)}
+                                  className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-colors"
+                                  title="Cambiar servicio"
+                                >
+                                  <ArrowLeftRight className="w-4 h-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
                                 className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
@@ -841,6 +884,15 @@ const KitchenOrderDetails: React.FC = () => {
               : null
           }
           loading={addItemLoading}
+        />
+
+        <SwapServiceModal
+          isOpen={showSwapModal}
+          onClose={() => { setShowSwapModal(false); setItemToSwap(null); }}
+          onConfirm={handleConfirmSwap}
+          currentItem={itemToSwap}
+          products={products}
+          loading={swapLoading}
         />
       </div>
     </div>

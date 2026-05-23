@@ -7,6 +7,7 @@ import type { Order } from '../../utils/types';
 import { getCategoriesByWorkstation } from '../../utils/categories';
 import { playNotificationSound } from '../../utils/notificationSound';
 import { printStationTicket } from '../../utils/printStationTicket';
+import { usePrintQueue } from '../../hooks/usePrintQueue';
 import type { PaperSize } from '../../utils/printTicket';
 
 const KitchenKanban: React.FC = () => {
@@ -16,6 +17,9 @@ const KitchenKanban: React.FC = () => {
   const path = location.pathname.toLowerCase();
   const station = path.includes('/barra') ? 'barra' : 'cocina';
   const stationLabel = station === 'barra' ? 'Barra' : 'Cocina';
+
+  // Escuchar la cola de impresión de Firestore y auto-imprimir en este dispositivo
+  usePrintQueue(station);
 
   const prevPendingCountRef = useRef<number>(0);
   const isFirstRenderRef = useRef<boolean>(true);

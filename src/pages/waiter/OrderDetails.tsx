@@ -12,8 +12,6 @@ import AddItemModal from '../../components/common/AddItemModal';
 import QuantityModal from '../../components/common/QuantityModal';
 import SwapServiceModal from '../../components/common/SwapServiceModal';
 import { getCategoryInfo } from '../../utils/categories';
-import { printStationTicket } from '../../utils/printStationTicket';
-import { usePaperSize } from '../../hooks/usePaperSize';
 import { useAuth } from '../../contexts/AuthContext';
 import type { OrderItem, Product } from '../../utils/types';
 
@@ -24,7 +22,6 @@ const WaiterOrderDetails: React.FC = () => {
     const { products } = useProducts();
     const { promotions: activePromotions } = useActivePromotions();
     const { currentUser } = useAuth();
-    const [paperSize] = usePaperSize(currentUser?.id);
 
     // Estados para el modal de PIN
     const [showPinModal, setShowPinModal] = useState(false);
@@ -89,8 +86,6 @@ const WaiterOrderDetails: React.FC = () => {
                 console.warn('Usuario no autorizado para eliminar item:', authorizedUser);
                 throw new Error('PIN válido, pero el usuario no tiene permisos. Solo administradores pueden eliminar items.');
             }
-
-            const itemToCancel = order.items.find(i => i.id === itemToDelete);
 
             // Eliminar item
             await deleteOrderItem(order.id, itemToDelete, authorizedUser);

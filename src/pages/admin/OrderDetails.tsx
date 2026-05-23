@@ -115,9 +115,6 @@ const OrderDetails: React.FC = () => {
         );
       }
 
-      // Obtener info del item antes de eliminarlo para el ticket
-      const itemToCancel = order.items.find(i => i.id === itemToDelete);
-
       // Eliminar item
       await deleteOrderItem(order.id, itemToDelete, authorizedUser);
 

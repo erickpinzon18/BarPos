@@ -30,7 +30,7 @@ export type TableStatus = 'libre' | 'ocupada' | 'reservada' | 'limpieza';
 
 export interface Table {
   id: string;
-  number: number;
+  number: number | string;
   // capacity: number;
   status: TableStatus;
   waiterId?: string;
@@ -83,7 +83,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   tableId: string;
-  tableNumber: number;
+  tableNumber: number | string;
   tableName?: string; // Nombre personalizado de la mesa (ej: "Mesa de Andrea")
   waiterId: string;
   waiterName: string;

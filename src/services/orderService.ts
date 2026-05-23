@@ -208,7 +208,7 @@ export const updateItemStatus = async (
  */
 export const createEmptyOrder = async (
   tableId: string,
-  tableNumber: number,
+  tableNumber: number | string,
   waiterId: string,
   waiterName: string
 ): Promise<string> => {

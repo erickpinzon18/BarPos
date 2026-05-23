@@ -106,8 +106,9 @@ const WaiterHome: React.FC = () => {
     const isMyTable = table.status === 'ocupada' && table.waiterId === currentUser?.id;
     const isFreeTable = table.status === 'libre';
 
-    // Determinar si es la barra (mesa 0)
-    const isBar = table.number === 0;
+    // Determinar si es la barra (mesa 0 legacy o B1-B5)
+    const isBar = table.number === 0 || /^B\d+$/i.test(String(table.number));
+    const barLabel = table.number === 0 ? '🍹 Barra' : `🍹 ${table.number}`;
 
     // Una mesa está activa solo si tiene una orden activa
     const isActive = table.status === 'ocupada' && !!currentOrder;
@@ -162,7 +163,7 @@ const WaiterHome: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-4">
               <span className="text-xl font-bold text-white">
-                {isBar ? '🍹 Barra' : `Mesa ${table.number}`}
+                {isBar ? barLabel : `Mesa ${table.number}`}
               </span>
               <span className={`${isBar ? 'bg-purple-500 text-purple-100' : 'bg-green-500 text-green-100'} text-sm font-bold px-3 py-1 rounded-full`}>
                 {isBar ? 'Tu Barra' : 'Tu Mesa'}
@@ -222,7 +223,7 @@ const WaiterHome: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-6">
               <span className="text-xl font-bold text-white">
-                {isBar ? '🍹 Barra' : `Mesa ${table.number}`}
+                {isBar ? barLabel : `Mesa ${table.number}`}
               </span>
               <span className={`${isBar ? 'bg-purple-600' : 'bg-green-600'} text-gray-200 text-sm font-bold px-3 py-1 rounded-full`}>
                 Libre
@@ -254,7 +255,7 @@ const WaiterHome: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-4">
               <span className="text-xl font-bold text-white">
-                {isBar ? '🍹 Barra' : `Mesa ${table.number}`}
+                {isBar ? barLabel : `Mesa ${table.number}`}
               </span>
               <span className="bg-red-600 text-red-100 text-sm font-bold px-3 py-1 rounded-full">
                 Ocupada

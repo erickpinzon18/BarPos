@@ -22,13 +22,11 @@ interface TablePos {
 }
 
 // ─── Grid constants ──────────────────────────────────────────────────────────
-// Positions scaled so content fills ~96% of both axes.
-// Aspect ratio AR=1.89 is derived from the physical content bounds.
-
 const TW = 8.6;   // table width  %
 const TH = 13.1;  // table height %
-const VW = 6.3;   // VIP width    %
-const CW = 5.7;   // circle width %
+const VW = 6.3;   // VIP/extra column width %
+const VCW = 4.0;  // third extra column width %
+const CW = 5.0;   // circle width %
 const CH = 9.0;   // circle height%
 
 // Main grid columns (left edge %)
@@ -39,19 +37,31 @@ const CR = 89;
 // Main grid rows (top edge %)
 const R1 = 18, R2 = 34, R3 = 50, R4 = 66;
 
-// VIP area
-const VA = 2, VB = 10, VR1 = 4, VR2 = 21;
+// Left side columns
+const VA = 2, VB = 10, VC = 18;
+// VIP rows
+const VR1 = 4, VR2 = 21;
 
 // P-circle column & y (vertically centered within each row)
-const PX  = 22;
-const pcy = (row: number) => row + (TH - CH) / 2; // centers circle in its row
+const PX  = 23;
+const pcy = (row: number) => row + (TH - CH) / 2;
 
-// Bottom row y (P5–P7 and Sala 2 share this row)
-const BOTTOM_Y = 82;
+// Bottom row y
+const BOTTOM_Y = 80;
+
+// Bar tables (B1–B5) positioned in the top strip
+const BAR_Y = 2;
+const BAR_W = 10.5;
+const BAR_GAP = 0.4;
+const barX = (i: number) => CA + i * (BAR_W + BAR_GAP);
 
 const TABLE_LAYOUT: TablePos[] = [
-  // ── Barra ─────────────────────────────────────────────
-  { number: 0,         x: CA,  y: 2,       w: CE + TW - CA, h: TH },
+  // ── Barra (B1–B5) ─────────────────────────────────────
+  { number: 'B1', x: barX(0), y: BAR_Y, w: BAR_W, h: TH },
+  { number: 'B2', x: barX(1), y: BAR_Y, w: BAR_W, h: TH },
+  { number: 'B3', x: barX(2), y: BAR_Y, w: BAR_W, h: TH },
+  { number: 'B4', x: barX(3), y: BAR_Y, w: BAR_W, h: TH },
+  { number: 'B5', x: barX(4), y: BAR_Y, w: BAR_W, h: TH },
 
   // ── Right column (1, 2, 3 + Salas) ───────────────────
   { number: 1,         x: CR,  y: R1,      w: TW, h: TH },
@@ -91,11 +101,16 @@ const TABLE_LAYOUT: TablePos[] = [
   { number: 'V1',      x: VA,  y: VR2,     w: VW, h: TH },
   { number: 'V2',      x: VB,  y: VR2,     w: VW, h: TH },
 
-  // ── Extras (Below VIPs) ───────────────────────────────
-  { number: 'Extra 1', x: VA,  y: 38,      w: VW, h: TH },
-  { number: 'Extra 2', x: VB,  y: 38,      w: VW, h: TH },
-  { number: 'Extra 3', x: VA,  y: 55,      w: VW, h: TH },
-  { number: 'Extra 4', x: VB,  y: 55,      w: VW, h: TH },
+  // ── Extras — 3 cols × 3 rows ──────────────────────────
+  { number: 'Extra 1', x: VA,  y: 38,      w: VW,  h: TH },
+  { number: 'Extra 2', x: VB,  y: 38,      w: VW,  h: TH },
+  { number: 'Extra 3', x: VA,  y: 55,      w: VW,  h: TH },
+  { number: 'Extra 4', x: VB,  y: 55,      w: VW,  h: TH },
+  { number: 'Extra 5', x: VA,  y: 70,      w: VW,  h: TH },
+  { number: 'Extra 6', x: VB,  y: 70,      w: VW,  h: TH },
+  { number: 'Extra 7', x: VC,  y: 38,      w: VCW, h: TH },
+  { number: 'Extra 8', x: VC,  y: 55,      w: VCW, h: TH },
+  { number: 'Extra 9', x: VC,  y: 70,      w: VCW, h: TH },
 
   // ── P circles — vertical column, aligned with rows ────
   { number: 'P1',      x: PX,  y: pcy(R1), w: CW, h: CH, shape: 'circle' },
@@ -108,6 +123,10 @@ const TABLE_LAYOUT: TablePos[] = [
   { number: 'P6',      x: CC,  y: BOTTOM_Y + (TH - CH) / 2, w: CW, h: CH, shape: 'circle' },
   { number: 'P7',      x: CD,  y: BOTTOM_Y + (TH - CH) / 2, w: CW, h: CH, shape: 'circle' },
 ];
+
+// Detecta si una mesa es de barra (número 0 legacy o B1–B9)
+const isBarNumber = (n: number | string): boolean =>
+  n === 0 || /^B\d+$/i.test(String(n));
 
 // ─── Popup ────────────────────────────────────────────────────────────────────
 
@@ -128,8 +147,9 @@ const Popup: React.FC<PopupProps> = ({
   table, order, reservation, accentColor, flipLeft, flipUp, isOtherWaiter, onOpen, onViewOrder, onCheckout,
 }) => {
   const isActive = table.status === 'ocupada' && !!order;
-  const isBar    = table.number === 0;
-  const label    = isBar ? '🍹 Barra'
+  const isBar    = isBarNumber(table.number);
+  const label    = isBar
+    ? (table.number === 0 ? '🍹 Barra' : `🍹 ${table.number}`)
     : typeof table.number === 'string' ? table.number
     : `Mesa ${table.number}`;
 
@@ -254,7 +274,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
         style={{
           minWidth: `${MAP_MIN_W}px`,
           // AR=1.89 is derived so content fills ~96% of both axes with no dead space
-          aspectRatio: '1.89',
+          aspectRatio: '1.55',
           background: 'linear-gradient(145deg, #0d1117 0%, #111827 55%, #0d1117 100%)',
           border: '1px solid rgba(255,255,255,0.05)',
           borderRadius: '16px',
@@ -272,9 +292,10 @@ export const VenueMap: React.FC<VenueMapProps> = ({
           const isReserved = !!reservation && !isActive; // Show reservation color only when not occupied
           const isSel    = selectedId === table.id;
           const isCircle = pos.shape === 'circle';
-          const isBar    = pos.number === 0;
+          const isBar    = isBarNumber(pos.number);
 
-          const label = isBar ? 'Barra'
+          const label = isBar
+            ? (pos.number === 0 ? 'Barra' : String(pos.number))
             : typeof pos.number === 'string' ? pos.number
             : String(pos.number);
 

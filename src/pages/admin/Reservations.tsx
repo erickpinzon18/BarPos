@@ -91,7 +91,11 @@ const Reservations: React.FC = () => {
         const loadedTables = snapshot.docs.map(
           (d) => ({ id: d.id, ...d.data() } as Table)
         );
-        loadedTables.sort((a, b) => a.number - b.number);
+        loadedTables.sort((a, b) => {
+          const na = Number(a.number), nb = Number(b.number);
+          if (!isNaN(na) && !isNaN(nb)) return na - nb;
+          return String(a.number).localeCompare(String(b.number));
+        });
         setTables(loadedTables);
       },
       (error) => console.error("Error loading tables:", error)

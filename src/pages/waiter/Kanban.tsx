@@ -13,7 +13,7 @@ const WaiterKanban: React.FC = () => {
 
   type ItemEntry = {
     orderId: string;
-    tableNumber?: number;
+    tableNumber?: number | string;
     tableName?: string;
     waiterId?: string;
     createdAt?: Date | null;

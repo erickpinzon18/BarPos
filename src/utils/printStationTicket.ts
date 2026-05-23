@@ -9,7 +9,7 @@ export interface StationTicketItem {
 
 export interface StationTicketOptions {
   station: 'cocina' | 'barra';
-  tableNumber: number;
+  tableNumber: number | string;
   tableName?: string;
   waiterName: string;
   items: StationTicketItem[];

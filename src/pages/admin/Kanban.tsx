@@ -39,7 +39,7 @@ const AdminKanban: React.FC = () => {
   // Flatten items across orders into a list of item-entries with parent order metadata
   type ItemEntry = {
     orderId: string;
-    tableNumber?: number;
+    tableNumber?: number | string;
     waiterName?: string;
     createdAt?: Date | null;
     item: NonNullable<Order['items']>[number];

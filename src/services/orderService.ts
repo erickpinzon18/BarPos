@@ -445,3 +445,61 @@ export const splitOrderItemsToNewTable = async (
     throw error;
   }
 };
+
+/**
+ * Actualiza los servicios (mixers) de una botella y crea un ticket para barra
+ */
+export const updateBottleMixers = async (
+  orderId: string,
+  bottleItemId: string,
+  newNotes: string,
+  diffText: string,
+  _tableNumber: number
+) => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderSnap = await getDoc(orderRef);
+    
+    if (!orderSnap.exists()) throw new Error('Orden no encontrada');
+    const orderData = orderSnap.data() as Order;
+    
+    // 1. Actualizar las notas de la botella original
+    const updatedItems = orderData.items.map(item => {
+      if (item.id === bottleItemId) {
+        return {
+          ...item,
+          notes: newNotes,
+          updatedAt: new Date()
+        };
+      }
+      return item;
+    });
+
+    // 2. Crear un ítem de "Cambio de servicios" para que se imprima en barra
+    const changeItem: OrderItem = {
+      id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      productId: 'change_mixers',
+      productName: '🔄 CAMBIO DE SERVICIOS',
+      productPrice: 0,
+      quantity: 1,
+      category: 'Servicio',
+      status: 'pendiente',
+      notes: diffText,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isDeleted: false,
+    };
+
+    updatedItems.push(changeItem);
+
+    // Guardar cambios
+    await updateDoc(orderRef, {
+      items: updatedItems,
+      updatedAt: Timestamp.now()
+    });
+
+  } catch (error) {
+    console.error('Error al actualizar servicios:', error);
+    throw error;
+  }
+};

@@ -7,16 +7,18 @@ import {
   verifyUserPin,
   addItemToOrder,
   swapOrderItem,
+  updateBottleMixers,
 } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
 import SwapServiceModal from "../../components/common/SwapServiceModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Printer, Scissors } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Printer, Scissors, Pencil } from "lucide-react";
 import type { Product } from "../../utils/types";
 import type { OrderItem } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
 import SplitOrderModal from "../../components/common/SplitOrderModal";
+import BottleQuantityModal, { MIXERS } from "../../components/common/BottleQuantityModal";
 import { useActivePromotions, isPromotionWithinSchedule } from "../../hooks/usePromotions";
 import { getCategoryInfo } from "../../utils/categories";
 import { printStationTicket } from "../../utils/printStationTicket";
@@ -60,6 +62,12 @@ const OrderDetails: React.FC = () => {
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [itemToSwap, setItemToSwap] = useState<OrderItem | null>(null);
   const [swapLoading, setSwapLoading] = useState(false);
+
+  // Estados para editar mixers de botella
+  const [showEditBottleModal, setShowEditBottleModal] = useState(false);
+  const [itemToEditBottle, setItemToEditBottle] = useState<OrderItem | null>(null);
+  const [editBottleMixers, setEditBottleMixers] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [editBottleLoading, setEditBottleLoading] = useState(false);
 
   // 'order' now comes directly from the optimized hook
 
@@ -315,6 +323,74 @@ const OrderDetails: React.FC = () => {
 
   const handleAdminCommentsBlur = () => {
     void saveAdminCommentsToDB(adminComments);
+  };
+
+  const handleOpenEditBottle = (item: OrderItem) => {
+    const mixers = [0, 0, 0, 0, 0];
+    if (item.notes) {
+      MIXERS.forEach((mixer, idx) => {
+        const regex = new RegExp(`(\\d+)x\\s+${mixer.label}`);
+        const match = item.notes?.match(regex);
+        if (match) {
+          mixers[idx] = parseInt(match[1], 10);
+        }
+      });
+    }
+    setEditBottleMixers(mixers);
+    setItemToEditBottle(item);
+    setShowEditBottleModal(true);
+  };
+
+  const handleConfirmEditBottle = async (_newQuantity: number, newNotes: string) => {
+    if (!order || !itemToEditBottle) return;
+    setEditBottleLoading(true);
+    try {
+      // Calcular diff
+      const newMixers = [0, 0, 0, 0, 0];
+      MIXERS.forEach((mixer, idx) => {
+        const regex = new RegExp(`(\\d+)x\\s+${mixer.label}`);
+        const match = newNotes.match(regex);
+        if (match) {
+          newMixers[idx] = parseInt(match[1], 10);
+        }
+      });
+
+      const toReturn: string[] = [];
+      const toDeliver: string[] = [];
+      MIXERS.forEach((m, i) => {
+        const diff = newMixers[i] - editBottleMixers[i];
+        if (diff < 0) {
+          toReturn.push(`${Math.abs(diff)}x ${m.label}`);
+        } else if (diff > 0) {
+          toDeliver.push(`${diff}x ${m.label}`);
+        }
+      });
+
+      if (toReturn.length === 0 && toDeliver.length === 0) {
+        // No hay cambios
+        setShowEditBottleModal(false);
+        return;
+      }
+
+      let diffText = `Botella: ${itemToEditBottle.productName}\n`;
+      if (toReturn.length) diffText += `Devolver: ${toReturn.join(", ")}\n`;
+      if (toDeliver.length) diffText += `Entregar: ${toDeliver.join(", ")}`;
+
+      await updateBottleMixers(
+        order.id,
+        itemToEditBottle.id,
+        newNotes,
+        diffText.trim(),
+        Number(order.tableNumber)
+      );
+      setShowEditBottleModal(false);
+      setItemToEditBottle(null);
+    } catch (err: any) {
+      console.error("Error editing bottle:", err);
+      alert(err.message || "Error al actualizar botella");
+    } finally {
+      setEditBottleLoading(false);
+    }
   };
 
   const handleReprintItem = (item: OrderItem) => {
@@ -814,6 +890,15 @@ const OrderDetails: React.FC = () => {
                                   <ArrowLeftRight className="w-4 h-4" />
                                 </button>
                               )}
+                              {(item.category === 'Botella' || item.productName.toLowerCase().includes('botella')) && (
+                                <button
+                                  onClick={() => handleOpenEditBottle(item)}
+                                  className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
+                                  title="Cambiar mixers"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
                                 className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
@@ -1019,7 +1104,7 @@ const OrderDetails: React.FC = () => {
               <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-xl border border-gray-700">
                 <h3 className="text-lg font-bold text-white mb-2">¿Cerrar mesa?</h3>
                 <p className="text-gray-400 text-sm mb-6">
-                  Se eliminará la orden vacía y la mesa quedará disponible.
+                  Se eliminará la orden vacía y la mesa quedará libre.
                 </p>
                 <div className="flex gap-3">
                   <button
@@ -1063,6 +1148,21 @@ const OrderDetails: React.FC = () => {
           loading={addItemLoading}
           activePromotions={activePromotions}
         />
+
+        {showEditBottleModal && itemToEditBottle && (
+          <BottleQuantityModal
+            isOpen={showEditBottleModal}
+            onClose={() => setShowEditBottleModal(false)}
+            onConfirm={handleConfirmEditBottle}
+            product={products.find(p => p.id === itemToEditBottle.productId) || null}
+            maxServicesPerBottle={5}
+            loading={editBottleLoading}
+            isPromoX2={itemToEditBottle.notes?.includes("2 BOTELLAS")}
+            isEditMode={true}
+            initialQuantity={itemToEditBottle.quantity}
+            initialMixers={editBottleMixers}
+          />
+        )}
 
         {showSplitModal && (
           <SplitOrderModal

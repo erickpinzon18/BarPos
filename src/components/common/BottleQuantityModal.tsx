@@ -8,7 +8,7 @@ interface MixerDef {
   emoji: string;
 }
 
-const MIXERS: MixerDef[] = [
+export const MIXERS: MixerDef[] = [
   { label: 'Agua Mineral', emoji: '💧' },
   { label: 'Coca Cola',   emoji: '🥤' },
   { label: 'Squirt',      emoji: '🍋' },
@@ -26,6 +26,9 @@ interface BottleQuantityModalProps {
   maxServicesPerBottle: number;
   loading?: boolean;
   isPromoX2?: boolean;
+  isEditMode?: boolean;
+  initialQuantity?: number;
+  initialMixers?: number[];
 }
 
 const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
@@ -36,19 +39,22 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
   maxServicesPerBottle,
   loading = false,
   isPromoX2 = false,
+  isEditMode = false,
+  initialQuantity = 1,
+  initialMixers = [0, 0, 0, 0, 0],
 }) => {
-  const [quantity, setQuantity] = useState(1);
-  const [mixerQty, setMixerQty] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [quantity, setQuantity] = useState(initialQuantity);
+  const [mixerQty, setMixerQty] = useState<number[]>(initialMixers);
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setQuantity(1);
-      setMixerQty([0, 0, 0, 0, 0]);
+      setQuantity(initialQuantity);
+      setMixerQty(initialMixers);
       setError('');
     }
-  }, [isOpen]);
+  }, [isOpen, initialQuantity, initialMixers]);
 
   // When bottle quantity changes downward, clamp mixer totals if they exceed new max
   const handleBottleChange = (delta: number) => {
@@ -156,24 +162,25 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
         {/* Bottle quantity */}
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-300 mb-3">Cantidad de botellas</label>
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center gap-4 bg-gray-900 rounded-xl p-2 border border-gray-700">
             <button
+              type="button"
               onClick={() => handleBottleChange(-1)}
-              disabled={quantity <= 1 || loading || confirming}
-              className="w-12 h-12 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center transition-colors"
+              disabled={quantity <= 1 || isEditMode}
+              className="w-12 h-12 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Minus className="w-5 h-5" />
+              <Minus className="w-6 h-6" />
             </button>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-white">{isPromoX2 ? quantity * 2 : quantity}</div>
-              <div className="text-xs text-gray-400">botellas</div>
-            </div>
+            <span className="w-12 text-center text-2xl font-bold text-white">
+              {quantity}
+            </span>
             <button
+              type="button"
               onClick={() => handleBottleChange(1)}
-              disabled={loading || confirming}
-              className="w-12 h-12 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center transition-colors"
+              disabled={isEditMode}
+              className="w-12 h-12 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-6 h-6" />
             </button>
           </div>
         </div>

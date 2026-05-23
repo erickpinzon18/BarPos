@@ -862,7 +862,7 @@ export const cancelEmptyOrder = async (tableId: string, orderId: string): Promis
     const batch = writeBatch(db);
     batch.delete(doc(db, 'orders', orderId));
     batch.update(doc(db, 'tables', tableId), {
-      status: 'disponible',
+      status: 'libre',
       currentOrderId: null,
       waiterId: null,
       waiterName: null,

@@ -236,7 +236,7 @@ const Popup: React.FC<PopupProps> = ({
               <p className="text-xs text-gray-500">{reservation.reservationDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
           )}
-          <p className="text-xs text-gray-600 mb-3">Disponible</p>
+          <p className="text-xs text-gray-600 mb-3">Libre</p>
           <button
             onClick={onOpen}
             className={`w-full ${accentBtn} text-white text-xs font-semibold py-2 rounded-xl transition-colors`}

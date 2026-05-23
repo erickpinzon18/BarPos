@@ -121,20 +121,6 @@ const OrderDetails: React.FC = () => {
       // Eliminar item
       await deleteOrderItem(order.id, itemToDelete, authorizedUser);
 
-      // Imprimir ticket de cancelación a la estación correspondiente
-      if (itemToCancel) {
-        const ws = getCategoryInfo(itemToCancel.category as any)?.workstation ?? 'cocina';
-        printStationTicket({
-          station: ws,
-          tableNumber: order.tableNumber,
-          tableName: order.tableName,
-          waiterName: order.waiterName,
-          items: [{ productName: itemToCancel.productName, quantity: itemToCancel.quantity, notes: itemToCancel.notes }],
-          paperSize,
-          isCancellation: true,
-        });
-      }
-
       console.log("✅ Item eliminado exitosamente");
       setShowPinModal(false);
       setItemToDelete(null);
@@ -172,16 +158,6 @@ const OrderDetails: React.FC = () => {
         quantity,
         notes
       );
-
-      const ws = getCategoryInfo(product.category as any)?.workstation ?? 'cocina';
-      printStationTicket({
-        station: ws,
-        tableNumber: order.tableNumber,
-        tableName: order.tableName,
-        waiterName: order.waiterName,
-        items: [{ productName: product.name, quantity, ...(notes ? { notes } : {}) }],
-        paperSize,
-      });
 
       console.log("✅ Item agregado exitosamente");
     } catch (error: any) {
@@ -223,16 +199,6 @@ const OrderDetails: React.FC = () => {
         notes
       );
 
-      const ws = getCategoryInfo(selectedItemForMore.category as any)?.workstation ?? 'cocina';
-      printStationTicket({
-        station: ws,
-        tableNumber: order.tableNumber,
-        tableName: order.tableName,
-        waiterName: order.waiterName,
-        items: [{ productName: selectedItemForMore.productName, quantity, ...(notes ? { notes } : {}) }],
-        paperSize,
-      });
-
       console.log(
         "✅ Item adicional agregado:",
         selectedItemForMore.productName,
@@ -263,15 +229,6 @@ const OrderDetails: React.FC = () => {
     setSwapLoading(true);
     try {
       await swapOrderItem(order.id, itemToSwap.id, newProduct.id, newProduct.name);
-      printStationTicket({
-        station: 'barra',
-        tableNumber: order.tableNumber,
-        tableName: order.tableName,
-        waiterName: order.waiterName,
-        items: [{ productName: newProduct.name, quantity: itemToSwap.quantity }],
-        paperSize,
-        swapFrom: itemToSwap.productName,
-      });
       setShowSwapModal(false);
       setItemToSwap(null);
     } catch (err) {

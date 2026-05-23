@@ -18,6 +18,7 @@ import {
   BarChart2,
   Tag,
   CalendarDays,
+  Archive,
 } from "lucide-react";
 
 // Estilos para los enlaces de navegación, cambia el color si está activo
@@ -135,6 +136,10 @@ export const AdminSidebar: React.FC = () => {
           <NavLink to="/admin/analytics" className={navLinkClass}>
             <BarChart3 size={20} />
             <span>Analytics</span>
+          </NavLink>
+          <NavLink to="/admin/inventory" className={navLinkClass}>
+            <Archive size={20} />
+            <span>Inventario</span>
           </NavLink>
           <NavLink to="/admin/manage-products" className={navLinkClass}>
             <Package size={20} />

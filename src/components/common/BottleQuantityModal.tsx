@@ -13,6 +13,7 @@ const MIXERS: MixerDef[] = [
   { label: 'Coca Cola',   emoji: '🥤' },
   { label: 'Squirt',      emoji: '🍋' },
   { label: 'Manzanita',   emoji: '🍎' },
+  { label: 'Sprite',      emoji: '🥤' },
 ];
 
 interface BottleQuantityModalProps {
@@ -37,14 +38,14 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
   isPromoX2 = false,
 }) => {
   const [quantity, setQuantity] = useState(1);
-  const [mixerQty, setMixerQty] = useState<number[]>([0, 0, 0, 0]);
+  const [mixerQty, setMixerQty] = useState<number[]>([0, 0, 0, 0, 0]);
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setQuantity(1);
-      setMixerQty([0, 0, 0, 0]);
+      setMixerQty([0, 0, 0, 0, 0]);
       setError('');
     }
   }, [isOpen]);

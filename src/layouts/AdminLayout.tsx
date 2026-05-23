@@ -19,6 +19,7 @@ import {
   BarChart2,
   Tag,
   CalendarDays,
+  Archive,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -167,6 +168,14 @@ const AdminLayout: React.FC = () => {
                 >
                   <BarChart3 size={20} />
                   <span>Analytics</span>
+                </NavLink>
+                <NavLink
+                  to="/admin/inventory"
+                  className={navLinkClassMobile}
+                  onClick={closeMobileMenu}
+                >
+                  <Archive size={20} />
+                  <span>Inventario</span>
                 </NavLink>
                 <NavLink
                   to="/admin/manage-products"

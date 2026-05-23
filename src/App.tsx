@@ -22,6 +22,7 @@ import ManageProducts from "./pages/admin/ManageProducts";
 import Promotions from "./pages/admin/Promotions";
 import DailySummary from "./pages/admin/DailySummary";
 import Analytics from "./pages/admin/Analytics";
+import Inventory from "./pages/admin/Inventory";
 
 // Waiter Pages
 import WaiterHome from "./pages/waiter/Home";
@@ -66,6 +67,7 @@ function App() {
           <Route path="cierre" element={<DailySummary />} />
           <Route path="ventas" element={<KitchenVentas />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="inventory" element={<Inventory />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Route>

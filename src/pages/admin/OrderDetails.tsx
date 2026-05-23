@@ -11,14 +11,14 @@ import {
 import PinModal from "../../components/common/PinModal";
 import QuantityModal from "../../components/common/QuantityModal";
 import SwapServiceModal from "../../components/common/SwapServiceModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, Printer, ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Printer } from "lucide-react";
 import type { Product } from "../../utils/types";
 import type { OrderItem } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
 import { useActivePromotions, isPromotionWithinSchedule } from "../../hooks/usePromotions";
-import { printStationTicket } from "../../utils/printStationTicket";
 import { getCategoryInfo } from "../../utils/categories";
+import { printStationTicket } from "../../utils/printStationTicket";
 import { usePaperSize } from "../../hooks/usePaperSize";
 import { useAuth } from "../../contexts/AuthContext";
 import {
@@ -325,6 +325,7 @@ const OrderDetails: React.FC = () => {
       paperSize,
     });
   };
+
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -781,6 +782,7 @@ const OrderDetails: React.FC = () => {
                                   <span className="text-sm font-bold">✓</span>
                                 </button>
                               )}
+
                               <button
                                 onClick={() => handleReprintItem(item)}
                                 className={`p-2 rounded-lg transition-colors ${

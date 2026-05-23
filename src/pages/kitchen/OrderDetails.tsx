@@ -13,9 +13,6 @@ import QuantityModal from "../../components/common/QuantityModal";
 import SwapServiceModal from "../../components/common/SwapServiceModal";
 import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight } from "lucide-react";
 import { getCategoryInfo } from "../../utils/categories";
-import { printStationTicket } from "../../utils/printStationTicket";
-import { usePaperSize } from "../../hooks/usePaperSize";
-import { useAuth } from "../../contexts/AuthContext";
 import type { OrderItem, Product } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
@@ -34,8 +31,6 @@ const KitchenOrderDetails: React.FC = () => {
   const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
   const { products } = useProducts();
   const { promotions: activePromotions } = useActivePromotions();
-  const { currentUser } = useAuth();
-  const [paperSize] = usePaperSize(currentUser?.id);
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -90,21 +85,7 @@ const KitchenOrderDetails: React.FC = () => {
           "PIN válido, pero el usuario no tiene permisos. Solo administradores pueden eliminar items."
         );
       }
-      const itemToCancel = order.items.find(i => i.id === itemToDelete);
       await deleteOrderItem(order.id, itemToDelete, authorizedUser);
-
-      if (itemToCancel) {
-        const ws = getCategoryInfo(itemToCancel.category as any)?.workstation ?? 'cocina';
-        printStationTicket({
-          station: ws,
-          tableNumber: order.tableNumber,
-          tableName: order.tableName,
-          waiterName: order.waiterName,
-          items: [{ productName: itemToCancel.productName, quantity: itemToCancel.quantity, notes: itemToCancel.notes }],
-          paperSize,
-          isCancellation: true,
-        });
-      }
 
       setShowPinModal(false);
       setItemToDelete(null);
@@ -135,15 +116,6 @@ const KitchenOrderDetails: React.FC = () => {
         quantity,
         notes
       );
-      const ws = getCategoryInfo(product.category as any)?.workstation ?? 'cocina';
-      printStationTicket({
-        station: ws,
-        tableNumber: order.tableNumber,
-        tableName: order.tableName,
-        waiterName: order.waiterName,
-        items: [{ productName: product.name, quantity, ...(notes ? { notes } : {}) }],
-        paperSize,
-      });
     } catch (error: any) {
       throw error;
     } finally {
@@ -168,15 +140,6 @@ const KitchenOrderDetails: React.FC = () => {
         quantity,
         notes
       );
-      const ws = getCategoryInfo(selectedItemForMore.category as any)?.workstation ?? 'cocina';
-      printStationTicket({
-        station: ws,
-        tableNumber: order.tableNumber,
-        tableName: order.tableName,
-        waiterName: order.waiterName,
-        items: [{ productName: selectedItemForMore.productName, quantity, ...(notes ? { notes } : {}) }],
-        paperSize,
-      });
       setShowQuantityModal(false);
       setSelectedItemForMore(null);
     } catch (error: any) {
@@ -194,15 +157,6 @@ const KitchenOrderDetails: React.FC = () => {
     setSwapLoading(true);
     try {
       await swapOrderItem(order.id, itemToSwap.id, newProduct.id, newProduct.name);
-      printStationTicket({
-        station: 'barra',
-        tableNumber: order.tableNumber,
-        tableName: order.tableName,
-        waiterName: order.waiterName,
-        items: [{ productName: newProduct.name, quantity: itemToSwap.quantity }],
-        paperSize,
-        swapFrom: itemToSwap.productName,
-      });
       setShowSwapModal(false);
       setItemToSwap(null);
     } catch (err) {

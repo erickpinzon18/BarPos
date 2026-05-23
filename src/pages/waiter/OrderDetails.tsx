@@ -12,7 +12,6 @@ import AddItemModal from '../../components/common/AddItemModal';
 import QuantityModal from '../../components/common/QuantityModal';
 import SwapServiceModal from '../../components/common/SwapServiceModal';
 import { getCategoryInfo } from '../../utils/categories';
-import { useAuth } from '../../contexts/AuthContext';
 import type { OrderItem, Product } from '../../utils/types';
 
 const WaiterOrderDetails: React.FC = () => {
@@ -21,7 +20,6 @@ const WaiterOrderDetails: React.FC = () => {
     const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
     const { products } = useProducts();
     const { promotions: activePromotions } = useActivePromotions();
-    const { currentUser } = useAuth();
 
     // Estados para el modal de PIN
     const [showPinModal, setShowPinModal] = useState(false);

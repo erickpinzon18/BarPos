@@ -19,6 +19,7 @@ import {
   Tag,
   CalendarDays,
   Archive,
+  FlaskConical,
 } from "lucide-react";
 
 // Estilos para los enlaces de navegación, cambia el color si está activo
@@ -140,6 +141,10 @@ export const AdminSidebar: React.FC = () => {
           <NavLink to="/admin/inventory" className={navLinkClass}>
             <Archive size={20} />
             <span>Inventario</span>
+          </NavLink>
+          <NavLink to="/admin/inventory-stats" className={navLinkClass}>
+            <FlaskConical size={20} />
+            <span>Stats Inventario</span>
           </NavLink>
           <NavLink to="/admin/manage-products" className={navLinkClass}>
             <Package size={20} />

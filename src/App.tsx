@@ -23,6 +23,7 @@ import Promotions from "./pages/admin/Promotions";
 import DailySummary from "./pages/admin/DailySummary";
 import Analytics from "./pages/admin/Analytics";
 import Inventory from "./pages/admin/Inventory";
+import InventoryStats from "./pages/admin/InventoryStats";
 
 // Waiter Pages
 import WaiterHome from "./pages/waiter/Home";
@@ -68,6 +69,7 @@ function App() {
           <Route path="ventas" element={<KitchenVentas />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="inventory" element={<Inventory />} />
+          <Route path="inventory-stats" element={<InventoryStats />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Route>

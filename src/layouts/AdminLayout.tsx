@@ -178,6 +178,14 @@ const AdminLayout: React.FC = () => {
                   <span>Inventario</span>
                 </NavLink>
                 <NavLink
+                  to="/admin/inventory-stats"
+                  className={navLinkClassMobile}
+                  onClick={closeMobileMenu}
+                >
+                  <BarChart3 size={20} />
+                  <span>Stats Inventario</span>
+                </NavLink>
+                <NavLink
                   to="/admin/manage-products"
                   className={navLinkClassMobile}
                   onClick={closeMobileMenu}

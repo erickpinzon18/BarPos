@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, Plus, Tag, Clock } from 'lucide-react';
 import QuantityModal from './QuantityModal';
 import BottleQuantityModal from './BottleQuantityModal';
+import DrinkMixerModal from './DrinkMixerModal';
 import type { Product, Promotion } from '../../utils/types';
 import { FILTER_CATEGORIES, getCategoryInfo } from '../../utils/categories';
 import { isPromotionWithinSchedule } from '../../hooks/usePromotions';
@@ -29,6 +30,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [showBottleModal, setShowBottleModal] = useState(false);
+  const [showDrinkModal, setShowDrinkModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const categories = FILTER_CATEGORIES;
@@ -79,6 +81,8 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
     setSelectedProduct(product);
     if (product.category === 'Botella') {
       setShowBottleModal(true);
+    } else if (product.category === 'Bebida' || product.category === 'Shot') {
+      setShowDrinkModal(true);
     } else {
       setShowQuantityModal(true);
     }
@@ -108,6 +112,17 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 
   const handleCloseBottleModal = () => {
     setShowBottleModal(false);
+    setSelectedProduct(null);
+  };
+
+  // Drink (Bebida/Shot) confirm: quantity + optional mixer notes
+  const handleConfirmDrink = async (quantity: number, notes: string) => {
+    if (!selectedProduct) return;
+    await onAddItem(selectedProduct.id, quantity, notes || undefined);
+  };
+
+  const handleCloseDrinkModal = () => {
+    setShowDrinkModal(false);
     setSelectedProduct(null);
   };
 
@@ -330,6 +345,15 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
                   : (getProductPromo(selectedProduct) ? 3 : 5)) 
               : 5
           }
+          loading={loading}
+        />
+
+        {/* Drink Mixer Modal: for Bebida / Shot */}
+        <DrinkMixerModal
+          isOpen={showDrinkModal}
+          onClose={handleCloseDrinkModal}
+          onConfirm={handleConfirmDrink}
+          product={selectedProduct}
           loading={loading}
         />
       </div>

@@ -6,6 +6,7 @@ import { useOrderByTableId } from '../../hooks/useOrders';
 import { useProducts } from '../../hooks/useProducts';
 import SplitOrderModal from '../../components/common/SplitOrderModal';
 import BottleQuantityModal, { MIXERS } from '../../components/common/BottleQuantityModal';
+import DrinkMixerModal, { parseDrinkNotes } from '../../components/common/DrinkMixerModal';
 import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
 import { deleteOrderItem, addItemToOrder, verifyUserPin, swapOrderItem, updateBottleMixers } from '../../services/orderService';
 import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments, updateOrderStatusInKanban, cancelEmptyOrder } from '../../services/firestoreService';
@@ -48,6 +49,13 @@ const WaiterOrderDetails: React.FC = () => {
     const [itemToEditBottle, setItemToEditBottle] = useState<OrderItem | null>(null);
     const [editBottleMixers, setEditBottleMixers] = useState<number[]>([0, 0, 0, 0, 0]);
     const [editBottleLoading, setEditBottleLoading] = useState(false);
+
+    // Estados para editar refresco de trago (Bebida/Shot)
+    const [showEditDrinkModal, setShowEditDrinkModal] = useState(false);
+    const [itemToEditDrink, setItemToEditDrink] = useState<OrderItem | null>(null);
+    const [editDrinkMixers, setEditDrinkMixers] = useState<number[]>([0, 0, 0, 0, 0]);
+    const [editDrinkComment, setEditDrinkComment] = useState('');
+    const [editDrinkLoading, setEditDrinkLoading] = useState(false);
 
     // Local state to edit people count (saved via +/- clicks)
     const [peopleCount, setPeopleCount] = useState<number>(order?.peopleCount ?? 1);
@@ -271,6 +279,49 @@ const WaiterOrderDetails: React.FC = () => {
             alert(err.message || 'Error al actualizar botella');
         } finally {
             setEditBottleLoading(false);
+        }
+    };
+
+    const handleOpenEditDrink = (item: OrderItem) => {
+        const { mixers, comment } = parseDrinkNotes(item.notes);
+        setEditDrinkMixers(mixers);
+        setEditDrinkComment(comment);
+        setItemToEditDrink(item);
+        setShowEditDrinkModal(true);
+    };
+
+    const handleConfirmEditDrink = async (_newQuantity: number, newNotes: string) => {
+        if (!order || !itemToEditDrink) return;
+        setEditDrinkLoading(true);
+        try {
+            const { mixers: newMixers } = parseDrinkNotes(newNotes);
+            const { mixers: oldMixers } = parseDrinkNotes(itemToEditDrink.notes);
+
+            const toReturn: string[] = [];
+            const toDeliver: string[] = [];
+            MIXERS.forEach((m, i) => {
+                const diff = newMixers[i] - oldMixers[i];
+                if (diff < 0) toReturn.push(`${Math.abs(diff)}x ${m.label}`);
+                else if (diff > 0) toDeliver.push(`${diff}x ${m.label}`);
+            });
+
+            if (toReturn.length === 0 && toDeliver.length === 0 && newNotes === (itemToEditDrink.notes ?? '')) {
+                setShowEditDrinkModal(false);
+                return;
+            }
+
+            let diffText = `Trago: ${itemToEditDrink.productName}\n`;
+            if (toReturn.length) diffText += `Devolver: ${toReturn.join(', ')}\n`;
+            if (toDeliver.length) diffText += `Entregar: ${toDeliver.join(', ')}`;
+
+            await updateBottleMixers(order.id, itemToEditDrink.id, newNotes, diffText.trim(), Number(order.tableNumber));
+            setShowEditDrinkModal(false);
+            setItemToEditDrink(null);
+        } catch (err: any) {
+            console.error('Error editing drink:', err);
+            alert(err.message || 'Error al actualizar trago');
+        } finally {
+            setEditDrinkLoading(false);
         }
     };
 
@@ -776,6 +827,15 @@ const WaiterOrderDetails: React.FC = () => {
                                                             <Pencil className="w-4 h-4 text-white" />
                                                         </button>
                                                     )}
+                                                    {(item.category === 'Bebida' || item.category === 'Shot') && (
+                                                        <button
+                                                            onClick={() => handleOpenEditDrink(item)}
+                                                            className="p-2 bg-cyan-700 hover:bg-cyan-600 rounded-lg transition-colors"
+                                                            title="Cambiar refresco del trago"
+                                                        >
+                                                            <Pencil className="w-4 h-4 text-white" />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => handleDeleteItem(item.id)}
                                                         className="p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
@@ -953,6 +1013,20 @@ const WaiterOrderDetails: React.FC = () => {
                     isEditMode={true}
                     initialQuantity={itemToEditBottle.quantity}
                     initialMixers={editBottleMixers}
+                />
+            )}
+
+            {showEditDrinkModal && itemToEditDrink && (
+                <DrinkMixerModal
+                    isOpen={showEditDrinkModal}
+                    onClose={() => { setShowEditDrinkModal(false); setItemToEditDrink(null); }}
+                    onConfirm={handleConfirmEditDrink}
+                    product={products.find(p => p.id === itemToEditDrink.productId) || null}
+                    loading={editDrinkLoading}
+                    isEditMode={true}
+                    initialQuantity={itemToEditDrink.quantity}
+                    initialMixers={editDrinkMixers}
+                    initialComment={editDrinkComment}
                 />
             )}
 

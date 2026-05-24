@@ -472,9 +472,22 @@ const Inventory: React.FC = () => {
               } else {
                 name = name.replace(/ - Promo/i, " - Botella");
               }
+              soldMap.set(name, (soldMap.get(name) ?? 0) + qty);
+            } else if (
+              (item.category === 'Bebida' || item.category === 'Shot') &&
+              (name.includes(' - Trago') || name.includes(' - Shot'))
+            ) {
+              // Cada trago descuenta 1/16 de la botella correspondiente
+              const bottleName = name
+                .replace(/ - Trago$/i, ' - Botella')
+                .replace(/ - Shot$/i, ' - Botella');
+              if (productNamesInPeriod.includes(bottleName)) {
+                soldMap.set(bottleName, (soldMap.get(bottleName) ?? 0) + qty / 16);
+              }
+              // No agregar el trago mismo al mapa (no es botella)
+            } else {
+              soldMap.set(name, (soldMap.get(name) ?? 0) + qty);
             }
-
-            soldMap.set(name, (soldMap.get(name) ?? 0) + qty);
           }
         });
       });
@@ -539,8 +552,22 @@ const Inventory: React.FC = () => {
               if (productNamesInPeriod.includes(asBotella)) name = asBotella;
               else if (productNamesInPeriod.includes(baseName)) name = baseName;
               else name = name.replace(/ - Promo/i, " - Botella");
+              soldMap.set(name, (soldMap.get(name) ?? 0) + qty);
+            } else if (
+              (item.category === 'Bebida' || item.category === 'Shot') &&
+              (name.includes(' - Trago') || name.includes(' - Shot'))
+            ) {
+              // Cada trago descuenta 1/16 de la botella correspondiente
+              const bottleName = name
+                .replace(/ - Trago$/i, ' - Botella')
+                .replace(/ - Shot$/i, ' - Botella');
+              if (productNamesInPeriod.includes(bottleName)) {
+                soldMap.set(bottleName, (soldMap.get(bottleName) ?? 0) + qty / 16);
+              }
+              // No agregar el trago mismo al mapa
+            } else {
+              soldMap.set(name, (soldMap.get(name) ?? 0) + qty);
             }
-            soldMap.set(name, (soldMap.get(name) ?? 0) + qty);
           }
         });
       });

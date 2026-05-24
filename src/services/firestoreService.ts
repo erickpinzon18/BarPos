@@ -664,6 +664,70 @@ export const updateOrderAdminComments = async (orderId: string, comments: string
   }
 };
 
+// Update payment method for a completed (pagado) order without changing totals
+export const updateOrderPaymentMethod = async (
+  orderId: string,
+  newMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto',
+  splitAmounts?: { efectivo?: number; tarjeta?: number; transferencia?: number }
+): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    if (!orderDoc.exists()) {
+      return { success: false, error: 'Orden no encontrada' };
+    }
+
+    const orderData = orderDoc.data();
+    const existingPayments: any[] = Array.isArray(orderData.payments) ? orderData.payments : [];
+
+    let updatedPayments: any[];
+
+    if (newMethod === 'mixto' && splitAmounts) {
+      // Preserve shared fields from the first existing payment (tip, cashier info)
+      const base = existingPayments[0] ?? {};
+      const sharedFields = {
+        tipAmount: base.tipAmount ?? 0,
+        tipPercent: base.tipPercent ?? 0,
+        cashierId: base.cashierId ?? null,
+        cashierName: base.cashierName ?? null,
+        closedAt: base.closedAt ?? Timestamp.now(),
+        createdAt: base.createdAt ?? Timestamp.now(),
+      };
+
+      // Build one payment entry per sub-method that has a non-zero amount
+      updatedPayments = (
+        [
+          { method: 'efectivo' as const, amount: splitAmounts.efectivo ?? 0 },
+          { method: 'tarjeta' as const, amount: splitAmounts.tarjeta ?? 0 },
+          { method: 'transferencia' as const, amount: splitAmounts.transferencia ?? 0 },
+        ] as { method: 'efectivo' | 'tarjeta' | 'transferencia'; amount: number }[]
+      )
+        .filter(s => s.amount > 0)
+        .map((s, i) => ({
+          id: `${Date.now()}_edit_${i}`,
+          method: s.method,
+          amount: s.amount,
+          receivedAmount: s.amount,
+          change: 0,
+          ...sharedFields,
+        }));
+    } else {
+      // For non-mixto methods, just update the method on all existing payments
+      updatedPayments = existingPayments.map((p: any) => ({ ...p, method: newMethod }));
+    }
+
+    await updateDoc(orderRef, {
+      paymentMethod: newMethod,
+      payments: updatedPayments,
+      updatedAt: Timestamp.now()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating payment method:', error);
+    return { success: false, error: 'Error al actualizar método de pago' };
+  }
+};
+
 // STATISTICS AND REPORTS
 export const getDailyStats = async (date: Date): Promise<FirestoreResponse<any>> => {
   try {

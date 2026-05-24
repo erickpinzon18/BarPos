@@ -827,7 +827,7 @@ const WaiterOrderDetails: React.FC = () => {
                                                             <Pencil className="w-4 h-4 text-white" />
                                                         </button>
                                                     )}
-                                                    {(item.category === 'Bebida' || item.category === 'Shot') && (
+                                                    {(item.category === 'Shot' || (item.category === 'Bebida' && item.productName.toLowerCase().includes('trago'))) && (
                                                         <button
                                                             onClick={() => handleOpenEditDrink(item)}
                                                             className="p-2 bg-cyan-700 hover:bg-cyan-600 rounded-lg transition-colors"

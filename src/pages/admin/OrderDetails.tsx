@@ -956,7 +956,7 @@ const OrderDetails: React.FC = () => {
                                   <Pencil className="w-4 h-4" />
                                 </button>
                               )}
-                              {(item.category === 'Bebida' || item.category === 'Shot') && (
+                              {(item.category === 'Shot' || (item.category === 'Bebida' && item.productName.toLowerCase().includes('trago'))) && (
                                 <button
                                   onClick={() => handleOpenEditDrink(item)}
                                   className="p-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-900/20 rounded-lg transition-colors"

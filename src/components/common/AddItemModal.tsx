@@ -79,9 +79,10 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 
   const handleAddItem = (product: Product) => {
     setSelectedProduct(product);
+    const requiresMixer = product.category === 'Shot' || (product.category === 'Bebida' && product.name.toLowerCase().includes('trago'));
     if (product.category === 'Botella') {
       setShowBottleModal(true);
-    } else if (product.category === 'Bebida' || product.category === 'Shot') {
+    } else if (requiresMixer) {
       setShowDrinkModal(true);
     } else {
       setShowQuantityModal(true);

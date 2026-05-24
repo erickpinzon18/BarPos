@@ -92,6 +92,7 @@ function App() {
           <Route path="barra" element={<KitchenKanban />} />
           <Route path="mesas" element={<KitchenHome />} />
           <Route path="ventas" element={<KitchenVentas />} />
+          <Route path="inventory" element={<Inventory />} />
           <Route path="order/:tableId" element={<KitchenOrderDetails />} />
           <Route path="checkout/:orderId" element={<KitchenCheckout />} />
         </Route>

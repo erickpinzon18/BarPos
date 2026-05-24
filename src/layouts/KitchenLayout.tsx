@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { getConfig } from '../services/firestoreService';
-import { User, LogOut, LayoutDashboard, Printer, BarChart2 } from 'lucide-react';
+import { User, LogOut, LayoutDashboard, Printer, BarChart2, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useAutoPrintTickets } from '../hooks/useAutoPrintTickets';
@@ -27,6 +27,7 @@ const KitchenLayout: React.FC = () => {
   const isInBarra = location.pathname.includes('/barra');
   const isInMesas = location.pathname.includes('/mesas') || location.pathname.includes('/order') || location.pathname.includes('/checkout');
   const isInVentas = location.pathname.includes('/ventas');
+  const isInInventory = location.pathname.includes('/inventory');
 
   // Load business config (name, logo) from Firestore
   useEffect(() => {
@@ -192,6 +193,19 @@ const KitchenLayout: React.FC = () => {
               >
                 <BarChart2 size={20} />
                 <span className="font-bold">Ventas</span>
+              </button>
+
+              {/* Inventario Button */}
+              <button
+                onClick={() => navigate('/kitchen/inventory')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${
+                  isInInventory
+                    ? 'bg-teal-700 text-white shadow-lg shadow-teal-500/50'
+                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-teal-400'
+                }`}
+              >
+                <Package size={20} />
+                <span className="font-bold">Inventario</span>
               </button>
 
               {/* Mesas Button */}

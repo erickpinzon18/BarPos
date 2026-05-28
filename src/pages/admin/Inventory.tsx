@@ -460,6 +460,21 @@ const Inventory: React.FC = () => {
             let name = item.productName;
             let qty = item.quantity || 1;
 
+            // Extraer mezcladores de las notas (ej: "Servicios: 2x Coca Cola")
+            if (item.notes) {
+              const MIXER_NAMES = ['Agua Mineral', 'Coca Cola', 'Squirt', 'Manzanita', 'Sprite'];
+              MIXER_NAMES.forEach(mixerName => {
+                const regex = new RegExp(`(\\d+)x\\s+${mixerName}`, 'i');
+                const match = item.notes?.match(regex);
+                if (match) {
+                  const mQty = parseInt(match[1], 10);
+                  if (!isNaN(mQty)) {
+                    soldMap.set(mixerName, (soldMap.get(mixerName) ?? 0) + mQty);
+                  }
+                }
+              });
+            }
+
             if (name.toLowerCase().includes("promo")) {
               qty = qty * 2;
               const baseName = name.replace(/ - Promo/i, "").replace(/ Promo/i, "").trim();
@@ -545,6 +560,22 @@ const Inventory: React.FC = () => {
           if (!item.isDeleted) {
             let name = item.productName;
             let qty = item.quantity || 1;
+
+            // Extraer mezcladores de las notas (ej: "Servicios: 2x Coca Cola")
+            if (item.notes) {
+              const MIXER_NAMES = ['Agua Mineral', 'Coca Cola', 'Squirt', 'Manzanita', 'Sprite'];
+              MIXER_NAMES.forEach(mixerName => {
+                const regex = new RegExp(`(\\d+)x\\s+${mixerName}`, 'i');
+                const match = item.notes?.match(regex);
+                if (match) {
+                  const mQty = parseInt(match[1], 10);
+                  if (!isNaN(mQty)) {
+                    soldMap.set(mixerName, (soldMap.get(mixerName) ?? 0) + mQty);
+                  }
+                }
+              });
+            }
+
             if (name.toLowerCase().includes("promo")) {
               qty = qty * 2;
               const baseName = name.replace(/ - Promo/i, "").replace(/ Promo/i, "").trim();

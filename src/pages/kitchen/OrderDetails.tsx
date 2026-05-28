@@ -10,6 +10,7 @@ import {
   updateBottleMixers,
 } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
+import CancelReasonModal from "../../components/common/CancelReasonModal";
 import QuantityModal from "../../components/common/QuantityModal";
 import SwapServiceModal from "../../components/common/SwapServiceModal";
 import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Scissors, Pencil } from "lucide-react";
@@ -35,6 +36,10 @@ const KitchenOrderDetails: React.FC = () => {
   const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
   const { products } = useProducts();
   const { promotions: activePromotions } = useActivePromotions();
+
+  // Estados para el modal de motivo de cancelación
+  const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState<string>('');
 
   const [showPinModal, setShowPinModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -90,8 +95,17 @@ const KitchenOrderDetails: React.FC = () => {
     }
   }, [order]);
 
+  // Función para iniciar eliminación de item (primero pide motivo)
   const handleDeleteItem = (itemId: string) => {
     setItemToDelete(itemId);
+    setCancelReason('');
+    setShowCancelReasonModal(true);
+  };
+
+  // Función para confirmar motivo de cancelación y pasar al PIN
+  const handleCancelReasonConfirm = (reason: string) => {
+    setCancelReason(reason);
+    setShowCancelReasonModal(false);
     setShowPinModal(true);
   };
 
@@ -105,7 +119,7 @@ const KitchenOrderDetails: React.FC = () => {
           "PIN válido, pero el usuario no tiene permisos. Solo administradores pueden eliminar items."
         );
       }
-      await deleteOrderItem(order.id, itemToDelete, authorizedUser);
+      await deleteOrderItem(order.id, itemToDelete, authorizedUser, cancelReason);
 
       setShowPinModal(false);
       setItemToDelete(null);
@@ -119,6 +133,7 @@ const KitchenOrderDetails: React.FC = () => {
   const handleCancelDelete = () => {
     setShowPinModal(false);
     setItemToDelete(null);
+    setCancelReason('');
   };
 
   const handleAddItem = async (productId: string, quantity: number, notes?: string) => {
@@ -794,9 +809,12 @@ const KitchenOrderDetails: React.FC = () => {
                         </p>
                       )}
                       {isDeleted && (
-                        <div className="mt-2 text-xs text-gray-500">
+                        <div className="mt-2 text-xs text-gray-500 space-y-0.5">
                           <p>Eliminado por: {item.deletedByName}</p>
                           <p>Fecha: {item.deletedAt?.toLocaleString()}</p>
+                          {item.cancelReason && (
+                            <p className="text-red-400 font-medium">Motivo: {item.cancelReason}</p>
+                          )}
                         </div>
                       )}
                       {/* Promo badge */}
@@ -973,6 +991,14 @@ const KitchenOrderDetails: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Cancel Reason Modal */}
+        <CancelReasonModal
+          isOpen={showCancelReasonModal}
+          onClose={() => { setShowCancelReasonModal(false); setItemToDelete(null); }}
+          onConfirm={handleCancelReasonConfirm}
+          itemName={order.items.find((i) => i.id === itemToDelete)?.productName ?? ''}
+        />
 
         <PinModal
           isOpen={showPinModal}

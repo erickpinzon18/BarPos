@@ -11,6 +11,7 @@ import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/useP
 import { deleteOrderItem, addItemToOrder, verifyUserPin, swapOrderItem, updateBottleMixers } from '../../services/orderService';
 import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments, updateOrderStatusInKanban, cancelEmptyOrder } from '../../services/firestoreService';
 import PinModal from '../../components/common/PinModal';
+import CancelReasonModal from '../../components/common/CancelReasonModal';
 import AddItemModal from '../../components/common/AddItemModal';
 import QuantityModal from '../../components/common/QuantityModal';
 import SwapServiceModal from '../../components/common/SwapServiceModal';
@@ -23,6 +24,10 @@ const WaiterOrderDetails: React.FC = () => {
     const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
     const { products } = useProducts();
     const { promotions: activePromotions } = useActivePromotions();
+
+    // Estados para el modal de motivo de cancelación
+    const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
+    const [cancelReason, setCancelReason] = useState<string>('');
 
     // Estados para el modal de PIN
     const [showPinModal, setShowPinModal] = useState(false);
@@ -83,9 +88,17 @@ const WaiterOrderDetails: React.FC = () => {
         }
     }, [order]);
 
-    // Función para iniciar eliminación de item
+    // Función para iniciar eliminación de item (primero pide motivo)
     const handleDeleteItem = (itemId: string) => {
         setItemToDelete(itemId);
+        setCancelReason('');
+        setShowCancelReasonModal(true);
+    };
+
+    // Función para confirmar motivo de cancelación y pasar al PIN
+    const handleCancelReasonConfirm = (reason: string) => {
+        setCancelReason(reason);
+        setShowCancelReasonModal(false);
         setShowPinModal(true);
     };
 
@@ -105,7 +118,7 @@ const WaiterOrderDetails: React.FC = () => {
             }
 
             // Eliminar item
-            await deleteOrderItem(order.id, itemToDelete, authorizedUser);
+            await deleteOrderItem(order.id, itemToDelete, authorizedUser, cancelReason);
 
             console.log('✅ Item eliminado exitosamente');
             setShowPinModal(false);
@@ -122,6 +135,7 @@ const WaiterOrderDetails: React.FC = () => {
     const handleCancelDelete = () => {
         setShowPinModal(false);
         setItemToDelete(null);
+        setCancelReason('');
     };
 
     // Función para agregar item a la orden
@@ -786,9 +800,16 @@ const WaiterOrderDetails: React.FC = () => {
                                                     </p>
                                                 )}
                                                 {isDeleted && (
-                                                    <p className="text-xs text-red-400 mt-1 font-medium">
-                                                        ❌ Eliminado por: {item.deletedByName || 'Admin'}
-                                                    </p>
+                                                    <div className="mt-1 space-y-0.5">
+                                                        <p className="text-xs text-red-400 font-medium">
+                                                            ❌ Eliminado por: {item.deletedByName || 'Admin'}
+                                                        </p>
+                                                        {item.cancelReason && (
+                                                            <p className="text-xs text-red-300">
+                                                                Motivo: {item.cancelReason}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                             {!isDeleted && (
@@ -978,6 +999,14 @@ const WaiterOrderDetails: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Cancel Reason Modal */}
+            <CancelReasonModal
+                isOpen={showCancelReasonModal}
+                onClose={() => { setShowCancelReasonModal(false); setItemToDelete(null); }}
+                onConfirm={handleCancelReasonConfirm}
+                itemName={order.items.find((i) => i.id === itemToDelete)?.productName ?? ''}
+            />
 
             {/* PIN Modal */}
             <PinModal

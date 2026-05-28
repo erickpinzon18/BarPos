@@ -60,7 +60,8 @@ export const verifyUserPin = async (pin: string): Promise<User> => {
 export const deleteOrderItem = async (
   orderId: string,
   itemId: string,
-  authorizedUser: User
+  authorizedUser: User,
+  cancelReason?: string
 ): Promise<void> => {
   try {
     console.log('🗑️ Eliminando item:', { orderId, itemId, authorizedBy: authorizedUser.displayName });
@@ -85,6 +86,7 @@ export const deleteOrderItem = async (
           deletedByName: authorizedUser.displayName || authorizedUser.email,
           deletedAt: new Date(),
           pendingCancelPrint: true,
+          ...(cancelReason ? { cancelReason } : {}),
         };
       }
       return item;

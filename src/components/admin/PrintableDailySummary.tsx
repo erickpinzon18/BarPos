@@ -4,10 +4,16 @@ interface PrintableDailySummaryProps {
   summary: any;
   shiftStart: Date;
   shiftEnd: Date;
+  expenses?: {
+    dj: number;
+    variety: number;
+    extra: number;
+    extraDesc: string;
+  };
 }
 
 export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySummaryProps>(
-  ({ summary, shiftStart, shiftEnd }, ref) => {
+  ({ summary, shiftStart, shiftEnd, expenses }, ref) => {
     if (!summary) return null;
 
     const formatCurrency = (n: number) => `$${n.toFixed(2)}`;
@@ -53,15 +59,23 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
           </div>
         </div>
 
-        {/* Detalles y Métodos de Pago */}
-        <div className="grid grid-cols-2 gap-8 mb-8 break-inside-avoid">
+        {/* Detalles, Gastos y Métodos de Pago */}
+        <div className={`grid gap-8 mb-8 break-inside-avoid ${expenses && (expenses.dj > 0 || expenses.variety > 0 || expenses.extra > 0) ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <div>
             <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Métodos de Pago</h3>
             <table className="w-full text-sm">
               <tbody>
                 <tr>
-                  <td className="py-1">Efectivo</td>
+                  <td className="py-1">Efectivo (Total)</td>
                   <td className="text-right font-medium">{formatCurrency(summary.paymentMethods.efectivo)}</td>
+                </tr>
+                <tr>
+                  <td className="py-1 text-gray-500 pl-4">— Propinas (Todas)</td>
+                  <td className="text-right font-medium text-gray-500">-{formatCurrency(summary.totalTipsNet)}</td>
+                </tr>
+                <tr>
+                  <td className="py-1 font-semibold text-green-700 pl-4 border-b border-gray-200 pb-2">Efectivo en Caja</td>
+                  <td className="text-right font-semibold text-green-700 border-b border-gray-200 pb-2">{formatCurrency(summary.paymentMethods.efectivo - summary.totalTipsNet)}</td>
                 </tr>
                 <tr>
                   <td className="py-1">Tarjeta</td>
@@ -97,6 +111,43 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
               </tbody>
             </table>
           </div>
+
+          {expenses && (expenses.dj > 0 || expenses.variety > 0 || expenses.extra > 0) && (
+            <div>
+              <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Gastos del Turno</h3>
+              <table className="w-full text-sm">
+                <tbody>
+                  {expenses.dj > 0 && (
+                    <tr>
+                      <td className="py-1">Pago DJ</td>
+                      <td className="text-right font-medium text-red-600">-{formatCurrency(expenses.dj)}</td>
+                    </tr>
+                  )}
+                  {expenses.variety > 0 && (
+                    <tr>
+                      <td className="py-1">Pago Variedad</td>
+                      <td className="text-right font-medium text-red-600">-{formatCurrency(expenses.variety)}</td>
+                    </tr>
+                  )}
+                  {expenses.extra > 0 && (
+                    <tr>
+                      <td className="py-1 border-b border-gray-200 pb-2">Extra ({expenses.extraDesc || 'N/A'})</td>
+                      <td className="text-right font-medium text-red-600 border-b border-gray-200 pb-2">-{formatCurrency(expenses.extra)}</td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td className="py-2 font-bold text-green-700">Efectivo Final en Caja</td>
+                    <td className="text-right font-bold text-green-700">
+                      {formatCurrency(
+                        (summary.paymentMethods.efectivo - summary.totalTipsNet) - 
+                        (expenses.dj + expenses.variety + expenses.extra)
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Desglose por Mesero */}

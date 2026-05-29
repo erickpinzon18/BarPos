@@ -6,7 +6,11 @@ import {
   where,
   getDocs,
   Timestamp,
+  doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
+import { toast } from "react-hot-toast";
 import { db } from "../../services/firebase";
 import type { Order } from "../../utils/types";
 import {
@@ -19,7 +23,9 @@ import {
   Printer,
   CreditCard,
   BarChart2,
-  FileText
+  FileText,
+  Save,
+  Receipt,
 } from "lucide-react";
 import { sendToPrinter } from "../../utils/printTicket";
 import { PrintableDailySummary } from "../../components/admin/PrintableDailySummary";
@@ -75,6 +81,8 @@ interface ShiftSummary {
   // Comisión tarjeta
   totalCardCommission: number; // 1.5% sobre todo lo que entró en tarjeta
   totalCardTips: number; // propinas en tarjeta (brutas)
+  totalCashTips: number; // propinas en efectivo
+  totalTransferTips: number; // propinas en transferencia
   totalCardTipsNet: number; // propinas en tarjeta netas (ya descontada comisión)
   totalTipsNet: number; // propinas totales netas para repartir
 
@@ -118,6 +126,14 @@ const DailySummary: React.FC = () => {
   const [summary, setSummary] = useState<ShiftSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentShiftDate());
+
+  // Expenses State
+  const [djExpense, setDjExpense] = useState<number>(0);
+  const [varietyExpense, setVarietyExpense] = useState<number>(0);
+  const [extraExpense, setExtraExpense] = useState<number>(0);
+  const [extraExpenseDesc, setExtraExpenseDesc] = useState<string>("");
+  const [savingExpenses, setSavingExpenses] = useState(false);
+
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrintPDF = useReactToPrint({
@@ -133,7 +149,7 @@ const DailySummary: React.FC = () => {
           -webkit-print-color-adjust: exact;
         }
       }
-    `
+    `,
   });
 
   const getShiftRange = (date: Date) => {
@@ -179,9 +195,15 @@ const DailySummary: React.FC = () => {
         totalTips: 0,
         totalSubtotal: 0,
         totalPeople: 0,
-        paymentMethods: { efectivo: 0, tarjeta: 0, transferencia: 0 },
+        paymentMethods: {
+          efectivo: 0,
+          tarjeta: 0,
+          transferencia: 0,
+        },
         totalCardCommission: 0,
         totalCardTips: 0,
+        totalCashTips: 0,
+        totalTransferTips: 0,
         totalCardTipsNet: 0,
         totalTipsNet: 0,
         averageOrderValue: 0,
@@ -265,7 +287,12 @@ const DailySummary: React.FC = () => {
           }
         }
 
-        // Comisión bancaria: 1.5% sobre TODO lo cobrado por terminal (subtotal + propina).
+        // Acumula totales de propinas por método
+        summary.totalCardTips += cardTip;
+        summary.totalCashTips += cashTip;
+        summary.totalTransferTips += transferTip;
+
+        // Comisión bancaria: 5% sobre TODO lo cobrado por terminal (subtotal + propina).
         // Esta comisión completa sale de la propina del mesero, no del subtotal.
         // Ej: $100 subtotal + $16 propina = $116 tarjeta → comisión $1.74 → propina neta $14.26
         const cardCommission = cardSale * CARD_COMMISSION_RATE;
@@ -273,7 +300,6 @@ const DailySummary: React.FC = () => {
         const cardTipNet = cardTip - cardCommission;
 
         summary.totalCardCommission += cardCommission;
-        summary.totalCardTips += cardTip;
         summary.totalCardTipsNet += cardTipNet;
 
         // Propina promedio
@@ -366,6 +392,23 @@ const DailySummary: React.FC = () => {
         .filter((s) => s.totalSales > 0)
         .sort((a, b) => b.totalSales - a.totalSales);
 
+      // Fetch shift expenses
+      const shiftDateStr = selectedDate.toISOString().split("T")[0];
+      const expensesRef = doc(db, "shiftExpenses", shiftDateStr);
+      const expensesSnap = await getDoc(expensesRef);
+      if (expensesSnap.exists()) {
+        const d = expensesSnap.data();
+        setDjExpense(d.djExpense || 0);
+        setVarietyExpense(d.varietyExpense || 0);
+        setExtraExpense(d.extraExpense || 0);
+        setExtraExpenseDesc(d.extraExpenseDesc || "");
+      } else {
+        setDjExpense(0);
+        setVarietyExpense(0);
+        setExtraExpense(0);
+        setExtraExpenseDesc("");
+      }
+
       setSummary(summary);
     } catch (error) {
       console.error("Error loading shift data:", error);
@@ -377,6 +420,29 @@ const DailySummary: React.FC = () => {
   useEffect(() => {
     loadShiftData(selectedDate);
   }, [selectedDate]);
+
+  const handleSaveExpenses = async () => {
+    if (extraExpense > 0 && !extraExpenseDesc.trim()) {
+      toast.error("Por favor describe el gasto extra.");
+      return;
+    }
+    setSavingExpenses(true);
+    try {
+      const shiftDateStr = selectedDate.toISOString().split("T")[0];
+      await setDoc(doc(db, "shiftExpenses", shiftDateStr), {
+        djExpense,
+        varietyExpense,
+        extraExpense,
+        extraExpenseDesc: extraExpenseDesc.trim(),
+      });
+      toast.success("Gastos guardados correctamente");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al guardar gastos");
+    } finally {
+      setSavingExpenses(false);
+    }
+  };
 
   const formatCurrency = (n: number) => `$${n.toFixed(2)}`;
   const formatPercent = (n: number) => `${n.toFixed(1)}%`;
@@ -443,10 +509,44 @@ const DailySummary: React.FC = () => {
     // ── Métodos de Pago ─────────────────────────────────────────────────────
     lines.push(center("METODOS DE PAGO"));
     lines.push(sep());
-    lines.push(fmtLine("Efectivo:", fmtM(summary.paymentMethods.efectivo)));
+    lines.push(
+      fmtLine("Efectivo (Total):", fmtM(summary.paymentMethods.efectivo))
+    );
+    lines.push(
+      fmtLine("  -Propinas (Total):", `-${fmtM(summary.totalTipsNet)}`)
+    );
+    const cashInRegister =
+      summary.paymentMethods.efectivo - summary.totalTipsNet;
+    lines.push(fmtLine("  Efectivo en caja:", fmtM(cashInRegister)));
     lines.push(fmtLine("Tarjeta:", fmtM(summary.paymentMethods.tarjeta)));
-    lines.push(fmtLine("Transferencia:", fmtM(summary.paymentMethods.transferencia)));
+    lines.push(
+      fmtLine("Transferencia:", fmtM(summary.paymentMethods.transferencia))
+    );
     lines.push("");
+
+    // ── Gastos del Turno ────────────────────────────────────────────────────
+    const totalExpenses =
+      (djExpense || 0) + (varietyExpense || 0) + (extraExpense || 0);
+    if (totalExpenses > 0) {
+      lines.push(center("GASTOS DEL TURNO"));
+      lines.push(sep());
+      if (djExpense > 0) lines.push(fmtLine("DJ:", `-${fmtM(djExpense)}`));
+      if (varietyExpense > 0)
+        lines.push(fmtLine("Variedad:", `-${fmtM(varietyExpense)}`));
+      if (extraExpense > 0)
+        lines.push(
+          fmtLine(
+            `Extra (${extraExpenseDesc || "N/A"}):`,
+            `-${fmtM(extraExpense)}`
+          )
+        );
+      lines.push(sep("-"));
+      lines.push(fmtLine("Total Gastos:", `-${fmtM(totalExpenses)}`));
+      lines.push(
+        fmtLine("EFECTIVO FINAL EN CAJA:", fmtM(cashInRegister - totalExpenses))
+      );
+      lines.push("");
+    }
 
     // ── Propinas ────────────────────────────────────────────────────────────
     lines.push(center("PROPINAS"));
@@ -711,11 +811,31 @@ const DailySummary: React.FC = () => {
                 Métodos de Pago
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                  <span className="text-gray-300 font-medium">💵 Efectivo</span>
-                  <span className="text-white font-bold">
-                    {formatCurrency(summary.paymentMethods.efectivo)}
-                  </span>
+                <div className="flex flex-col gap-1 p-3 bg-gray-700/50 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300 font-medium">
+                      💵 Efectivo (Total)
+                    </span>
+                    <span className="text-white font-bold">
+                      {formatCurrency(summary.paymentMethods.efectivo)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pl-4 text-sm mt-1">
+                    <span className="text-gray-400">— Propinas (Todas)</span>
+                    <span className="text-gray-400 font-semibold">
+                      -{formatCurrency(summary.totalTipsNet)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pl-4 text-sm border-t border-gray-600 pt-1 mt-1">
+                    <span className="text-green-400 font-medium">
+                      Efectivo en caja
+                    </span>
+                    <span className="text-green-400 font-bold">
+                      {formatCurrency(
+                        summary.paymentMethods.efectivo - summary.totalTipsNet
+                      )}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1 p-3 bg-gray-700/50 rounded-lg">
                   <div className="flex justify-between items-center">
@@ -756,7 +876,6 @@ const DailySummary: React.FC = () => {
                     </span>
                   </div>
                 </div>
-
                 {/* Propinas en efectivo/transferencia */}
                 <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
                   <span className="text-gray-300 font-medium">
@@ -766,8 +885,7 @@ const DailySummary: React.FC = () => {
                     {formatCurrency(summary.totalTips - summary.totalCardTips)}
                   </span>
                 </div>
-
-                {/* Total neto */}
+                {/* Total neto
                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-600">
                   <span className="text-green-300 font-bold text-lg">
                     ✅ Propinas a repartir
@@ -775,8 +893,7 @@ const DailySummary: React.FC = () => {
                   <span className="text-green-400 font-bold text-xl">
                     {formatCurrency(summary.totalTipsNet)}
                   </span>
-                </div>
-
+                </div> */}
                 {/* Stats adicionales */}
                 <div className="flex justify-between items-center p-3 bg-gray-700/30 rounded-lg text-sm">
                   <span className="text-gray-400">Propina promedio</span>
@@ -784,6 +901,130 @@ const DailySummary: React.FC = () => {
                     {formatPercent(summary.averageTipPercent)}
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* ── Gastos del Turno ───────────────────────────────────────── */}
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+              <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
+                <Receipt className="text-orange-500" size={20} />
+                Gastos del Turno
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">
+                    Pago a DJ
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500">$</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={djExpense || ""}
+                      onChange={(e) => setDjExpense(Number(e.target.value))}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-8 pr-4 py-2 text-white focus:outline-none focus:border-red-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1">
+                    Pago a Variedad
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500">$</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={varietyExpense || ""}
+                      onChange={(e) =>
+                        setVarietyExpense(Number(e.target.value))
+                      }
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-8 pr-4 py-2 text-white focus:outline-none focus:border-red-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">
+                      Gasto Extra
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500">$</span>
+                      </div>
+                      <input
+                        type="number"
+                        value={extraExpense || ""}
+                        onChange={(e) =>
+                          setExtraExpense(Number(e.target.value))
+                        }
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-8 pr-2 py-2 text-white focus:outline-none focus:border-red-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">
+                      Descripción extra
+                    </label>
+                    <input
+                      type="text"
+                      value={extraExpenseDesc}
+                      onChange={(e) => setExtraExpenseDesc(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                      placeholder="Ej. Vasos, hielo..."
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 p-4 bg-gray-900/60 rounded-xl border border-gray-700">
+                  <div className="flex justify-between items-center text-sm mb-2">
+                    <span className="text-gray-400">Efectivo en caja</span>
+                    <span className="text-gray-300 font-medium">
+                      {formatCurrency(
+                        summary.paymentMethods.efectivo - summary.totalTipsNet
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm mb-2">
+                    <span className="text-gray-400">Total Gastos</span>
+                    <span className="text-red-400 font-medium">
+                      -
+                      {formatCurrency(
+                        (djExpense || 0) +
+                          (varietyExpense || 0) +
+                          (extraExpense || 0)
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-gray-700 pt-2 mt-2">
+                    <span className="text-green-400 font-bold">
+                      Efectivo Final en Caja
+                    </span>
+                    <span className="text-green-400 font-bold text-lg">
+                      {formatCurrency(
+                        summary.paymentMethods.efectivo -
+                          summary.totalTipsNet -
+                          ((djExpense || 0) +
+                            (varietyExpense || 0) +
+                            (extraExpense || 0))
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveExpenses}
+                  disabled={savingExpenses}
+                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition-colors mt-2"
+                >
+                  <Save size={18} />
+                  {savingExpenses ? "Guardando..." : "Guardar Gastos"}
+                </button>
               </div>
             </div>
           </div>
@@ -982,7 +1223,9 @@ const DailySummary: React.FC = () => {
                 </p>
               </div>
               <div>
-                <p className="text-gray-400 text-sm mb-1">Propinas a Repartir</p>
+                <p className="text-gray-400 text-sm mb-1">
+                  Propinas a Repartir
+                </p>
                 <p className="text-3xl font-bold text-red-400">
                   {formatCurrency(summary.totalTipsNet)}
                 </p>
@@ -1011,14 +1254,20 @@ const DailySummary: React.FC = () => {
           )}
         </>
       ) : null}
-      
+
       {/* Hidden printable component */}
       <div style={{ display: "none" }}>
-        <PrintableDailySummary 
-          ref={printRef} 
-          summary={summary} 
-          shiftStart={shiftStart} 
-          shiftEnd={shiftEnd} 
+        <PrintableDailySummary
+          ref={printRef}
+          summary={summary}
+          shiftStart={shiftStart}
+          shiftEnd={shiftEnd}
+          expenses={{
+            dj: djExpense || 0,
+            variety: varietyExpense || 0,
+            extra: extraExpense || 0,
+            extraDesc: extraExpenseDesc,
+          }}
         />
       </div>
     </div>

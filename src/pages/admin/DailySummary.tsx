@@ -352,31 +352,42 @@ const DailySummary: React.FC = () => {
         ws.cardCommission += cardCommission;
       });
 
-      // ── Post-proceso propinas netas por mesero ───────────────────────────
-      // La comisión completa (1.5% del total tarjeta) sale íntegra de las propinas.
-      // Propinas netas globales = (propinas en efect/transf) + (propinas en tarjeta - comisión total tarjeta)
-      summary.totalTipsNet =
-        summary.totalTips -
-        summary.totalCardTips + // propinas efect + transf
-        Math.max(0, summary.totalCardTipsNet); // propinas tarjeta ya descontada comisión entera
+      // ── Propinas netas: modelo proporcional ─────────────────────────────
+      // La comisión total del banco (5% de todas las ventas en tarjeta) se descuenta
+      // del pool global de propinas y se reparte proporcionalmente entre todos los meseros.
+      // Esto garantiza que sum(ws.tipsNet) == totalTipsNet al centavo, sin importar si
+      // algún mesero tuvo cuentas de tarjeta sin propina.
+      const totalRawTips = summary.totalTips; // propinas brutas totales
+      summary.totalTipsNet = Math.max(0, totalRawTips - summary.totalCardCommission);
 
+      let totalWaiterShare = 0;
       waiterStatsMap.forEach((ws) => {
-        // Toda la comisión bancaria del mesero sale de su propina en tarjeta
+        // Propinas brutas del mesero (sin descontar comisión todavía)
+        const wsRawTips = ws.tipsCash + ws.tipsCard + ws.tipsTransfer;
+
+        // Participación proporcional en el pool neto
+        ws.tipsNet = totalRawTips > 0
+          ? (wsRawTips / totalRawTips) * summary.totalTipsNet
+          : 0;
+
+        // Mantener tipsCardNet informativo para referencia por-mesero
         ws.tipsCardNet = ws.tipsCard - ws.cardCommission;
-        ws.tipsNet =
-          ws.tipsCash + ws.tipsTransfer + Math.max(0, ws.tipsCardNet);
 
         ws.waiterShare = ws.tipsNet * 0.4667;
-        ws.barShare = ws.tipsNet * 0.2;
+        ws.barShare    = ws.tipsNet * 0.2;
         ws.busserShare = ws.tipsNet * 0.1333;
         ws.managerShare = ws.tipsNet * 0.1333;
         ws.cashierShare = ws.tipsNet * 0.0667;
 
-        summary.totalBarShare += ws.barShare;
+        totalWaiterShare += ws.waiterShare;
+        summary.totalBarShare    += ws.barShare;
         summary.totalBusserShare += ws.busserShare;
         summary.totalManagerShare += ws.managerShare;
         summary.totalCashierShare += ws.cashierShare;
       });
+
+      // Con el modelo proporcional: sum(ws.tipsNet) == totalTipsNet exactamente.
+
 
       // ── Promedios globales ───────────────────────────────────────────────
       summary.averageOrderValue =
@@ -1168,25 +1179,25 @@ const DailySummary: React.FC = () => {
                     {
                       label: "Barra",
                       pct: "20.00%",
-                      amount: summary.totalBarShare,
+                      amount: summary.totalTipsNet * 0.2,
                       color: "purple",
                     },
                     {
                       label: "Garrotero",
                       pct: "13.33%",
-                      amount: summary.totalBusserShare,
+                      amount: summary.totalTipsNet * 0.1333,
                       color: "orange",
                     },
                     {
                       label: "Encargado",
                       pct: "13.33%",
-                      amount: summary.totalManagerShare,
+                      amount: summary.totalTipsNet * 0.1333,
                       color: "yellow",
                     },
                     {
                       label: "Caja",
                       pct: "6.67%",
-                      amount: summary.totalCashierShare,
+                      amount: summary.totalTipsNet * 0.0667,
                       color: "blue",
                     },
                   ].map((item) => (

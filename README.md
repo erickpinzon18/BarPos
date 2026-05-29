@@ -1,4 +1,4 @@
-# Bar POS Application (ChepeChupes y Wikka)
+# Bar POS Application
 
 Una aplicación completa de Punto de Venta (POS) para bares y restaurantes, construida con React, TypeScript, Firebase y Tailwind CSS.
 
@@ -23,23 +23,27 @@ Una aplicación completa de Punto de Venta (POS) para bares y restaurantes, cons
 ## 📦 Instalación
 
 1. **Clona el repositorio**
+
 ```bash
 git clone <repository-url>
 cd bar-pos-app
 ```
 
 2. **Instala las dependencias**
+
 ```bash
 npm install
 ```
 
 3. **Configura Firebase**
+
    - El archivo `src/services/firebase.ts` ya está configurado
    - Asegúrate de que tu proyecto Firebase tenga habilitado:
      - Authentication (Email/Password)
      - Firestore Database
 
 4. **Ejecuta la aplicación**
+
 ```bash
 npm run dev
 ```
@@ -51,6 +55,7 @@ npm run dev
 La aplicación requiere las siguientes colecciones en Firestore:
 
 #### 1. Colección `users`
+
 ```javascript
 // Documento con ID = uid del usuario
 {
@@ -64,6 +69,7 @@ La aplicación requiere las siguientes colecciones en Firestore:
 ```
 
 #### 2. Colección `tables`
+
 ```javascript
 {
   number: 1,
@@ -78,6 +84,7 @@ La aplicación requiere las siguientes colecciones en Firestore:
 ```
 
 #### 3. Colección `products`
+
 ```javascript
 {
   name: "Cerveza Corona",
@@ -91,6 +98,7 @@ La aplicación requiere las siguientes colecciones en Firestore:
 ```
 
 #### 4. Colección `orders`
+
 ```javascript
 {
   tableId: "table-doc-id",
@@ -125,6 +133,7 @@ La aplicación requiere las siguientes colecciones en Firestore:
 Para probar la aplicación, crea los siguientes datos en Firestore:
 
 #### Usuarios de Prueba
+
 ```javascript
 // Crear en Authentication y luego en colección users
 // Admin
@@ -137,7 +146,7 @@ Para probar la aplicación, crea los siguientes datos en Firestore:
 
 // Mesero
 {
-  uid: "waiter-uid", 
+  uid: "waiter-uid",
   email: "mesero@bar.com",
   displayName: "Juan Pérez",
   role: "waiter"
@@ -146,17 +155,18 @@ Para probar la aplicación, crea los siguientes datos en Firestore:
 // Cocina
 {
   uid: "kitchen-uid",
-  email: "cocina@bar.com", 
+  email: "cocina@bar.com",
   displayName: "Chef Mario",
   role: "kitchen"
 }
 ```
 
 #### Mesas de Ejemplo
+
 ```javascript
 // Mesa 1
 { number: 1, capacity: 2, status: "libre" }
-// Mesa 2  
+// Mesa 2
 { number: 2, capacity: 4, status: "libre" }
 // Mesa 3
 { number: 3, capacity: 6, status: "libre" }
@@ -165,6 +175,7 @@ Para probar la aplicación, crea los siguientes datos en Firestore:
 ```
 
 #### Productos de Ejemplo
+
 ```javascript
 // Bebidas
 { name: "Cerveza Corona", description: "Cerveza clara mexicana", price: 45, category: "Bebida", available: true }
@@ -186,7 +197,7 @@ Para probar la aplicación, crea los siguientes datos en Firestore:
 Una vez que hayas creado los usuarios en Firebase Authentication, puedes usar:
 
 - **Admin**: admin@bar.com / password123
-- **Mesero**: mesero@bar.com / password123  
+- **Mesero**: mesero@bar.com / password123
 - **Cocina**: cocina@bar.com / password123
 
 ## 🚀 Uso de la Aplicación

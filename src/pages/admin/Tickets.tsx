@@ -237,7 +237,7 @@ const AdminTickets: React.FC = () => {
             <div className="p-8 overflow-y-auto flex-1">
                 <div className="text-center mb-6 border-b border-gray-600 pb-6">
                 <h2 className="text-2xl font-bold text-red-500 tracking-widest">PASE DE SALIDA</h2>
-                <p className="text-lg font-semibold text-white mt-1">{config?.name ?? 'ChepeChupes'} — Ticket de salida</p>
+                <p className="text-lg font-semibold text-white mt-1">{config?.name ?? 'Wikka Despecho'} — Ticket de salida</p>
                 <p className="text-sm text-gray-400">Fecha: {new Date(selected.createdAt || Date.now()).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date(selected.createdAt || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
                 <p className="text-xs text-gray-400 mt-1">ID ticket: {selected.id}</p>
                 {selected.payments && selected.payments.length > 0 && (

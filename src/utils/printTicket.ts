@@ -145,7 +145,7 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   // ── Header ────────────────────────────────────────────────────────────────
   lines.push(s('='));
   lines.push(c('PASE DE SALIDA'));
-  lines.push(c((businessName || 'ChepeChupes').toUpperCase()));
+  lines.push(c((businessName || 'Wikka Despecho').toUpperCase()));
   lines.push(s('='));
   lines.push('');
 

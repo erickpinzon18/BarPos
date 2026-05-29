@@ -450,7 +450,7 @@ const AdminCheckout: React.FC = () => {
                 PASE DE SALIDA
               </h2>
               <p className="text-sm text-gray-400">
-                {config?.name ?? "ChepeChupes"} — Ticket de salida
+                {config?.name ?? "Wikka Despecho"} — Ticket de salida
               </p>
               <p className="text-xs text-gray-500 mt-2">
                 Fecha: {new Date().toLocaleString()}

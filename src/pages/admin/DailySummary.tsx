@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useReactToPrint } from "react-to-print";
 import {
   collection,
   query,
@@ -18,10 +19,12 @@ import {
   Printer,
   CreditCard,
   BarChart2,
+  FileText
 } from "lucide-react";
 import { sendToPrinter } from "../../utils/printTicket";
+import { PrintableDailySummary } from "../../components/admin/PrintableDailySummary";
 
-const CARD_COMMISSION_RATE = 0.015; // 1.5% comisión terminal
+const CARD_COMMISSION_RATE = 0.05; // 5% comisión terminal
 
 interface WaiterStats {
   waiterName: string;
@@ -115,6 +118,23 @@ const DailySummary: React.FC = () => {
   const [summary, setSummary] = useState<ShiftSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentShiftDate());
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrintPDF = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Cierre_Caja_${selectedDate.toISOString().split("T")[0]}`,
+    pageStyle: `
+      @page {
+        size: auto;
+        margin: 15mm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+        }
+      }
+    `
+  });
 
   const getShiftRange = (date: Date) => {
     const shiftStart = new Date(date);
@@ -371,7 +391,7 @@ const DailySummary: React.FC = () => {
 
     lines.push(sep("="));
     lines.push(center("CIERRE DE CAJA"));
-    lines.push(center("ChepeChupes"));
+    lines.push(center("Wikka Despecho"));
     lines.push(sep("="));
     lines.push("");
 
@@ -424,37 +444,18 @@ const DailySummary: React.FC = () => {
     lines.push(center("METODOS DE PAGO"));
     lines.push(sep());
     lines.push(fmtLine("Efectivo:", fmtM(summary.paymentMethods.efectivo)));
-    lines.push(
-      fmtLine("Tarjeta (bruto):", fmtM(summary.paymentMethods.tarjeta))
-    );
-    lines.push(
-      fmtLine("  -Comision 1.5%:", `-${fmtM(summary.totalCardCommission)}`)
-    );
-    lines.push(
-      fmtLine(
-        "  Tarjeta neto:",
-        fmtM(summary.paymentMethods.tarjeta - summary.totalCardCommission)
-      )
-    );
-    lines.push(
-      fmtLine("Transferencia:", fmtM(summary.paymentMethods.transferencia))
-    );
+    lines.push(fmtLine("Tarjeta:", fmtM(summary.paymentMethods.tarjeta)));
+    lines.push(fmtLine("Transferencia:", fmtM(summary.paymentMethods.transferencia)));
     lines.push("");
 
     // ── Propinas ────────────────────────────────────────────────────────────
     lines.push(center("PROPINAS"));
     lines.push(sep());
     lines.push(fmtLine("Propinas en tarjeta:", fmtM(summary.totalCardTips)));
-    lines.push(
-      fmtLine("  -Comision 1.5%:", `-${fmtM(summary.totalCardCommission)}`)
-    );
-    lines.push(
-      fmtLine("  Propinas tarjeta neto:", fmtM(summary.totalCardTipsNet))
-    );
     const cashAndTransferTips = summary.totalTips - summary.totalCardTips;
     lines.push(fmtLine("Propinas efect/transf:", fmtM(cashAndTransferTips)));
     lines.push(sep("-"));
-    lines.push(fmtLine("PROPINAS NETAS:", fmtM(summary.totalTipsNet)));
+    lines.push(fmtLine("PROPINAS A REPARTIR:", fmtM(summary.totalTipsNet)));
     lines.push("");
 
     // ── Indicadores ─────────────────────────────────────────────────────────
@@ -493,13 +494,9 @@ const DailySummary: React.FC = () => {
         lines.push(fmtLine("Ventas totales:", fmtM(w.totalSales)));
         if (w.salesCard > 0) {
           lines.push(fmtLine("  Ventas tarjeta:", fmtM(w.salesCard)));
-          lines.push(fmtLine("  Comision 1.5%:", `-${fmtM(w.cardCommission)}`));
           lines.push(fmtLine("  Propina tarjeta:", fmtM(w.tipsCard)));
-          lines.push(
-            fmtLine("  Prop.tarjeta neta:", fmtM(Math.max(0, w.tipsCardNet)))
-          );
         }
-        lines.push(fmtLine("Propinas netas:", fmtM(w.tipsNet)));
+        lines.push(fmtLine("Propinas a repartir:", fmtM(w.tipsNet)));
         lines.push("");
         lines.push(center("-- DISTRIBUCION PROPINAS --"));
         lines.push(fmtLine("  Mesero (46.67%):", fmtM(w.waiterShare)));
@@ -543,13 +540,22 @@ const DailySummary: React.FC = () => {
           <p className="text-gray-400">Resumen de ventas del turno</p>
         </div>
         {summary && summary.totalOrders > 0 && (
-          <button
-            onClick={printClosingReport}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-3 rounded-xl transition-colors shadow-lg"
-          >
-            <Printer size={18} />
-            Imprimir Cierre
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={printClosingReport}
+              className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-bold px-4 py-2.5 rounded-xl transition-colors shadow-lg text-sm"
+            >
+              <Printer size={18} />
+              Imprimir en ticket
+            </button>
+            <button
+              onClick={() => handlePrintPDF()}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-xl transition-colors shadow-lg text-sm"
+            >
+              <FileText size={18} />
+              Imprimir en PDF
+            </button>
+          </div>
         )}
       </div>
 
@@ -714,27 +720,10 @@ const DailySummary: React.FC = () => {
                 <div className="flex flex-col gap-1 p-3 bg-gray-700/50 rounded-lg">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-300 font-medium">
-                      💳 Tarjeta (bruto)
+                      💳 Tarjeta
                     </span>
                     <span className="text-white font-bold">
                       {formatCurrency(summary.paymentMethods.tarjeta)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pl-4 text-sm">
-                    <span className="text-red-400">— Comisión 1.5%</span>
-                    <span className="text-red-400 font-semibold">
-                      -{formatCurrency(summary.totalCardCommission)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pl-4 text-sm border-t border-gray-600 pt-1">
-                    <span className="text-green-400 font-medium">
-                      Tarjeta neto
-                    </span>
-                    <span className="text-green-400 font-bold">
-                      {formatCurrency(
-                        summary.paymentMethods.tarjeta -
-                          summary.totalCardCommission
-                      )}
                     </span>
                   </div>
                 </div>
@@ -766,20 +755,6 @@ const DailySummary: React.FC = () => {
                       {formatCurrency(summary.totalCardTips)}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center pl-4 text-sm">
-                    <span className="text-red-400">— Comisión 1.5%</span>
-                    <span className="text-red-400 font-semibold">
-                      -{formatCurrency(summary.totalCardCommission)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pl-4 text-sm border-t border-yellow-700/40 pt-1">
-                    <span className="text-green-400 font-medium">
-                      Propinas tarjeta netas
-                    </span>
-                    <span className="text-green-400 font-bold">
-                      {formatCurrency(summary.totalCardTipsNet)}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Propinas en efectivo/transferencia */}
@@ -793,9 +768,9 @@ const DailySummary: React.FC = () => {
                 </div>
 
                 {/* Total neto */}
-                <div className="flex justify-between items-center p-3 bg-green-900/30 border border-green-500/40 rounded-lg">
+                <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-600">
                   <span className="text-green-300 font-bold text-lg">
-                    ✅ Propinas netas totales
+                    ✅ Propinas a repartir
                   </span>
                   <span className="text-green-400 font-bold text-xl">
                     {formatCurrency(summary.totalTipsNet)}
@@ -807,12 +782,6 @@ const DailySummary: React.FC = () => {
                   <span className="text-gray-400">Propina promedio</span>
                   <span className="text-white font-semibold">
                     {formatPercent(summary.averageTipPercent)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-700/30 rounded-lg text-sm">
-                  <span className="text-gray-400">Total comisiones banco</span>
-                  <span className="text-red-400 font-semibold">
-                    -{formatCurrency(summary.totalCardCommission)}
                   </span>
                 </div>
               </div>
@@ -880,20 +849,6 @@ const DailySummary: React.FC = () => {
                             </span>
                             <span className="text-yellow-300 font-medium">
                               {formatCurrency(waiter.tipsCard)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-red-400">Comisión 1.5%</span>
-                            <span className="text-red-400 font-medium">
-                              -{formatCurrency(waiter.cardCommission)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-green-400">
-                              Prop. tarjeta neta
-                            </span>
-                            <span className="text-green-400 font-medium">
-                              {formatCurrency(Math.max(0, waiter.tipsCardNet))}
                             </span>
                           </div>
                         </div>
@@ -1019,7 +974,7 @@ const DailySummary: React.FC = () => {
             <h3 className="text-2xl font-bold mb-4 text-red-500 text-center">
               💰 Resumen del Turno
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-gray-400 text-sm mb-1">Total Vendido</p>
                 <p className="text-3xl font-bold text-white">
@@ -1027,7 +982,7 @@ const DailySummary: React.FC = () => {
                 </p>
               </div>
               <div>
-                <p className="text-gray-400 text-sm mb-1">Propinas Netas</p>
+                <p className="text-gray-400 text-sm mb-1">Propinas a Repartir</p>
                 <p className="text-3xl font-bold text-red-400">
                   {formatCurrency(summary.totalTipsNet)}
                 </p>
@@ -1036,12 +991,6 @@ const DailySummary: React.FC = () => {
                 <p className="text-gray-400 text-sm mb-1">Cuentas / Personas</p>
                 <p className="text-3xl font-bold text-blue-400">
                   {summary.totalOrders} / {summary.totalPeople}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-sm mb-1">Comisión Banco</p>
-                <p className="text-3xl font-bold text-yellow-400">
-                  -{formatCurrency(summary.totalCardCommission)}
                 </p>
               </div>
             </div>
@@ -1062,6 +1011,16 @@ const DailySummary: React.FC = () => {
           )}
         </>
       ) : null}
+      
+      {/* Hidden printable component */}
+      <div style={{ display: "none" }}>
+        <PrintableDailySummary 
+          ref={printRef} 
+          summary={summary} 
+          shiftStart={shiftStart} 
+          shiftEnd={shiftEnd} 
+        />
+      </div>
     </div>
   );
 };

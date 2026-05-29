@@ -199,6 +199,16 @@ export const generateTicketContent = (opts: PrintOptions): string => {
     // Same layout for both paper sizes: wrap name then show importe inline
     wrapText(`${qty}x ${name}`, W).forEach(line => lines.push(line));
     pushLabeledValue(lines, '  Importe:', formatMoney(lineTotal), W);
+
+    // Print services (mezcladores) if present in notes
+    const serviceMatch = (item.notes || '').match(/^Servicios:\s*(.+)$/s);
+    if (serviceMatch) {
+      const services = serviceMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+      services.forEach(svc => {
+        wrapText(`  > ${svc}`, W).forEach(l => lines.push(l));
+        pushLabeledValue(lines, '    Importe:', '$0.00', W);
+      });
+    }
   });
 
   lines.push(s());

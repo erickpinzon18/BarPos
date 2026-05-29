@@ -263,9 +263,26 @@ const AdminTickets: React.FC = () => {
               </div>
               <div className="border-t border-b border-dashed border-gray-600 py-4 space-y-3">
                 <div className="flex justify-between text-sm"><span className="font-semibold text-white">CANT. PRODUCTO</span><span className="font-semibold text-white">SUBTOTAL</span></div>
-                {(selected.items || []).filter(i => !i.isDeleted).map((it) => (
-                  <div key={it.id} className="flex justify-between"><span className="text-gray-300">{it.quantity}x {it.productName}</span><span className="text-gray-300">${((it.productPrice ?? 0) * (it.quantity ?? 1)).toFixed(2)}</span></div>
-                ))}
+                {(selected.items || []).filter(i => !i.isDeleted).map((it) => {
+                  const serviceMatch = (it.notes || '').match(/^Servicios:\s*(.+)$/s);
+                  const services = serviceMatch
+                    ? serviceMatch[1].split(',').map(s => s.trim()).filter(Boolean)
+                    : [];
+                  return (
+                    <div key={it.id}>
+                      <div className="flex justify-between">
+                        <span className="text-gray-300">{it.quantity}x {it.productName}</span>
+                        <span className="text-gray-300">${((it.productPrice ?? 0) * (it.quantity ?? 1)).toFixed(2)}</span>
+                      </div>
+                      {services.map((svc, i) => (
+                        <div key={i} className="flex justify-between pl-4 text-xs text-gray-500">
+                          <span>↳ {svc}</span>
+                          <span>$0.00</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
               <div className="py-6 space-y-2">
                 <div className="flex justify-between items-center text-md">

@@ -326,12 +326,26 @@ const KitchenCheckout: React.FC = () => {
 
             <div className="border-t border-dashed border-gray-600 pt-2">
               <div className="flex justify-between"><span>CANT. PRODUCTO</span><span>SUBTOTAL</span></div>
-              {activeItems.map(item => (
-                <div key={item.id} className="flex justify-between mt-2">
-                  <span>{item.quantity}x {item.productName}</span>
-                  <span>${(item.productPrice * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
+              {activeItems.map(item => {
+                const serviceMatch = item.notes?.match(/^Servicios:\s*(.+)$/s);
+                const services = serviceMatch
+                  ? serviceMatch[1].split(',').map(s => s.trim()).filter(Boolean)
+                  : [];
+                return (
+                  <div key={item.id} className="mt-2">
+                    <div className="flex justify-between">
+                      <span>{item.quantity}x {item.productName}</span>
+                      <span>${(item.productPrice * item.quantity).toFixed(2)}</span>
+                    </div>
+                    {services.map((svc, i) => (
+                      <div key={i} className="flex justify-between text-gray-400 text-xs pl-4">
+                        <span>↳ {svc}</span>
+                        <span>$0.00</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="border-t border-dashed border-gray-600 mt-4 pt-2">

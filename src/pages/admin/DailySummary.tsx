@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { sendToPrinter } from "../../utils/printTicket";
 import { PrintableDailySummary } from "../../components/admin/PrintableDailySummary";
+import { useActiveOrders } from "../../hooks/useOrders";
 
 const CARD_COMMISSION_RATE = 0.05; // 5% comisión terminal
 
@@ -65,7 +66,9 @@ interface WaiterStats {
 }
 
 interface ShiftSummary {
-  totalSales: number;
+  totalSales: number; // Saldo cobrado
+  pendingBalance: number; // Saldo por cobrar
+  pendingOrders: number; // Mesas abiertas
   totalOrders: number;
   totalItems: number;
   totalTips: number; // propinas brutas
@@ -110,6 +113,15 @@ const fmtLine = (left: string, right: string) => {
 };
 const fmtM = (n: number) => `$${n.toFixed(2)}`;
 
+const getShiftRange = (date: Date) => {
+  const shiftStart = new Date(date);
+  shiftStart.setHours(17, 0, 0, 0);
+  const shiftEnd = new Date(date);
+  shiftEnd.setDate(shiftEnd.getDate() + 1);
+  shiftEnd.setHours(5, 0, 0, 0);
+  return { shiftStart, shiftEnd };
+};
+
 const DailySummary: React.FC = () => {
   // Función para obtener la fecha del turno actual
   const getCurrentShiftDate = () => {
@@ -135,6 +147,20 @@ const DailySummary: React.FC = () => {
   const [savingExpenses, setSavingExpenses] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
+  
+  const { orders: activeOrders } = useActiveOrders();
+  const { shiftStart, shiftEnd } = getShiftRange(selectedDate);
+
+  const shiftActiveOrders = activeOrders.filter(order => {
+    const orderDate = order.createdAt;
+    return orderDate >= shiftStart && orderDate <= shiftEnd;
+  });
+
+  const livePendingOrders = shiftActiveOrders.length;
+  const livePendingBalance = shiftActiveOrders.reduce((sum, order) => {
+    const activeItems = order.items?.filter(i => !i.isDeleted) || [];
+    return sum + activeItems.reduce((s, i) => s + (i.productPrice || 0) * (i.quantity || 0), 0);
+  }, 0);
 
   const handlePrintPDF = useReactToPrint({
     contentRef: printRef,
@@ -151,15 +177,6 @@ const DailySummary: React.FC = () => {
       }
     `,
   });
-
-  const getShiftRange = (date: Date) => {
-    const shiftStart = new Date(date);
-    shiftStart.setHours(17, 0, 0, 0);
-    const shiftEnd = new Date(date);
-    shiftEnd.setDate(shiftEnd.getDate() + 1);
-    shiftEnd.setHours(5, 0, 0, 0);
-    return { shiftStart, shiftEnd };
-  };
 
   const loadShiftData = async (date: Date) => {
     setLoading(true);
@@ -190,6 +207,8 @@ const DailySummary: React.FC = () => {
       // ── Inicializar resumen ──────────────────────────────────────────────
       const summary: ShiftSummary = {
         totalSales: 0,
+        pendingBalance: 0,
+        pendingOrders: 0,
         totalOrders: ordersData.length,
         totalItems: 0,
         totalTips: 0,
@@ -220,6 +239,8 @@ const DailySummary: React.FC = () => {
       let totalTipPercent = 0;
       let ordersWithTip = 0;
       const waiterStatsMap = new Map<string, WaiterStats>();
+
+      // Ya no consultamos aquí, usamos el hook useActiveOrders para tiempo real
 
       ordersData.forEach((order) => {
         const subtotal = order.subtotal ?? 0;
@@ -360,7 +381,6 @@ const DailySummary: React.FC = () => {
       const totalRawTips = summary.totalTips; // propinas brutas totales
       summary.totalTipsNet = Math.max(0, totalRawTips - summary.totalCardCommission);
 
-      let totalWaiterShare = 0;
       waiterStatsMap.forEach((ws) => {
         // Propinas brutas del mesero (sin descontar comisión todavía)
         const wsRawTips = ws.tipsCash + ws.tipsCard + ws.tipsTransfer;
@@ -379,7 +399,6 @@ const DailySummary: React.FC = () => {
         ws.managerShare = ws.tipsNet * 0.1333;
         ws.cashierShare = ws.tipsNet * 0.0667;
 
-        totalWaiterShare += ws.waiterShare;
         summary.totalBarShare    += ws.barShare;
         summary.totalBusserShare += ws.busserShare;
         summary.totalManagerShare += ws.managerShare;
@@ -430,6 +449,7 @@ const DailySummary: React.FC = () => {
 
   useEffect(() => {
     loadShiftData(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const handleSaveExpenses = async () => {
@@ -457,7 +477,6 @@ const DailySummary: React.FC = () => {
 
   const formatCurrency = (n: number) => `$${n.toFixed(2)}`;
   const formatPercent = (n: number) => `${n.toFixed(1)}%`;
-  const { shiftStart, shiftEnd } = getShiftRange(selectedDate);
 
   // ── Ticket de cierre de caja (80mm) ─────────────────────────────────────
   const printClosingReport = () => {
@@ -719,7 +738,7 @@ const DailySummary: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <DollarSign className="text-green-400" size={24} />
                 <span className="text-xs font-semibold text-green-400 bg-green-500/20 px-2 py-1 rounded">
-                  TOTAL
+                  COBRADO
                 </span>
               </div>
               <p className="text-3xl font-bold text-white mb-1">
@@ -727,6 +746,7 @@ const DailySummary: React.FC = () => {
               </p>
               <p className="text-sm text-gray-400">Ventas totales</p>
             </div>
+
 
             <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/30 rounded-xl p-5">
               <div className="flex items-center justify-between mb-2">
@@ -914,9 +934,12 @@ const DailySummary: React.FC = () => {
                 </div>
               </div>
             </div>
+            </div>
 
-            {/* ── Gastos del Turno ───────────────────────────────────────── */}
-            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+            {/* ── Gastos y Por Cobrar ───────────────────────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Gastos del Turno */}
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
               <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
                 <Receipt className="text-orange-500" size={20} />
                 Gastos del Turno
@@ -1036,6 +1059,39 @@ const DailySummary: React.FC = () => {
                   <Save size={18} />
                   {savingExpenses ? "Guardando..." : "Guardar Gastos"}
                 </button>
+              </div>
+            </div>
+
+            {/* Saldo Por Cobrar */}
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+              <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
+                <Clock className="text-orange-500" size={20} />
+                Saldo Por Cobrar (Mesas Abiertas)
+              </h3>
+              <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 rounded-xl p-6 flex flex-col items-center justify-center text-center h-[calc(100%-3.5rem)] border border-orange-500/20">
+                <p className="text-sm text-gray-400 mb-2">Total regado en mesas</p>
+                <p className="text-5xl font-bold text-orange-400 mb-4">
+                  {formatCurrency(livePendingBalance)}
+                </p>
+                <div className="bg-gray-900/60 border border-gray-700 rounded-lg px-4 py-2 inline-block mb-6">
+                  <span className="text-white font-medium">{livePendingOrders}</span>
+                  <span className="text-gray-400 ml-2">Mesas activas</span>
+                </div>
+
+                <div className="w-full grid grid-cols-2 gap-4 border-t border-orange-500/20 pt-4 mt-auto">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Ya Cobrado</p>
+                    <p className="text-xl font-bold text-green-400">
+                      {formatCurrency(summary.totalSales)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Proyección Total</p>
+                    <p className="text-xl font-bold text-blue-400">
+                      {formatCurrency(summary.totalSales + livePendingBalance)}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

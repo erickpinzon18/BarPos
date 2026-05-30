@@ -665,28 +665,21 @@ const KitchenOrderDetails: React.FC = () => {
         </div>
 
         <div className="divide-y divide-gray-700">
-          {order.items.length === 0 ||
-          order.items.every((item) => item.isDeleted) ? (
+          {order.items.length === 0 ? (
             <div className="p-12 text-center">
               <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">
-                {order.items.length === 0
-                  ? "Orden Vacía"
-                  : "Todos los Items Eliminados"}
+                Orden Vacía
               </h3>
               <p className="text-gray-400 mb-6">
-                {order.items.length === 0
-                  ? "Esta mesa no tiene productos agregados aún."
-                  : "Todos los productos han sido eliminados de esta orden."}
+                Esta mesa no tiene productos agregados aún.
               </p>
               <button
                 onClick={() => setShowAddItemModal(true)}
                 className="bg-orange-500 hover:bg-orange-600 text-gray-100 font-bold py-3 px-8 rounded-lg transition-colors inline-flex items-center"
               >
                 <Plus className="w-5 h-5 mr-2" />
-                {order.items.length === 0
-                  ? "Agregar Primer Producto"
-                  : "Agregar Nuevos Productos"}
+                Agregar Primer Producto
               </button>
             </div>
           ) : (

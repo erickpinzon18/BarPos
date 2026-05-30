@@ -714,18 +714,15 @@ const WaiterOrderDetails: React.FC = () => {
                     </div>
 
                     <div className="divide-y divide-gray-700">
-                        {order.items.length === 0 || order.items.every(item => item.isDeleted) ? (
+                        {order.items.length === 0 ? (
                             // Estado vacío - sin items
                             <div className="p-8 text-center">
                                 <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                                 <h3 className="text-lg font-bold text-white mb-2">
-                                    {order.items.length === 0 ? 'Orden Vacía' : 'Items Eliminados'}
+                                    Orden Vacía
                                 </h3>
                                 <p className="text-sm text-gray-400 mb-6">
-                                    {order.items.length === 0
-                                        ? 'Agrega productos a esta mesa.'
-                                        : 'Todos los productos han sido eliminados.'
-                                    }
+                                    Agrega productos a esta mesa.
                                 </p>
                                 <button
                                     onClick={handleOpenAddItemModal}

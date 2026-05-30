@@ -1062,7 +1062,7 @@ const WaiterCheckout: React.FC = () => {
                               total
                           ) < 0.01
                             ? "text-green-400"
-                            : "text-red-400"
+                            : "text-gray-300"
                         }`}
                       >
                         $
@@ -1073,6 +1073,14 @@ const WaiterCheckout: React.FC = () => {
                         ).toFixed(2)}
                       </span>
                     </div>
+                    {total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0)) > 0.001 && (
+                      <div className="flex justify-between text-sm mt-1 text-red-400">
+                        <span>Faltante:</span>
+                        <span className="font-bold">
+                          ${(total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0))).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                     {Number(mixedEfectivo) > 0 &&
                       Number(cashReceived) > Number(mixedEfectivo) && (
                         <div className="flex justify-between text-sm mt-1 text-green-400">

@@ -481,10 +481,18 @@ const KitchenCheckout: React.FC = () => {
                   </div>
                   <div className="flex justify-between text-sm mt-1">
                     <span className="text-gray-400">Suma actual:</span>
-                    <span className={`font-bold ${Math.abs((Number(mixedEfectivo||0)+Number(mixedTarjeta||0)+Number(mixedTransferencia||0)) - total) < 0.01 ? 'text-green-400' : 'text-red-400'}`}>
+                    <span className={`font-bold ${Math.abs((Number(mixedEfectivo||0)+Number(mixedTarjeta||0)+Number(mixedTransferencia||0)) - total) < 0.01 ? 'text-green-400' : 'text-gray-300'}`}>
                       ${(Number(mixedEfectivo||0)+Number(mixedTarjeta||0)+Number(mixedTransferencia||0)).toFixed(2)}
                     </span>
                   </div>
+                  {total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0)) > 0.001 && (
+                    <div className="flex justify-between text-sm mt-1 text-red-400">
+                      <span>Faltante:</span>
+                      <span className="font-bold">
+                        ${(total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0))).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   {Number(mixedEfectivo) > 0 && Number(cashReceived) > Number(mixedEfectivo) && (
                     <div className="flex justify-between text-sm mt-1 text-green-400">
                       <span>Cambio (Efectivo):</span>

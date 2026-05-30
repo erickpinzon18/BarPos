@@ -849,31 +849,31 @@ const AdminCheckout: React.FC = () => {
                     <label className="text-sm text-gray-400 w-24">
                       Tarjeta:
                     </label>
-                    <input
-                      disabled={isReadOnly}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={mixedTarjeta}
-                      onChange={(e) => setMixedTarjeta(e.target.value)}
-                      placeholder="0.00"
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
-                    />
+                      <input
+                        disabled={isReadOnly}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={mixedTarjeta}
+                        onChange={(e) => setMixedTarjeta(e.target.value)}
+                        placeholder="0.00"
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+                      />
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-400 w-24">
                       Transf.:
                     </label>
-                    <input
-                      disabled={isReadOnly}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={mixedTransferencia}
-                      onChange={(e) => setMixedTransferencia(e.target.value)}
-                      placeholder="0.00"
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
-                    />
+                      <input
+                        disabled={isReadOnly}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={mixedTransferencia}
+                        onChange={(e) => setMixedTransferencia(e.target.value)}
+                        placeholder="0.00"
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+                      />
                   </div>
                 </div>
 
@@ -895,7 +895,7 @@ const AdminCheckout: React.FC = () => {
                             total
                         ) < 0.01
                           ? "text-green-400"
-                          : "text-red-400"
+                          : "text-gray-300"
                       }`}
                     >
                       $
@@ -906,6 +906,14 @@ const AdminCheckout: React.FC = () => {
                       ).toFixed(2)}
                     </span>
                   </div>
+                  {total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0)) > 0.001 && (
+                    <div className="flex justify-between text-sm mt-1 text-red-400">
+                      <span>Faltante:</span>
+                      <span className="font-bold">
+                        ${(total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0))).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   {Number(mixedEfectivo) > 0 &&
                     Number(cashReceived) > Number(mixedEfectivo) && (
                       <div className="flex justify-between text-sm mt-1 text-green-400">

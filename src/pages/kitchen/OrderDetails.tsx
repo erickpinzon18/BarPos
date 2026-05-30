@@ -62,13 +62,13 @@ const KitchenOrderDetails: React.FC = () => {
   // Estados para editar mixers de botella
   const [showEditBottleModal, setShowEditBottleModal] = useState(false);
   const [itemToEditBottle, setItemToEditBottle] = useState<OrderItem | null>(null);
-  const [editBottleMixers, setEditBottleMixers] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [editBottleMixers, setEditBottleMixers] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0, 0]);
   const [editBottleLoading, setEditBottleLoading] = useState(false);
 
   // Estados para editar refresco de trago (Bebida/Shot)
   const [showEditDrinkModal, setShowEditDrinkModal] = useState(false);
   const [itemToEditDrink, setItemToEditDrink] = useState<OrderItem | null>(null);
-  const [editDrinkMixers, setEditDrinkMixers] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [editDrinkMixers, setEditDrinkMixers] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0, 0]);
   const [editDrinkComment, setEditDrinkComment] = useState('');
   const [editDrinkLoading, setEditDrinkLoading] = useState(false);
 
@@ -242,7 +242,7 @@ const KitchenOrderDetails: React.FC = () => {
   };
 
   const handleOpenEditBottle = (item: OrderItem) => {
-    const mixers = [0, 0, 0, 0, 0];
+    const mixers = [0, 0, 0, 0, 0, 0, 0, 0, 0];
     if (item.notes) {
       MIXERS.forEach((mixer, idx) => {
         const regex = new RegExp(`(\\d+)x\\s+${mixer.label}`);
@@ -262,7 +262,7 @@ const KitchenOrderDetails: React.FC = () => {
     setEditBottleLoading(true);
     try {
       // Calcular diff
-      const newMixers = [0, 0, 0, 0, 0];
+      const newMixers = [0, 0, 0, 0, 0, 0, 0, 0, 0];
       MIXERS.forEach((mixer, idx) => {
         const regex = new RegExp(`(\\d+)x\\s+${mixer.label}`);
         const match = newNotes.match(regex);

@@ -5,7 +5,7 @@ import { MIXERS } from './BottleQuantityModal';
 import type { Product } from '../../utils/types';
 
 const MAX_MIXERS = 2;
-const DEFAULT_MIXERS = [0, 0, 0, 0, 0];
+const DEFAULT_MIXERS = new Array(9).fill(0);
 
 interface DrinkMixerModalProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ interface DrinkMixerModalProps {
 
 /** Parse notes like "Refresco: 1x Coca Cola, 1x Squirt | sin hielo" */
 export const parseDrinkNotes = (notes: string | undefined): { mixers: number[]; comment: string } => {
-  const mixers = [0, 0, 0, 0, 0];
+  const mixers = new Array(MIXERS.length).fill(0);
   let comment = '';
   if (!notes) return { mixers, comment };
 
@@ -215,28 +215,31 @@ const DrinkMixerModal: React.FC<DrinkMixerModalProps> = ({
           </div>
 
           <div className="space-y-2 mb-1">
-            {MIXERS.map((mixer, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-gray-700 rounded-lg px-3 py-2.5">
-                <span className="text-sm text-white">{mixer.emoji} {mixer.label}</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleMixerChange(idx, -1)}
-                    disabled={mixerQty[idx] <= 0 || loading || confirming}
-                    className="w-7 h-7 bg-gray-600 hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-md flex items-center justify-center transition-colors"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <span className="w-5 text-center text-white font-bold text-sm">{mixerQty[idx]}</span>
-                  <button
-                    onClick={() => handleMixerChange(idx, 1)}
-                    disabled={remaining <= 0 || loading || confirming}
-                    className="w-7 h-7 bg-gray-600 hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-md flex items-center justify-center transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
+            {MIXERS.map((mixer, idx) => {
+              if (mixer.group !== 'REFRESCOS') return null;
+              return (
+                <div key={idx} className="flex items-center justify-between bg-gray-700 rounded-lg px-3 py-2.5">
+                  <span className="text-sm text-white">{mixer.emoji} {mixer.label}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleMixerChange(idx, -1)}
+                      disabled={mixerQty[idx] <= 0 || loading || confirming}
+                      className="w-7 h-7 bg-gray-600 hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-md flex items-center justify-center transition-colors"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="w-5 text-center text-white font-bold text-sm">{mixerQty[idx]}</span>
+                    <button
+                      onClick={() => handleMixerChange(idx, 1)}
+                      disabled={remaining <= 0 || loading || confirming}
+                      className="w-7 h-7 bg-gray-600 hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-md flex items-center justify-center transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

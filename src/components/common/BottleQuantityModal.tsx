@@ -3,17 +3,27 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Wine } from 'lucide-react';
 import type { Product } from '../../utils/types';
 
-interface MixerDef {
+export type MixerGroup = 'REFRESCOS' | 'BOOST' | 'JUGO';
+
+export interface MixerDef {
   label: string;
   emoji: string;
+  group: MixerGroup;
 }
 
 export const MIXERS: MixerDef[] = [
-  { label: 'Agua Mineral', emoji: '💧' },
-  { label: 'Coca Cola',   emoji: '🥤' },
-  { label: 'Squirt',      emoji: '🍋' },
-  { label: 'Manzanita',   emoji: '🍎' },
-  { label: 'Sprite',      emoji: '🥤' },
+  // Refrescos
+  { label: 'Agua Mineral', emoji: '💧', group: 'REFRESCOS' },
+  { label: 'Coca Cola',   emoji: '🥤', group: 'REFRESCOS' },
+  { label: 'Squirt',      emoji: '🍋', group: 'REFRESCOS' },
+  { label: 'Manzanita',   emoji: '🍎', group: 'REFRESCOS' },
+  { label: 'Sprite',      emoji: '🥤', group: 'REFRESCOS' },
+  { label: 'Agua Tónica', emoji: '🫧', group: 'REFRESCOS' },
+  { label: 'Ginger Ale',  emoji: '🍺', group: 'REFRESCOS' },
+  // Boost
+  { label: 'Boost',       emoji: '⚡', group: 'BOOST' },
+  // Jugo
+  { label: 'Jarra de Jugo', emoji: '🧃', group: 'JUGO' },
 ];
 
 interface BottleQuantityModalProps {
@@ -31,7 +41,7 @@ interface BottleQuantityModalProps {
   initialMixers?: number[];
 }
 
-const DEFAULT_MIXERS = [0, 0, 0, 0, 0];
+const DEFAULT_MIXERS = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
   isOpen,
@@ -58,25 +68,42 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
     }
   }, [isOpen, initialQuantity, initialMixers]);
 
+  const getGroupMaxForQty = (group: MixerGroup, qty: number) => {
+    let factor = 1;
+    if (isPromoX2 || maxServicesPerBottle >= 10) factor = 2;
+    
+    switch (group) {
+      case 'REFRESCOS': return maxServicesPerBottle * qty;
+      case 'BOOST': return 3 * factor * qty;
+      case 'JUGO': return 1 * factor * qty;
+      default: return maxServicesPerBottle * qty;
+    }
+  };
+
+  const totalUsed = mixerQty.reduce((s, q) => s + q, 0);
+  let currentGroup: MixerGroup | null = null;
+  if (totalUsed > 0) {
+    const firstIndex = mixerQty.findIndex(q => q > 0);
+    if (firstIndex !== -1) currentGroup = MIXERS[firstIndex].group;
+  }
+
+  const maxTotal = currentGroup ? getGroupMaxForQty(currentGroup, quantity) : getGroupMaxForQty('REFRESCOS', quantity);
+  const remaining = maxTotal - totalUsed;
+  const barFull = totalUsed >= maxTotal;
+
   // When bottle quantity changes downward, clamp mixer totals if they exceed new max
   const handleBottleChange = (delta: number) => {
     const newQty = Math.max(1, quantity + delta);
-    const newMax = newQty * maxServicesPerBottle;
+    const newMax = currentGroup ? getGroupMaxForQty(currentGroup, newQty) : getGroupMaxForQty('REFRESCOS', newQty);
     if (delta < 0) {
-      const total = mixerQty.reduce((s, q) => s + q, 0);
-      if (total > newMax) {
+      if (totalUsed > newMax) {
         // Scale each mixer down proportionally
-        const ratio = newMax / total;
+        const ratio = newMax / totalUsed;
         setMixerQty(mixerQty.map(q => Math.floor(q * ratio)));
       }
     }
     setQuantity(newQty);
   };
-
-  const maxTotal = quantity * maxServicesPerBottle;
-  const totalUsed = mixerQty.reduce((s, q) => s + q, 0);
-  const remaining = maxTotal - totalUsed;
-  const barFull = totalUsed >= maxTotal;
 
   const handleMixerChange = (idx: number, delta: number) => {
     setMixerQty(prev =>
@@ -116,7 +143,7 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
 
   const handleClose = () => {
     setQuantity(1);
-    setMixerQty([0, 0, 0, 0]);
+    setMixerQty(DEFAULT_MIXERS);
     setError('');
     onClose();
   };
@@ -219,7 +246,8 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
             Selecciona los servicios
           </h3>
           <p className="text-gray-400 text-sm mt-1">
-            Puedes elegir hasta {maxTotal} servicios ({maxServicesPerBottle} por {isPromoX2 ? 'paquete' : 'botella'})
+            Puedes elegir hasta {maxTotal} {currentGroup === 'BOOST' ? 'Boosts' : currentGroup === 'JUGO' ? 'Jarras' : 'servicios'} 
+            (según el tipo de mezclador seleccionado)
           </p>
         </div>
 
@@ -233,28 +261,31 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
         )}
 
         <div className="space-y-4 mb-8">
-          {MIXERS.map((mixer, idx) => (
-            <div key={idx} className="flex items-center justify-between bg-gray-700 rounded-lg px-3 py-2.5">
-              <span className="text-sm text-white">{mixer.emoji} {mixer.label}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleMixerChange(idx, -1)}
-                  disabled={mixerQty[idx] <= 0 || loading || confirming}
-                  className="w-7 h-7 bg-gray-600 hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-md flex items-center justify-center transition-colors"
-                >
-                  <Minus className="w-3 h-3" />
-                </button>
-                <span className="w-5 text-center text-white font-bold text-sm">{mixerQty[idx]}</span>
-                <button
-                  onClick={() => handleMixerChange(idx, 1)}
-                  disabled={remaining <= 0 || loading || confirming}
-                  className="w-7 h-7 bg-gray-600 hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-md flex items-center justify-center transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
+          {MIXERS.map((mixer, idx) => {
+            const isGroupDisabled = currentGroup !== null && currentGroup !== mixer.group;
+            return (
+              <div key={idx} className={`flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors ${isGroupDisabled ? 'bg-gray-800 opacity-50' : 'bg-gray-700'}`}>
+                <span className="text-sm text-white">{mixer.emoji} {mixer.label}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleMixerChange(idx, -1)}
+                    disabled={mixerQty[idx] <= 0 || loading || confirming}
+                    className="w-7 h-7 bg-gray-600 hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-md flex items-center justify-center transition-colors"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="w-5 text-center text-white font-bold text-sm">{mixerQty[idx]}</span>
+                  <button
+                    onClick={() => handleMixerChange(idx, 1)}
+                    disabled={remaining <= 0 || isGroupDisabled || loading || confirming}
+                    className="w-7 h-7 bg-gray-600 hover:bg-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-md flex items-center justify-center transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {error && (

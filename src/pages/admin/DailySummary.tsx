@@ -373,26 +373,22 @@ const DailySummary: React.FC = () => {
         ws.cardCommission += cardCommission;
       });
 
-      // ── Propinas netas: modelo proporcional ─────────────────────────────
-      // La comisión total del banco (5% de todas las ventas en tarjeta) se descuenta
-      // del pool global de propinas y se reparte proporcionalmente entre todos los meseros.
-      // Esto garantiza que sum(ws.tipsNet) == totalTipsNet al centavo, sin importar si
-      // algún mesero tuvo cuentas de tarjeta sin propina.
-      const totalRawTips = summary.totalTips; // propinas brutas totales
-      summary.totalTipsNet = Math.max(0, totalRawTips - summary.totalCardCommission);
+      // ── Propinas netas por mesero ─────────────────────────────
+      // La comisión de la tarjeta (5% sobre la venta en tarjeta) se le descuenta
+      // directamente a la propina bruta del mesero que generó ese cobro.
+      summary.totalTipsNet = 0;
 
       waiterStatsMap.forEach((ws) => {
-        // Propinas brutas del mesero (sin descontar comisión todavía)
-        const wsRawTips = ws.tipsCash + ws.tipsCard + ws.tipsTransfer;
-
-        // Participación proporcional en el pool neto
-        ws.tipsNet = totalRawTips > 0
-          ? (wsRawTips / totalRawTips) * summary.totalTipsNet
-          : 0;
+        // La propina neta del mesero es su propina total menos la comisión generada por SUS cobros con tarjeta
+        ws.tipsNet = Math.max(0, ws.totalTips - ws.cardCommission);
+        
+        // Sumamos al pool global neto
+        summary.totalTipsNet += ws.tipsNet;
 
         // Mantener tipsCardNet informativo para referencia por-mesero
         ws.tipsCardNet = ws.tipsCard - ws.cardCommission;
 
+        // Distribución de su propina neta
         ws.waiterShare = ws.tipsNet * 0.4667;
         ws.barShare    = ws.tipsNet * 0.2;
         ws.busserShare = ws.tipsNet * 0.1333;

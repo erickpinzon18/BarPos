@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useOrderById, useOrderByTableId } from '../../hooks/useOrders';
 import type { Order } from '../../utils/types';
-import { closeTable, getConfig } from '../../services/firestoreService';
+import { closeTable, getConfig, checkOperationNumberUnique } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import PinModal from '../../components/common/PinModal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -38,10 +38,10 @@ const KitchenCheckout: React.FC = () => {
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'tarjeta' | 'transferencia' | 'mixto'>('efectivo');
-  const [cashReceived, setCashReceived] = useState<string>('');
   const [mixedEfectivo, setMixedEfectivo] = useState<string>('');
   const [mixedTarjeta, setMixedTarjeta] = useState<string>('');
   const [mixedTransferencia, setMixedTransferencia] = useState<string>('');
+  const [cardOperationNumber, setCardOperationNumber] = useState<string>('');
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
   const [config, setConfig] = useState<any | null>(null);
 
@@ -161,7 +161,19 @@ const KitchenCheckout: React.FC = () => {
       const tra = Number(mixedTransferencia || 0);
       const sum = efe + tar + tra;
       if (Math.abs(sum - total) > 0.01) {
-        alert(`En el pago mixto, la suma de los montos ($${sum.toFixed(2)}) debe ser igual al total ($${total.toFixed(2)}).`);
+        alert(`En el pago mixto, la suma ($${sum.toFixed(2)}) debe ser igual al total ($${total.toFixed(2)}).`);
+        return;
+      }
+    }
+
+    if (paymentMethod === "tarjeta" || (paymentMethod === "mixto" && Number(mixedTarjeta || 0) > 0)) {
+      if (!cardOperationNumber.trim()) {
+        alert("Debes ingresar los dígitos de la operación (Verifone).");
+        return;
+      }
+      const isUnique = await checkOperationNumberUnique(cardOperationNumber);
+      if (!isUnique) {
+        alert("Este número de operación ya fue utilizado en otra cuenta.");
         return;
       }
     }
@@ -176,20 +188,18 @@ const KitchenCheckout: React.FC = () => {
       const orderId = order.id;
       let paymentDetails: any;
       if (paymentMethod === 'efectivo') {
-        const received = Number(cashReceived || 0);
-        const change = Math.max(0, received - total);
-        paymentDetails = { receivedAmount: received, change, tipAmount, tipPercent, cashierId: authorizedUser?.id };
+        paymentDetails = { receivedAmount: total, change: 0, tipAmount, tipPercent, cashierId: authorizedUser?.id };
       } else if (paymentMethod === 'mixto') {
         const efe = Number(mixedEfectivo || 0);
         const tar = Number(mixedTarjeta || 0);
         const tra = Number(mixedTransferencia || 0);
         const splitPayments = [];
-        if (efe > 0) splitPayments.push({ method: 'efectivo', amount: efe, receivedAmount: Number(cashReceived || efe), change: Math.max(0, Number(cashReceived || efe) - efe) });
-        if (tar > 0) splitPayments.push({ method: 'tarjeta', amount: tar });
+        if (efe > 0) splitPayments.push({ method: 'efectivo', amount: efe, receivedAmount: efe, change: 0 });
+        if (tar > 0) splitPayments.push({ method: 'tarjeta', amount: tar, cardOperationNumber: cardOperationNumber });
         if (tra > 0) splitPayments.push({ method: 'transferencia', amount: tra });
         paymentDetails = { tipAmount, tipPercent, cashierId: authorizedUser?.id, splitPayments };
       } else {
-        paymentDetails = { tipAmount, tipPercent, cashierId: authorizedUser?.id };
+        paymentDetails = { tipAmount, tipPercent, cashierId: authorizedUser?.id, cardOperationNumber: paymentMethod === 'tarjeta' ? cardOperationNumber : undefined };
       }
       const res = await closeTable(tableId, orderId, paymentMethod, peopleCount, paymentDetails);
       if (!res.success) throw new Error(res.error || 'Error al cerrar mesa');
@@ -200,8 +210,8 @@ const KitchenCheckout: React.FC = () => {
         : [{
             method: paymentMethod,
             amount: total,
-            receivedAmount: paymentMethod === 'efectivo' ? paymentDetails.receivedAmount : undefined,
-            change: paymentMethod === 'efectivo' ? paymentDetails.change : undefined
+            receivedAmount: paymentMethod === 'efectivo' ? total : undefined,
+            change: paymentMethod === 'efectivo' ? 0 : undefined
           }];
 
       const updatedOrder = {
@@ -384,7 +394,6 @@ const KitchenCheckout: React.FC = () => {
             <div className="mt-2 text-sm text-gray-400">Seleccionado: {(tipPercent * 100).toFixed(0)}%</div>
           </div>
 
-          {/* Promoción auto-aplicada */}
           {selectedPromo && (
             <div className="bg-green-900/20 border border-green-700/50 p-4 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -410,14 +419,17 @@ const KitchenCheckout: React.FC = () => {
             </div>
             {paymentMethod === 'efectivo' && (
               <div className="mt-4">
-                <label className="text-sm text-gray-400 block mb-2">Monto recibido</label>
-                <div className="flex items-center space-x-2">
-                  <input disabled={isReadOnly} type="number" min="0" step="0.01" value={cashReceived} onChange={e => setCashReceived(e.target.value)} placeholder="0.00" className="w-full bg-gray-900 border border-gray-800 text-right rounded-lg focus:ring-orange-500 focus:border-orange-500 py-3 px-3 text-white" />
-                  <button type="button" disabled={isReadOnly} onClick={() => setCashReceived(total.toFixed(2))} className="ml-2 bg-orange-500 text-gray-900 font-bold py-2 px-3 rounded-lg">Exacto</button>
-                </div>
+                <label className="text-sm text-gray-400 block mb-2">Pago en efectivo</label>
                 <div className="mt-2 text-sm text-gray-300">
-                  <div>Pago: ${Number(cashReceived || 0).toFixed(2)}</div>
-                  <div className="mt-1 font-semibold">Cambio: ${Math.max(0, Number(cashReceived || 0) - total).toFixed(2)}</div>
+                  <div>Monto exacto: ${total.toFixed(2)}</div>
+                </div>
+              </div>
+            )}
+            {paymentMethod === 'tarjeta' && (
+              <div className="mt-4">
+                <label className="text-sm text-gray-400 block mb-2">Dígitos de operación (Verifone)</label>
+                <div className="flex items-center space-x-2">
+                  <input disabled={isReadOnly} type="text" value={cardOperationNumber} onChange={e => setCardOperationNumber(e.target.value)} placeholder="Ej. 123456" className="w-full bg-gray-900 border border-gray-800 text-left rounded-lg focus:ring-orange-500 focus:border-orange-500 py-3 px-3 text-white" />
                 </div>
               </div>
             )}
@@ -458,16 +470,16 @@ const KitchenCheckout: React.FC = () => {
                     <label className="text-sm text-gray-400 w-24">Efectivo:</label>
                     <input disabled={isReadOnly} type="number" min="0" step="0.01" value={mixedEfectivo} onChange={(e) => setMixedEfectivo(e.target.value)} placeholder="0.00" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800" />
                   </div>
-                  {Number(mixedEfectivo) > 0 && (
-                    <div className="flex items-center gap-2 pl-26">
-                      <label className="text-xs text-gray-500 w-24">Recibido:</label>
-                      <input disabled={isReadOnly} type="number" min="0" step="0.01" value={cashReceived} onChange={(e) => setCashReceived(e.target.value)} placeholder="Monto entregado" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-white disabled:bg-gray-800 text-sm" />
-                    </div>
-                  )}
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-400 w-24">Tarjeta:</label>
                     <input disabled={isReadOnly} type="number" min="0" step="0.01" value={mixedTarjeta} onChange={(e) => setMixedTarjeta(e.target.value)} placeholder="0.00" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800" />
                   </div>
+                  {Number(mixedTarjeta) > 0 && (
+                    <div className="flex items-center gap-2 pl-26">
+                      <label className="text-xs text-gray-500 w-24">Operación:</label>
+                      <input disabled={isReadOnly} type="text" value={cardOperationNumber} onChange={(e) => setCardOperationNumber(e.target.value)} placeholder="Dígitos Verifone" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-white disabled:bg-gray-800 text-sm" />
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-400 w-24">Transf.:</label>
                     <input disabled={isReadOnly} type="number" min="0" step="0.01" value={mixedTransferencia} onChange={(e) => setMixedTransferencia(e.target.value)} placeholder="0.00" className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800" />
@@ -491,12 +503,6 @@ const KitchenCheckout: React.FC = () => {
                       <span className="font-bold">
                         ${(total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0))).toFixed(2)}
                       </span>
-                    </div>
-                  )}
-                  {Number(mixedEfectivo) > 0 && Number(cashReceived) > Number(mixedEfectivo) && (
-                    <div className="flex justify-between text-sm mt-1 text-green-400">
-                      <span>Cambio (Efectivo):</span>
-                      <span className="font-bold">${(Number(cashReceived) - Number(mixedEfectivo)).toFixed(2)}</span>
                     </div>
                   )}
                 </div>

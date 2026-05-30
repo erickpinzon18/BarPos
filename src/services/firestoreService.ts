@@ -326,12 +326,26 @@ export async function addUserClient(userData: Partial<User>) {
   }
 }
 
+export const checkOperationNumberUnique = async (operationNumber: string): Promise<boolean> => {
+  try {
+    const q = query(
+      collection(db, 'orders'),
+      where('cardOperationNumbers', 'array-contains', operationNumber.trim())
+    );
+    const snap = await getDocs(q);
+    return snap.empty;
+  } catch (error) {
+    console.error('Error checking operation number:', error);
+    return false; // On error, assume it's not unique just in case, or true? false prevents duplicate accidentally. Let's return false to be safe but usually it's a network issue.
+  }
+};
+
 export const closeTable = async (
   tableId: string,
   orderId: string,
   paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto',
   peopleCount?: number,
-  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string; cashierName?: string; splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number }[] }
+  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string; cashierName?: string; cardOperationNumber?: string; splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string }[] }
 ): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);
@@ -393,6 +407,7 @@ export const closeTable = async (
           amount: p.amount,
           receivedAmount: typeof p.receivedAmount === 'number' ? p.receivedAmount : null,
           change: typeof p.change === 'number' ? p.change : null,
+          cardOperationNumber: p.cardOperationNumber ?? null,
           tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
           tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
           cashierId: paymentDetails.cashierId ?? null,
@@ -406,6 +421,7 @@ export const closeTable = async (
           method: paymentMethod,
           receivedAmount: typeof paymentDetails.receivedAmount === 'number' ? paymentDetails.receivedAmount : null,
           change: typeof paymentDetails.change === 'number' ? paymentDetails.change : null,
+          cardOperationNumber: paymentDetails.cardOperationNumber ?? null,
           tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
           tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
           cashierId: paymentDetails.cashierId ?? null,
@@ -413,6 +429,11 @@ export const closeTable = async (
           closedAt: Timestamp.now(),
           createdAt: Timestamp.now()
         }];
+      }
+
+      const cardOps = newPayments.map((p: any) => p.cardOperationNumber).filter(Boolean);
+      if (cardOps.length > 0) {
+        orderUpdate.cardOperationNumbers = arrayUnion(...cardOps.map((op: string) => op.trim()));
       }
 
       // Use arrayUnion to add the payment objects into the payments array on the order

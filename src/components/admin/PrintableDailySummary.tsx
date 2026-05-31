@@ -97,8 +97,8 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
             <table className="w-full text-sm">
               <tbody>
                 <tr>
-                  <td className="py-1">Propinas en tarjeta</td>
-                  <td className="text-right font-medium">{formatCurrency(summary.totalCardTips)}</td>
+                  <td className="py-1">Propinas en tarjeta (neta) <span className="text-gray-400 text-xs font-normal">— 5% comisión ya descontada</span></td>
+                  <td className="text-right font-medium">{formatCurrency(summary.totalCardTipsNet)}</td>
                 </tr>
                 <tr>
                   <td className="py-1 border-b border-gray-200 pb-2">Propinas efect/transf</td>
@@ -174,8 +174,8 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                       <p className="font-medium">{formatCurrency(w.salesCard)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Propina Tarjeta</p>
-                      <p className="font-medium">{formatCurrency(w.tipsCard)}</p>
+                      <p className="text-gray-500 text-xs">Propina Tarjeta (neta)</p>
+                      <p className="font-medium">{formatCurrency(w.tipsCardNet)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Propinas a Repartir</p>

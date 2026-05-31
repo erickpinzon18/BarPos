@@ -272,9 +272,12 @@ const DailySummary: React.FC = () => {
           transferTip = 0;
 
         if (order.paymentMethod === "mixto" && Array.isArray(order.payments)) {
+          // Distribute the order tip proportionally by payment amount to avoid
+          // double-counting from old orders that stored tipAmount on every payment entry.
+          const totalPaymentAmt = order.payments.reduce((s, p) => s + (p.amount ?? 0), 0);
           order.payments.forEach((p) => {
             const pAmt = p.amount ?? 0;
-            const pTip = p.tipAmount ?? 0;
+            const pTip = totalPaymentAmt > 0 ? tip * (pAmt / totalPaymentAmt) : 0;
             summary.paymentMethods[
               p.method as keyof typeof summary.paymentMethods
             ] =
@@ -417,6 +420,68 @@ const DailySummary: React.FC = () => {
       summary.waiterStats = Array.from(waiterStatsMap.values())
         .filter((s) => s.totalSales > 0)
         .sort((a, b) => b.totalSales - a.totalSales);
+
+      // ── DEBUG LOGS ─────────────────────────────────────────────────────────
+      console.group("📊 CIERRE DE CAJA — Desglose completo");
+
+      console.group("💰 VENTAS TOTALES");
+      console.log("Total cobrado (subtotal + propinas):", summary.totalSales.toFixed(2));
+      console.log("  Subtotal (comida/bebida):", summary.totalSubtotal.toFixed(2));
+      console.log("  Propinas brutas:", summary.totalTips.toFixed(2));
+      console.groupEnd();
+
+      console.group("💳 MÉTODOS DE PAGO");
+      console.log("Efectivo (incluye propinas):", summary.paymentMethods.efectivo.toFixed(2));
+      console.log("Tarjeta  (incluye propinas):", summary.paymentMethods.tarjeta.toFixed(2));
+      console.log("Transferencia:", summary.paymentMethods.transferencia.toFixed(2));
+      console.log("SUMA métodos:", (summary.paymentMethods.efectivo + summary.paymentMethods.tarjeta + summary.paymentMethods.transferencia).toFixed(2), " ← debe = Total cobrado");
+      console.groupEnd();
+
+      console.group("🎯 PROPINAS POR MÉTODO");
+      console.log("Propinas en efectivo (brutas):", summary.totalCashTips.toFixed(2));
+      console.log("Propinas en tarjeta  (brutas):", summary.totalCardTips.toFixed(2));
+      console.log("Propinas transferencia:", summary.totalTransferTips.toFixed(2));
+      const sumaMetodos = summary.totalCashTips + summary.totalCardTips + summary.totalTransferTips;
+      const propinasNoAtribuidas = summary.totalTips - sumaMetodos;
+      console.log("SUMA propinas por método:", sumaMetodos.toFixed(2));
+      console.log("Propinas brutas totales:", summary.totalTips.toFixed(2));
+      console.log("⚠️  Propinas NO atribuidas a método (cuentas mixtas):", propinasNoAtribuidas.toFixed(2));
+      console.groupEnd();
+
+      console.group("🏦 COMISIÓN TARJETA (5%)");
+      console.log("Cargo total por terminal:", summary.paymentMethods.tarjeta.toFixed(2));
+      console.log("Comisión 5% =", summary.totalCardCommission.toFixed(2), " ←", summary.paymentMethods.tarjeta.toFixed(2), "× 0.05");
+      console.log("Propinas tarjeta brutas:", summary.totalCardTips.toFixed(2));
+      console.log("Propinas tarjeta netas:", summary.totalCardTipsNet.toFixed(2), " ← brutas − comisión");
+      console.groupEnd();
+
+      console.group("✅ PROPINAS A REPARTIR");
+      console.log("Propinas tarjeta (neta):", summary.totalCardTipsNet.toFixed(2));
+      console.log("Propinas efect/transf:", (summary.totalCashTips + summary.totalTransferTips).toFixed(2));
+      console.log("Propinas mixtas no atribuidas:", propinasNoAtribuidas.toFixed(2));
+      console.log("TOTAL A REPARTIR (totalTipsNet):", summary.totalTipsNet.toFixed(2));
+      console.log("CHECK — totalTipsNet debe = tarjeta neta + efect/transf + mixtas:", (summary.totalCardTipsNet + summary.totalCashTips + summary.totalTransferTips + propinasNoAtribuidas).toFixed(2));
+      console.groupEnd();
+
+      console.group("👨‍🍳 POR MESERO");
+      summary.waiterStats.forEach(w => {
+        console.group(w.waiterName);
+        console.log("Ventas totales:", w.totalSales.toFixed(2));
+        console.log("  Efectivo:", w.salesCash.toFixed(2), "| Tarjeta:", w.salesCard.toFixed(2), "| Transf:", w.salesTransfer.toFixed(2));
+        console.log("Propinas brutas:", w.totalTips.toFixed(2));
+        console.log("  Propinas efect:", w.tipsCash.toFixed(2), "| Propinas tarjeta:", w.tipsCard.toFixed(2), "| Propinas transf:", w.tipsTransfer.toFixed(2));
+        console.log("Comisión tarjeta (5% de", w.salesCard.toFixed(2), "):", w.cardCommission.toFixed(2));
+        console.log("Propinas netas a repartir:", w.tipsNet.toFixed(2));
+        console.log("  Mesero (46.67%):", w.waiterShare.toFixed(2));
+        console.log("  Barra  (20.00%):", w.barShare.toFixed(2));
+        console.log("  Garrot (13.33%):", w.busserShare.toFixed(2));
+        console.log("  Encarg (13.33%):", w.managerShare.toFixed(2));
+        console.log("  Caja   ( 6.67%):", w.cashierShare.toFixed(2));
+        console.groupEnd();
+      });
+      console.groupEnd();
+
+      console.groupEnd(); // CIERRE DE CAJA
 
       // Fetch shift expenses
       const shiftDateStr = selectedDate.toISOString().split("T")[0];
@@ -577,7 +642,7 @@ const DailySummary: React.FC = () => {
     // ── Propinas ────────────────────────────────────────────────────────────
     lines.push(center("PROPINAS"));
     lines.push(sep());
-    lines.push(fmtLine("Propinas en tarjeta:", fmtM(summary.totalCardTips)));
+    lines.push(fmtLine("Propinas tarjeta (neta):", fmtM(summary.totalCardTipsNet)));
     const cashAndTransferTips = summary.totalTips - summary.totalCardTips;
     lines.push(fmtLine("Propinas efect/transf:", fmtM(cashAndTransferTips)));
     lines.push(sep("-"));
@@ -620,7 +685,7 @@ const DailySummary: React.FC = () => {
         lines.push(fmtLine("Ventas totales:", fmtM(w.totalSales)));
         if (w.salesCard > 0) {
           lines.push(fmtLine("  Ventas tarjeta:", fmtM(w.salesCard)));
-          lines.push(fmtLine("  Propina tarjeta:", fmtM(w.tipsCard)));
+          lines.push(fmtLine("  Propina tarj(neta):", fmtM(w.tipsCardNet)));
         }
         lines.push(fmtLine("Propinas a repartir:", fmtM(w.tipsNet)));
         lines.push("");
@@ -896,11 +961,23 @@ const DailySummary: React.FC = () => {
                 <div className="flex flex-col gap-1 p-3 bg-yellow-900/20 border border-yellow-700/40 rounded-lg">
                   <div className="flex justify-between items-center">
                     <span className="text-yellow-300 font-medium">
-                      💳 Propinas en tarjeta
+                      💳 Propinas en tarjeta (bruta)
                     </span>
                     <span className="text-yellow-300 font-bold">
                       {formatCurrency(summary.totalCardTips)}
                     </span>
+                  </div>
+                  <div className="flex justify-between items-center pl-3 text-xs mt-1">
+                    <span className="text-gray-400">Cargo total por terminal</span>
+                    <span className="text-gray-400">{formatCurrency(summary.paymentMethods.tarjeta)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pl-3 text-xs">
+                    <span className="text-red-400">— Comisión 5% ({formatCurrency(summary.paymentMethods.tarjeta)} × 5%)</span>
+                    <span className="text-red-400">-{formatCurrency(summary.totalCardCommission)}</span>
+                  </div>
+                  <div className="flex justify-between items-center pl-3 text-xs border-t border-yellow-700/40 pt-1 mt-1">
+                    <span className="text-green-400 font-semibold">= Propinas tarjeta (neta)</span>
+                    <span className="text-green-400 font-semibold">{formatCurrency(summary.totalCardTipsNet)}</span>
                   </div>
                 </div>
                 {/* Propinas en efectivo/transferencia */}
@@ -1149,10 +1226,10 @@ const DailySummary: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-400">
-                              Propinas tarjeta
+                              Propinas tarjeta (neta)
                             </span>
                             <span className="text-yellow-300 font-medium">
-                              {formatCurrency(waiter.tipsCard)}
+                              {formatCurrency(waiter.tipsCardNet)}
                             </span>
                           </div>
                         </div>

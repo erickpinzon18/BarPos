@@ -13,8 +13,11 @@ import PinModal from "../../components/common/PinModal";
 import CancelReasonModal from "../../components/common/CancelReasonModal";
 import QuantityModal from "../../components/common/QuantityModal";
 import SwapServiceModal from "../../components/common/SwapServiceModal";
-import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Scissors, Pencil } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Trash2, Plus, Tag, ArrowLeftRight, Printer, Scissors, Pencil } from "lucide-react";
 import { getCategoryInfo } from "../../utils/categories";
+import { printStationTicket } from "../../utils/printStationTicket";
+import { usePaperSize } from "../../hooks/usePaperSize";
+import { useAuth } from "../../contexts/AuthContext";
 import type { OrderItem, Product } from "../../utils/types";
 import { useProducts } from "../../hooks/useProducts";
 import AddItemModal from "../../components/common/AddItemModal";
@@ -36,6 +39,8 @@ const KitchenOrderDetails: React.FC = () => {
   const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
   const { products } = useProducts();
   const { promotions: activePromotions } = useActivePromotions();
+  const { currentUser } = useAuth();
+  const [paperSize] = usePaperSize(currentUser?.id);
 
   // Estados para el modal de motivo de cancelación
   const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
@@ -356,6 +361,19 @@ const KitchenOrderDetails: React.FC = () => {
     } finally {
       setEditDrinkLoading(false);
     }
+  };
+
+  const handleReprintItem = (item: OrderItem) => {
+    if (!order) return;
+    const ws = getCategoryInfo(item.category as any)?.workstation ?? 'cocina';
+    printStationTicket({
+      station: ws,
+      tableNumber: order.tableNumber,
+      tableName: order.tableName,
+      waiterName: order.waiterName,
+      items: [{ productName: item.productName, quantity: item.quantity, notes: item.notes }],
+      paperSize,
+    });
   };
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -738,6 +756,17 @@ const KitchenOrderDetails: React.FC = () => {
                                   <span className="text-sm font-bold">✓</span>
                                 </button>
                               )}
+                              <button
+                                onClick={() => handleReprintItem(item)}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  item.printedAt
+                                    ? "text-gray-500 hover:text-gray-300 hover:bg-gray-700"
+                                    : "text-orange-400 hover:text-orange-300 hover:bg-orange-900/20"
+                                }`}
+                                title={item.printedAt ? "Reimprimir ticket" : "Imprimir ticket (no impreso)"}
+                              >
+                                <Printer className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => handleAddAnother(item)}
                                 className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"

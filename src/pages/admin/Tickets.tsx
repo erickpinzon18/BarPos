@@ -145,30 +145,34 @@ const AdminTickets: React.FC = () => {
             return new Date(y, m - 1, day);
           };
 
+          // Orders between midnight and 5 AM belong to the previous evening's shift
+          const getShiftDateKey = (d: Date) => {
+            if (d.getHours() < 5) {
+              const prev = new Date(d);
+              prev.setDate(prev.getDate() - 1);
+              return makeLocalDateKey(prev);
+            }
+            return makeLocalDateKey(d);
+          };
+
           const groups: Record<string, Order[]> = {};
           const q = (searchQuery || '').trim().toLowerCase();
 
           const filtered = orders.filter(o => {
             if (!q) return true;
-            // match order id (full or first 6 chars)
             if (o.id && o.id.toLowerCase().includes(q)) return true;
             if (o.id && o.id.slice(0, 6).toLowerCase().includes(q)) return true;
-            // match table number
             if (o.tableNumber && String(o.tableNumber).includes(q)) return true;
-            // match waiter
             if (o.waiterName && o.waiterName.toLowerCase().includes(q)) return true;
-            // match payment ids
             if (Array.isArray(o.payments) && o.payments.some(p => p.id && p.id.toLowerCase().includes(q))) return true;
-            // match table name
             if (o.tableName && o.tableName.toLowerCase().includes(q)) return true;
-            // match admin comments
             if (o.adminComments && o.adminComments.toLowerCase().includes(q)) return true;
             return false;
           });
 
           filtered.forEach(o => {
-            const d = new Date(o.createdAt || Date.now());
-            const key = makeLocalDateKey(d);
+            const d = new Date(o.completedAt || o.createdAt || Date.now());
+            const key = getShiftDateKey(d);
             if (!groups[key]) groups[key] = [];
             groups[key].push(o);
           });
@@ -176,20 +180,27 @@ const AdminTickets: React.FC = () => {
           // sort dates descending (most recent first)
           const dateKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
-          const todayKey = makeLocalDateKey(new Date());
+          const currentShiftKey = getShiftDateKey(new Date());
 
           return (
             <div className="space-y-8">
               {dateKeys.map(dateKey => {
-                const date = parseLocalDateKey(dateKey);
-                const isToday = dateKey === todayKey;
-                const headerLabel = isToday
-                  ? `Hoy, ${date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`
-                  : date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                const shiftStart = parseLocalDateKey(dateKey);
+                const shiftEnd = new Date(shiftStart);
+                shiftEnd.setDate(shiftEnd.getDate() + 1);
+                const isCurrentShift = dateKey === currentShiftKey;
+
+                const startLabel = shiftStart.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                const endLabel = shiftEnd.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+                const headerLabel = isCurrentShift
+                  ? `Turno actual — ${startLabel} · 5:00 PM → ${endLabel} 5:00 AM`
+                  : `Turno ${startLabel} · 5:00 PM → ${endLabel} 5:00 AM`;
 
                 return (
                   <div key={dateKey}>
-                    <h2 className="text-xl font-bold text-red-500 border-b-2 border-red-500/30 pb-2 mb-4">{headerLabel}</h2>
+                    <h2 className={`text-xl font-bold pb-2 mb-4 border-b-2 ${isCurrentShift ? 'text-red-500 border-red-500/30' : 'text-gray-400 border-gray-600/50'}`}>
+                      {isCurrentShift ? '🔴 ' : '📅 '}{headerLabel}
+                    </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                       {groups[dateKey].map(order => (
                         <div key={order.id} className="bg-gray-800 rounded-2xl border border-gray-800 p-5 flex flex-col justify-between">

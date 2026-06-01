@@ -63,6 +63,8 @@ interface WaiterStats {
   busserShare: number; // 13.33%
   managerShare: number; // 13.33%
   cashierShare: number; // 6.67%
+
+  orders: Order[]; // órdenes individuales del mesero para vista de detalle
 }
 
 interface ShiftSummary {
@@ -138,6 +140,7 @@ const DailySummary: React.FC = () => {
   const [summary, setSummary] = useState<ShiftSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentShiftDate());
+  const [waiterTab, setWaiterTab] = useState<'resumen' | 'detalle'>('resumen');
 
   // Expenses State
   const [djExpense, setDjExpense] = useState<number>(0);
@@ -359,6 +362,7 @@ const DailySummary: React.FC = () => {
             busserShare: 0,
             managerShare: 0,
             cashierShare: 0,
+            orders: [],
           });
         }
 
@@ -374,6 +378,7 @@ const DailySummary: React.FC = () => {
         ws.tipsCard += cardTip;
         ws.tipsTransfer += transferTip;
         ws.cardCommission += cardCommission;
+        ws.orders.push(order);
       });
 
       // ── Propinas netas por mesero ─────────────────────────────
@@ -1172,181 +1177,231 @@ const DailySummary: React.FC = () => {
           {/* ── Corte de Propinas por Mesero ─────────────────────────────── */}
           {summary.waiterStats && summary.waiterStats.length > 0 && (
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
-              <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-                <Users className="text-red-500" size={20} />
-                Corte por Mesero
-              </h3>
-              <div className="space-y-4">
-                {summary.waiterStats.map((waiter, index) => (
-                  <div
-                    key={waiter.waiterId}
-                    className="bg-gradient-to-r from-gray-700/40 to-gray-800/40 border border-gray-600/50 rounded-xl p-5"
+              {/* Header + tabs */}
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Users className="text-red-500" size={20} />
+                  Corte por Mesero
+                </h3>
+                <div className="flex bg-gray-700 rounded-lg p-1 gap-1">
+                  <button
+                    onClick={() => setWaiterTab('resumen')}
+                    className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${waiterTab === 'resumen' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}
                   >
-                    {/* Header mesero */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-red-500/20 text-red-400 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm">
-                          #{index + 1}
-                        </div>
-                        <div>
-                          <p className="text-white font-bold text-lg">
-                            {waiter.waiterName}
-                          </p>
-                          <p className="text-gray-400 text-sm">
-                            {waiter.totalOrders} cuentas · {waiter.totalPeople}{" "}
-                            personas · {formatCurrency(waiter.totalSales)}{" "}
-                            vendidos
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-green-400">
-                          {formatCurrency(waiter.waiterShare)}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          para mesero (46.67%)
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Desglose tarjeta si aplica */}
-                    {waiter.salesCard > 0 && (
-                      <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-700/40 rounded-lg text-sm">
-                        <p className="text-yellow-300 font-semibold mb-2 flex items-center gap-1">
-                          <CreditCard size={14} /> Detalle Tarjeta
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">
-                              Ventas tarjeta
-                            </span>
-                            <span className="text-white font-medium">
-                              {formatCurrency(waiter.salesCard)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">
-                              Propinas tarjeta (neta)
-                            </span>
-                            <span className="text-yellow-300 font-medium">
-                              {formatCurrency(waiter.tipsCardNet)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Propinas netas */}
-                    <div className="flex justify-between items-center mb-4 p-2 bg-green-900/20 rounded-lg">
-                      <span className="text-gray-300 text-sm font-medium">
-                        Propinas netas para distribuir
-                      </span>
-                      <span className="text-green-400 font-bold">
-                        {formatCurrency(waiter.tipsNet)}
-                      </span>
-                    </div>
-
-                    {/* Grid distribución */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-3 border-t border-gray-600/40">
-                      <div className="bg-green-900/20 rounded-lg p-3 text-center border border-green-500/20">
-                        <p className="text-gray-400 text-xs mb-1">👨‍🍳 Mesero</p>
-                        <p className="text-green-400 font-bold">
-                          {formatCurrency(waiter.waiterShare)}
-                        </p>
-                        <p className="text-gray-500 text-xs">46.67%</p>
-                      </div>
-                      <div className="bg-purple-900/20 rounded-lg p-3 text-center border border-purple-500/20">
-                        <p className="text-gray-400 text-xs mb-1">🍺 Barra</p>
-                        <p className="text-purple-400 font-bold">
-                          {formatCurrency(waiter.barShare)}
-                        </p>
-                        <p className="text-gray-500 text-xs">20.00%</p>
-                      </div>
-                      <div className="bg-orange-900/20 rounded-lg p-3 text-center border border-orange-500/20">
-                        <p className="text-gray-400 text-xs mb-1">
-                          🧹 Garrotero
-                        </p>
-                        <p className="text-orange-400 font-bold">
-                          {formatCurrency(waiter.busserShare)}
-                        </p>
-                        <p className="text-gray-500 text-xs">13.33%</p>
-                      </div>
-                      <div className="bg-yellow-900/20 rounded-lg p-3 text-center border border-yellow-500/20">
-                        <p className="text-gray-400 text-xs mb-1">
-                          👔 Encargado
-                        </p>
-                        <p className="text-yellow-400 font-bold">
-                          {formatCurrency(waiter.managerShare)}
-                        </p>
-                        <p className="text-gray-500 text-xs">13.33%</p>
-                      </div>
-                      <div className="bg-blue-900/20 rounded-lg p-3 text-center border border-blue-500/20">
-                        <p className="text-gray-400 text-xs mb-1">🧾 Caja</p>
-                        <p className="text-blue-400 font-bold">
-                          {formatCurrency(waiter.cashierShare)}
-                        </p>
-                        <p className="text-gray-500 text-xs">6.67%</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Resumen distribución total */}
-              <div className="mt-5 pt-5 border-t border-gray-700">
-                <p className="text-gray-400 text-sm font-semibold mb-3 uppercase tracking-wide">
-                  Distribución Total del Turno
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {[
-                    {
-                      label: "Meseros",
-                      pct: "46.67%",
-                      amount: summary.totalTipsNet * 0.4667,
-                      color: "green",
-                    },
-                    {
-                      label: "Barra",
-                      pct: "20.00%",
-                      amount: summary.totalTipsNet * 0.2,
-                      color: "purple",
-                    },
-                    {
-                      label: "Garrotero",
-                      pct: "13.33%",
-                      amount: summary.totalTipsNet * 0.1333,
-                      color: "orange",
-                    },
-                    {
-                      label: "Encargado",
-                      pct: "13.33%",
-                      amount: summary.totalTipsNet * 0.1333,
-                      color: "yellow",
-                    },
-                    {
-                      label: "Caja",
-                      pct: "6.67%",
-                      amount: summary.totalTipsNet * 0.0667,
-                      color: "blue",
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className={`bg-${item.color}-900/20 border border-${item.color}-500/30 rounded-lg p-4 text-center`}
-                    >
-                      <p
-                        className={`text-${item.color}-400 font-bold text-sm mb-1`}
-                      >
-                        {item.label}
-                      </p>
-                      <p className={`text-${item.color}-300 font-bold text-xl`}>
-                        {formatCurrency(item.amount)}
-                      </p>
-                      <p className="text-gray-500 text-xs mt-1">{item.pct}</p>
-                    </div>
-                  ))}
+                    Resumen
+                  </button>
+                  <button
+                    onClick={() => setWaiterTab('detalle')}
+                    className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${waiterTab === 'detalle' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    Detalle de Propinas
+                  </button>
                 </div>
               </div>
+
+              {/* ── TAB: RESUMEN ── */}
+              {waiterTab === 'resumen' && (
+                <>
+                  <div className="space-y-4">
+                    {summary.waiterStats.map((waiter, index) => (
+                      <div
+                        key={waiter.waiterId}
+                        className="bg-gradient-to-r from-gray-700/40 to-gray-800/40 border border-gray-600/50 rounded-xl p-5"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-red-500/20 text-red-400 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm">
+                              #{index + 1}
+                            </div>
+                            <div>
+                              <p className="text-white font-bold text-lg">{waiter.waiterName}</p>
+                              <p className="text-gray-400 text-sm">
+                                {waiter.totalOrders} cuentas · {waiter.totalPeople} personas · {formatCurrency(waiter.totalSales)} vendidos
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-green-400">{formatCurrency(waiter.waiterShare)}</p>
+                            <p className="text-xs text-gray-400">para mesero (46.67%)</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-3 border-t border-gray-600/40">
+                          <div className="bg-green-900/20 rounded-lg p-3 text-center border border-green-500/20">
+                            <p className="text-gray-400 text-xs mb-1">👨‍🍳 Mesero</p>
+                            <p className="text-green-400 font-bold">{formatCurrency(waiter.waiterShare)}</p>
+                            <p className="text-gray-500 text-xs">46.67%</p>
+                          </div>
+                          <div className="bg-purple-900/20 rounded-lg p-3 text-center border border-purple-500/20">
+                            <p className="text-gray-400 text-xs mb-1">🍺 Barra</p>
+                            <p className="text-purple-400 font-bold">{formatCurrency(waiter.barShare)}</p>
+                            <p className="text-gray-500 text-xs">20.00%</p>
+                          </div>
+                          <div className="bg-orange-900/20 rounded-lg p-3 text-center border border-orange-500/20">
+                            <p className="text-gray-400 text-xs mb-1">🧹 Garrotero</p>
+                            <p className="text-orange-400 font-bold">{formatCurrency(waiter.busserShare)}</p>
+                            <p className="text-gray-500 text-xs">13.33%</p>
+                          </div>
+                          <div className="bg-yellow-900/20 rounded-lg p-3 text-center border border-yellow-500/20">
+                            <p className="text-gray-400 text-xs mb-1">👔 Encargado</p>
+                            <p className="text-yellow-400 font-bold">{formatCurrency(waiter.managerShare)}</p>
+                            <p className="text-gray-500 text-xs">13.33%</p>
+                          </div>
+                          <div className="bg-blue-900/20 rounded-lg p-3 text-center border border-blue-500/20">
+                            <p className="text-gray-400 text-xs mb-1">🧾 Caja</p>
+                            <p className="text-blue-400 font-bold">{formatCurrency(waiter.cashierShare)}</p>
+                            <p className="text-gray-500 text-xs">6.67%</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Totales del turno */}
+                  <div className="mt-5 pt-5 border-t border-gray-700">
+                    <p className="text-gray-400 text-sm font-semibold mb-3 uppercase tracking-wide">Distribución Total del Turno</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {[
+                        { label: "Meseros", pct: "46.67%", amount: summary.totalTipsNet * 0.4667, color: "green" },
+                        { label: "Barra", pct: "20.00%", amount: summary.totalTipsNet * 0.2, color: "purple" },
+                        { label: "Garrotero", pct: "13.33%", amount: summary.totalTipsNet * 0.1333, color: "orange" },
+                        { label: "Encargado", pct: "13.33%", amount: summary.totalTipsNet * 0.1333, color: "yellow" },
+                        { label: "Caja", pct: "6.67%", amount: summary.totalTipsNet * 0.0667, color: "blue" },
+                      ].map((item) => (
+                        <div key={item.label} className={`bg-${item.color}-900/20 border border-${item.color}-500/30 rounded-lg p-4 text-center`}>
+                          <p className={`text-${item.color}-400 font-bold text-sm mb-1`}>{item.label}</p>
+                          <p className={`text-${item.color}-300 font-bold text-xl`}>{formatCurrency(item.amount)}</p>
+                          <p className="text-gray-500 text-xs mt-1">{item.pct}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ── TAB: DETALLE DE PROPINAS ── */}
+              {waiterTab === 'detalle' && (
+                <div className="space-y-8">
+                  {summary.waiterStats.map((waiter) => {
+                    // Calcular por orden los montos de efectivo/tarjeta usando la misma lógica proporcional
+                    const orderRows = waiter.orders
+                      .filter(o => (o.total ?? 0) > 0)
+                      .sort((a, b) => (a.completedAt?.getTime() ?? 0) - (b.completedAt?.getTime() ?? 0))
+                      .map(o => {
+                        const total = o.total ?? 0;
+                        const subtotal = o.subtotal ?? 0;
+                        const tip = total - subtotal;
+                        let cashAmt = 0, cardAmt = 0;
+                        if (o.paymentMethod === 'mixto' && Array.isArray(o.payments)) {
+                          o.payments.forEach(p => {
+                            if (p.method === 'efectivo') cashAmt += p.amount ?? 0;
+                            else if (p.method === 'tarjeta') cardAmt += p.amount ?? 0;
+                          });
+                          const cardComm = cardAmt * CARD_COMMISSION_RATE;
+                          return { o, total, subtotal, tip, cashAmt, cardAmt, cardComm, tipNet: tip - cardComm };
+                        } else {
+                          cashAmt = o.paymentMethod === 'efectivo' ? total : 0;
+                          cardAmt = o.paymentMethod === 'tarjeta' ? total : 0;
+                          const cardComm = cardAmt * CARD_COMMISSION_RATE;
+                          return { o, total, subtotal, tip, cashAmt, cardAmt, cardComm, tipNet: tip - cardComm };
+                        }
+                      });
+
+                    return (
+                      <div key={waiter.waiterId} className="border border-gray-700 rounded-xl overflow-hidden">
+                        {/* Encabezado del mesero */}
+                        <div className="bg-gray-700/60 px-5 py-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-white font-bold text-base">{waiter.waiterName}</p>
+                            <p className="text-gray-400 text-xs">{waiter.totalOrders} cuentas · {waiter.totalPeople} personas</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-green-400 font-bold text-lg">{formatCurrency(waiter.tipsNet)}</p>
+                            <p className="text-gray-500 text-xs">propina libre total</p>
+                          </div>
+                        </div>
+
+                        {/* Tabla de órdenes */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-700 text-gray-400 text-xs uppercase">
+                                <th className="text-left px-4 py-2">Mesa</th>
+                                <th className="text-left px-4 py-2">Hora</th>
+                                <th className="text-right px-4 py-2">Personas</th>
+                                <th className="text-right px-4 py-2">Total</th>
+                                <th className="text-right px-4 py-2">Efectivo</th>
+                                <th className="text-right px-4 py-2">Tarjeta</th>
+                                <th className="text-right px-4 py-2">Propina</th>
+                                <th className="text-right px-4 py-2">Comisión 5%</th>
+                                <th className="text-right px-4 py-2 text-green-400">Propina libre</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700/50">
+                              {orderRows.map(({ o, total, tip, cashAmt, cardAmt, cardComm, tipNet }) => (
+                                <tr key={o.id} className="hover:bg-gray-700/30 transition-colors">
+                                  <td className="px-4 py-2 text-gray-300">
+                                    {o.tableNumber === 0 ? 'Barra' : `Mesa ${o.tableNumber}`}
+                                    {o.tableName ? <span className="text-gray-500 text-xs ml-1">({o.tableName})</span> : null}
+                                  </td>
+                                  <td className="px-4 py-2 text-gray-400">
+                                    {o.completedAt?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) ?? '—'}
+                                  </td>
+                                  <td className="px-4 py-2 text-right text-gray-300">{o.peopleCount ?? 1}</td>
+                                  <td className="px-4 py-2 text-right text-white font-medium">{formatCurrency(total)}</td>
+                                  <td className="px-4 py-2 text-right text-gray-300">{cashAmt > 0 ? formatCurrency(cashAmt) : '—'}</td>
+                                  <td className="px-4 py-2 text-right text-yellow-300">{cardAmt > 0 ? formatCurrency(cardAmt) : '—'}</td>
+                                  <td className="px-4 py-2 text-right text-gray-300">{formatCurrency(tip)}</td>
+                                  <td className="px-4 py-2 text-right text-red-400">{cardComm > 0 ? `-${formatCurrency(cardComm)}` : '—'}</td>
+                                  <td className="px-4 py-2 text-right text-green-400 font-semibold">{formatCurrency(tipNet)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            {/* Fila de totales */}
+                            <tfoot>
+                              <tr className="border-t-2 border-gray-600 bg-gray-700/40 font-bold text-sm">
+                                <td className="px-4 py-3 text-white" colSpan={3}>TOTAL</td>
+                                <td className="px-4 py-3 text-right text-white">{formatCurrency(waiter.totalSales)}</td>
+                                <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(waiter.salesCash)}</td>
+                                <td className="px-4 py-3 text-right text-yellow-300">{waiter.salesCard > 0 ? formatCurrency(waiter.salesCard) : '—'}</td>
+                                <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(waiter.totalTips)}</td>
+                                <td className="px-4 py-3 text-right text-red-400">{waiter.cardCommission > 0 ? `-${formatCurrency(waiter.cardCommission)}` : '—'}</td>
+                                <td className="px-4 py-3 text-right text-green-400">{formatCurrency(waiter.tipsNet)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+
+                        {/* Distribución de propinas del mesero */}
+                        <div className="px-5 py-4 bg-gray-800/60">
+                          <p className="text-gray-500 text-xs uppercase font-semibold mb-3">Distribución de {formatCurrency(waiter.tipsNet)}</p>
+                          <div className="grid grid-cols-5 gap-2">
+                            <div className="bg-green-900/20 rounded-lg p-2 text-center border border-green-500/20">
+                              <p className="text-gray-400 text-xs">👨‍🍳 Mesero</p>
+                              <p className="text-green-400 font-bold text-sm">{formatCurrency(waiter.waiterShare)}</p>
+                            </div>
+                            <div className="bg-purple-900/20 rounded-lg p-2 text-center border border-purple-500/20">
+                              <p className="text-gray-400 text-xs">🍺 Barra</p>
+                              <p className="text-purple-400 font-bold text-sm">{formatCurrency(waiter.barShare)}</p>
+                            </div>
+                            <div className="bg-orange-900/20 rounded-lg p-2 text-center border border-orange-500/20">
+                              <p className="text-gray-400 text-xs">🧹 Garrot</p>
+                              <p className="text-orange-400 font-bold text-sm">{formatCurrency(waiter.busserShare)}</p>
+                            </div>
+                            <div className="bg-yellow-900/20 rounded-lg p-2 text-center border border-yellow-500/20">
+                              <p className="text-gray-400 text-xs">👔 Encarg</p>
+                              <p className="text-yellow-400 font-bold text-sm">{formatCurrency(waiter.managerShare)}</p>
+                            </div>
+                            <div className="bg-blue-900/20 rounded-lg p-2 text-center border border-blue-500/20">
+                              <p className="text-gray-400 text-xs">🧾 Caja</p>
+                              <p className="text-blue-400 font-bold text-sm">{formatCurrency(waiter.cashierShare)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

@@ -51,11 +51,11 @@ interface WaiterStats {
   tipsCard: number; // propinas cobradas en tarjeta (brutas)
   tipsTransfer: number; // propinas en transferencia
 
-  // Comisión bancaria (solo sobre ventas en tarjeta)
-  cardCommission: number; // salesCard × 1.5%
+  // Comisión bancaria (5% solo de la propina en pagos 100% tarjeta — no aplica a mixto)
+  cardCommission: number; // tipsCard × 5% — solo órdenes con paymentMethod === 'tarjeta'
 
-  // Propinas netas ya descontando comisión proporcional
-  tipsCardNet: number; // tipsCard - (tipsCard × 1.5%) * adjustment
+  // Propinas netas ya descontando comisión
+  tipsCardNet: number; // tipsCard - cardCommission
   tipsNet: number; // tipsCash + tipsTransfer + tipsCardNet — lo que realmente se reparte
 
   waiterShare: number; // 46.67%
@@ -319,11 +319,9 @@ const DailySummary: React.FC = () => {
         summary.totalCashTips += cashTip;
         summary.totalTransferTips += transferTip;
 
-        // Comisión bancaria: 5% sobre TODO lo cobrado por terminal (subtotal + propina).
-        // Esta comisión completa sale de la propina del mesero, no del subtotal.
-        // Ej: $100 subtotal + $16 propina = $116 tarjeta → comisión $1.74 → propina neta $14.26
-        const cardCommission = cardSale * CARD_COMMISSION_RATE;
-        // Toda la comisión se descuenta directamente de la propina en tarjeta
+        // Comisión: 5% de la propina, SOLO para pagos 100% tarjeta (no mixto, no efectivo)
+        const isPureCard = order.paymentMethod === 'tarjeta';
+        const cardCommission = isPureCard ? cardTip * CARD_COMMISSION_RATE : 0;
         const cardTipNet = cardTip - cardCommission;
 
         summary.totalCardCommission += cardCommission;
@@ -453,10 +451,10 @@ const DailySummary: React.FC = () => {
       console.log("⚠️  Propinas NO atribuidas a método (cuentas mixtas):", propinasNoAtribuidas.toFixed(2));
       console.groupEnd();
 
-      console.group("🏦 COMISIÓN TARJETA (5%)");
+      console.group("🏦 COMISIÓN TARJETA (5% solo de propina en pago puro tarjeta)");
       console.log("Cargo total por terminal:", summary.paymentMethods.tarjeta.toFixed(2));
-      console.log("Comisión 5% =", summary.totalCardCommission.toFixed(2), " ←", summary.paymentMethods.tarjeta.toFixed(2), "× 0.05");
-      console.log("Propinas tarjeta brutas:", summary.totalCardTips.toFixed(2));
+      console.log("Propinas tarjeta brutas (solo pagos puros):", summary.totalCardTips.toFixed(2));
+      console.log("Comisión 5% =", summary.totalCardCommission.toFixed(2), " ←", summary.totalCardTips.toFixed(2), "× 0.05");
       console.log("Propinas tarjeta netas:", summary.totalCardTipsNet.toFixed(2), " ← brutas − comisión");
       console.groupEnd();
 
@@ -977,7 +975,7 @@ const DailySummary: React.FC = () => {
                     <span className="text-gray-400">{formatCurrency(summary.paymentMethods.tarjeta)}</span>
                   </div>
                   <div className="flex justify-between items-center pl-3 text-xs">
-                    <span className="text-red-400">— Comisión 5% ({formatCurrency(summary.paymentMethods.tarjeta)} × 5%)</span>
+                    <span className="text-red-400">— Comisión 5% (propinas tarjeta pura × 5%)</span>
                     <span className="text-red-400">-{formatCurrency(summary.totalCardCommission)}</span>
                   </div>
                   <div className="flex justify-between items-center pl-3 text-xs border-t border-yellow-700/40 pt-1 mt-1">
@@ -1296,14 +1294,13 @@ const DailySummary: React.FC = () => {
                             if (p.method === 'efectivo') cashAmt += p.amount ?? 0;
                             else if (p.method === 'tarjeta') cardAmt += p.amount ?? 0;
                           });
-                          const cardComm = cardAmt * CARD_COMMISSION_RATE;
-                          return { o, total, subtotal, tip, cashAmt, cardAmt, cardComm, tipNet: tip - cardComm };
                         } else {
                           cashAmt = o.paymentMethod === 'efectivo' ? total : 0;
                           cardAmt = o.paymentMethod === 'tarjeta' ? total : 0;
-                          const cardComm = cardAmt * CARD_COMMISSION_RATE;
-                          return { o, total, subtotal, tip, cashAmt, cardAmt, cardComm, tipNet: tip - cardComm };
                         }
+                        // Comisión solo en pago 100% tarjeta, sobre la propina únicamente
+                        const cardComm = o.paymentMethod === 'tarjeta' ? tip * CARD_COMMISSION_RATE : 0;
+                        return { o, total, subtotal, tip, cashAmt, cardAmt, cardComm, tipNet: tip - cardComm };
                       });
 
                     return (

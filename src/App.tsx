@@ -30,6 +30,7 @@ import WaiterHome from "./pages/waiter/Home";
 import WaiterOrderDetails from "./pages/waiter/OrderDetails";
 import WaiterCheckout from "./pages/waiter/Checkout";
 import WaiterKanban from "./pages/waiter/Kanban";
+import WaiterMisVentas from "./pages/waiter/MisVentas";
 
 // Kitchen Pages
 import KitchenKanban from "./pages/kitchen/Kanban";
@@ -79,6 +80,7 @@ function App() {
         <Route path="/waiter" element={<WaiterLayout />}>
           <Route path="home" element={<WaiterHome />} />
           <Route path="kanban" element={<WaiterKanban />} />
+          <Route path="mis-ventas" element={<WaiterMisVentas />} />
           <Route path="reservations" element={<Reservations />} />
           <Route path="order/:tableId" element={<WaiterOrderDetails />} />
           <Route path="checkout/:orderId" element={<WaiterCheckout />} />

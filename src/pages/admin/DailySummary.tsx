@@ -1214,7 +1214,14 @@ const DailySummary: React.FC = () => {
                             <div>
                               <p className="text-white font-bold text-lg">{waiter.waiterName}</p>
                               <p className="text-gray-400 text-sm">
-                                {waiter.totalOrders} cuentas · {waiter.totalPeople} personas · {formatCurrency(waiter.totalSales)} vendidos
+                                {waiter.totalOrders} cuentas · {waiter.totalPeople} personas
+                              </p>
+                              <p className="text-xs mt-0.5">
+                                <span className="text-gray-500">Sin propina: </span>
+                                <span className="text-gray-300 font-medium">{formatCurrency(waiter.totalSales - waiter.totalTips)}</span>
+                                <span className="text-gray-600 mx-1">·</span>
+                                <span className="text-gray-500">Con propina: </span>
+                                <span className="text-white font-medium">{formatCurrency(waiter.totalSales)}</span>
                               </p>
                             </div>
                           </div>
@@ -1325,6 +1332,7 @@ const DailySummary: React.FC = () => {
                                 <th className="text-left px-4 py-2">Mesa</th>
                                 <th className="text-left px-4 py-2">Hora</th>
                                 <th className="text-right px-4 py-2">Personas</th>
+                                <th className="text-right px-4 py-2">Subtotal</th>
                                 <th className="text-right px-4 py-2">Total</th>
                                 <th className="text-right px-4 py-2">Efectivo</th>
                                 <th className="text-right px-4 py-2">Tarjeta</th>
@@ -1334,7 +1342,7 @@ const DailySummary: React.FC = () => {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700/50">
-                              {orderRows.map(({ o, total, tip, cashAmt, cardAmt, cardComm, tipNet }) => (
+                              {orderRows.map(({ o, total, subtotal, tip, cashAmt, cardAmt, cardComm, tipNet }) => (
                                 <tr key={o.id} className="hover:bg-gray-700/30 transition-colors">
                                   <td className="px-4 py-2 text-gray-300">
                                     {o.tableNumber === 0 ? 'Barra' : `Mesa ${o.tableNumber}`}
@@ -1344,6 +1352,7 @@ const DailySummary: React.FC = () => {
                                     {o.completedAt?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) ?? '—'}
                                   </td>
                                   <td className="px-4 py-2 text-right text-gray-300">{o.peopleCount ?? 1}</td>
+                                  <td className="px-4 py-2 text-right text-gray-400">{formatCurrency(subtotal)}</td>
                                   <td className="px-4 py-2 text-right text-white font-medium">{formatCurrency(total)}</td>
                                   <td className="px-4 py-2 text-right text-gray-300">{cashAmt > 0 ? formatCurrency(cashAmt) : '—'}</td>
                                   <td className="px-4 py-2 text-right text-yellow-300">{cardAmt > 0 ? formatCurrency(cardAmt) : '—'}</td>
@@ -1357,6 +1366,7 @@ const DailySummary: React.FC = () => {
                             <tfoot>
                               <tr className="border-t-2 border-gray-600 bg-gray-700/40 font-bold text-sm">
                                 <td className="px-4 py-3 text-white" colSpan={3}>TOTAL</td>
+                                <td className="px-4 py-3 text-right text-gray-400">{formatCurrency(waiter.totalSales - waiter.totalTips)}</td>
                                 <td className="px-4 py-3 text-right text-white">{formatCurrency(waiter.totalSales)}</td>
                                 <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(waiter.salesCash)}</td>
                                 <td className="px-4 py-3 text-right text-yellow-300">{waiter.salesCard > 0 ? formatCurrency(waiter.salesCard) : '—'}</td>
@@ -1407,7 +1417,13 @@ const DailySummary: React.FC = () => {
             <h3 className="text-2xl font-bold mb-4 text-red-500 text-center">
               💰 Resumen del Turno
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-gray-400 text-sm mb-1">Sin Propina</p>
+                <p className="text-3xl font-bold text-gray-300">
+                  {formatCurrency(summary.totalSubtotal)}
+                </p>
+              </div>
               <div>
                 <p className="text-gray-400 text-sm mb-1">Total Vendido</p>
                 <p className="text-3xl font-bold text-white">

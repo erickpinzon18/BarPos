@@ -49,6 +49,9 @@ const WaiterLayout: React.FC = () => {
             <nav className="flex items-center gap-4 text-sm">
               <Link to="/waiter/home" className="hover:text-red-400">Mesas</Link>
               <Link to="/waiter/kanban" className="hover:text-green-400 font-medium">🍽️ Mis Pedidos</Link>
+              <Link to="/waiter/mis-ventas" className="hover:text-yellow-400 font-medium flex items-center gap-1">
+                📊 Mis Ventas
+              </Link>
               {(currentUser?.role === 'capitan' || currentUser?.role === 'admin') && (
                 <Link to="/waiter/reservations" className="hover:text-blue-400 font-medium flex items-center gap-1">
                   <CalendarDays size={16} />

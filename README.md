@@ -1,267 +1,254 @@
-# Bar POS Application
+# BarPos — Sistema de Punto de Venta para Bares y Restaurantes
 
-Una aplicación completa de Punto de Venta (POS) para bares y restaurantes, construida con React, TypeScript, Firebase y Tailwind CSS.
+Sistema POS completo y en tiempo real para bares y restaurantes. Gestión de mesas, control de cocina/barra, cobros, reportes, inventario y más.
 
-## 🚀 Características
+---
 
-- **Autenticación por roles**: Admin, Mesero, Cocina
-- **Gestión de mesas en tiempo real**
-- **Sistema de pedidos con Kanban para cocina**
-- **Interfaz responsive y moderna**
-- **Base de datos en tiempo real con Firestore**
-- **Notificaciones toast para feedback del usuario**
+## Stack Tecnológico
 
-## 🛠️ Tecnologías
+| Capa | Tecnología |
+|---|---|
+| Frontend | React 19 + TypeScript |
+| Build | Vite |
+| Estilos | Tailwind CSS + Lucide Icons |
+| Backend / DB | Firebase + Firestore |
+| Auth | Firebase Authentication |
+| Impresión | react-to-print |
+| Notificaciones | React Hot Toast |
+| Deploy | Vercel + Firebase Hosting |
 
-- **Frontend**: React 19, TypeScript, Vite
-- **Estilos**: Tailwind CSS
-- **Backend**: Firebase Auth, Firestore
-- **Enrutamiento**: React Router DOM
-- **Notificaciones**: React Hot Toast
-- **Iconos**: Lucide React
+---
 
-## 📦 Instalación
+## Roles de Usuario
 
-1. **Clona el repositorio**
+El sistema tiene tres roles con acceso diferenciado:
 
-```bash
-git clone <repository-url>
-cd bar-pos-app
-```
+- **Admin** — Acceso completo: mesas, reportes, productos, configuración
+- **Mesero / Capitán** — Gestión de sus mesas asignadas, órdenes y cobros
+- **Cocina / Barra** — Vista Kanban de pedidos, impresión automática, inventario
 
-2. **Instala las dependencias**
+---
 
-```bash
-npm install
-```
+## Módulos y Funcionalidades
 
-3. **Configura Firebase**
+### Autenticación
+- Login unificado con redirección automática por rol
+- Control de usuarios activos/inactivos
+- Verificación por PIN para operaciones críticas
 
-   - El archivo `src/services/firebase.ts` ya está configurado
-   - Asegúrate de que tu proyecto Firebase tenga habilitado:
-     - Authentication (Email/Password)
-     - Firestore Database
+---
 
-4. **Ejecuta la aplicación**
+### Gestión de Mesas
+- Estado en tiempo real: libre, ocupada, reservada, limpieza
+- Mapa visual del local con representación interactiva por mesa
+- Vista de cuadrícula alternativa (cards)
+- Asignación de mesas a meseros
+- Meseros solo ven sus mesas asignadas
+- Indicadores de reservaciones sobre las tarjetas de mesa
 
-```bash
-npm run dev
-```
+---
 
-## 🔧 Configuración de Base de Datos
+### Gestión de Órdenes
+- Crear órdenes y asignarlas a mesas
+- Agregar productos desde catálogo por categoría
+- Seguimiento del estado por ítem: pendiente / entregado
+- Notas especiales por ítem
+- Motivo de cancelación al eliminar ítems con registro de quién lo hizo
+- Modal para dividir órdenes (Split Order)
+- Modal para cambiar/sustituir productos (Swap Service)
+- Modal de cantidad para botellas
 
-### Estructura de Firestore
+---
 
-La aplicación requiere las siguientes colecciones en Firestore:
+### Catálogo de Productos
+- Categorías: Bebida, Botella, Shot, Servicio, Entrada, Comida, Postre
+- Toggle de disponibilidad por producto
+- Gestión de precios, imágenes y descripciones
+- CRUD completo (crear, ver, editar, eliminar)
 
-#### 1. Colección `users`
+---
 
-```javascript
-// Documento con ID = uid del usuario
-{
-  uid: "firebase-auth-uid",
-  email: "admin@bar.com",
-  displayName: "Administrador",
-  role: "admin", // "admin" | "waiter" | "kitchen"
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
+### Promociones y Descuentos
+- 5 tipos de descuento:
+  - Porcentaje
+  - Monto fijo
+  - 2×1
+  - N unidades por precio fijo
+  - Precio fijo por unidad
+- Aplicar por categoría o productos específicos
+- Horario de corte configurable (por hora del día)
+- Aplicación automática al abrir el checkout
 
-#### 2. Colección `tables`
+---
 
-```javascript
-{
-  number: 1,
-  capacity: 4,
-  status: "libre", // "libre" | "ocupada" | "reservada"
-  waiterId: null,
-  waiterName: null,
-  currentOrderId: null,
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
+### Kanban de Cocina y Barra
+- Tablero en tiempo real separado por estación (cocina / barra)
+- Flujo: Pendiente → Entregado
+- Sonido de notificación para nuevos pedidos (toggle activable por usuario)
+- Integración con impresión automática al recibir nuevas órdenes
+- Retención de 5 minutos para ítems ya entregados
+- Disponible para Admin, Mesero y Cocina
 
-#### 3. Colección `products`
+---
 
-```javascript
-{
-  name: "Cerveza Corona",
-  description: "Cerveza clara mexicana",
-  price: 45.00,
-  category: "Bebida", // "Bebida" | "Comida" | "Postre" | "Entrada"
-  available: true,
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
+### Checkout y Cobro
+- Métodos de pago: Efectivo, Tarjeta, Transferencia, Mixto
+- Propinas configurables por porcentaje o monto personalizado
+- Aplicación automática de promociones activas
+- Registro del número de operación para pagos con tarjeta
+- Conteo de personas para cargo de servicio
+- Comentarios del admin sobre la orden
+- Impresión de ticket al cerrar (58mm u 80mm)
 
-#### 4. Colección `orders`
+---
 
-```javascript
-{
-  tableId: "table-doc-id",
-  tableNumber: 1,
-  waiterId: "waiter-uid",
-  waiterName: "Juan Pérez",
-  items: [
-    {
-      id: "unique-item-id",
-      productId: "product-doc-id",
-      productName: "Cerveza Corona",
-      productPrice: 45.00,
-      quantity: 2,
-      status: "pendiente", // "pendiente" | "en_preparacion" | "listo" | "entregado"
-      notes: "Sin hielo",
-      category: "Bebida",
-      createdAt: timestamp,
-      updatedAt: timestamp
-    }
-  ],
-  status: "activo", // "activo" | "pagado" | "cancelado"
-  subtotal: 90.00,
-  tax: 14.40,
-  total: 104.40,
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
+### Reportes y Analítica
 
-### Datos de Ejemplo
+**Resumen Diario (Cierre)**
+- Total del día desglosado por método de pago
+- Desglose de propinas
+- Historial de tickets cerrados
 
-Para probar la aplicación, crea los siguientes datos en Firestore:
+**Corte de Ventas**
+- Vista de ventas del turno o periodo seleccionado
 
-#### Usuarios de Prueba
+**Analytics**
+- Filtro por rango de fechas: día, semana, mes o personalizado
+- Desglose de ventas por categoría con íconos
+- Seguimiento de ventas por mesero
+- Paginación configurable
 
-```javascript
-// Crear en Authentication y luego en colección users
-// Admin
-{
-  uid: "admin-uid",
-  email: "admin@bar.com",
-  displayName: "Administrador",
-  role: "admin"
-}
+**Mis Ventas (Mesero)**
+- Ventas personales del mesero autenticado en el turno actual
 
-// Mesero
-{
-  uid: "waiter-uid",
-  email: "mesero@bar.com",
-  displayName: "Juan Pérez",
-  role: "waiter"
-}
+---
 
-// Cocina
-{
-  uid: "kitchen-uid",
-  email: "cocina@bar.com",
-  displayName: "Chef Mario",
-  role: "kitchen"
-}
-```
+### Reservaciones
+- Reservar mesas con fecha y hora
+- Tamaño de grupo (pax) y nivel de prioridad
+- Estados: pendiente, aceptada, llegó, cancelada
+- Notas por reservación
+- Vista en tabla con filtros por estado
 
-#### Mesas de Ejemplo
+---
 
-```javascript
-// Mesa 1
-{ number: 1, capacity: 2, status: "libre" }
-// Mesa 2
-{ number: 2, capacity: 4, status: "libre" }
-// Mesa 3
-{ number: 3, capacity: 6, status: "libre" }
-// Mesa 4
-{ number: 4, capacity: 4, status: "libre" }
-```
+### Inventario
+- Control de niveles de inventario por producto
+- Estadísticas de inventario por categoría
+- Vista disponible también para cocina
 
-#### Productos de Ejemplo
+---
 
-```javascript
-// Bebidas
-{ name: "Cerveza Corona", description: "Cerveza clara mexicana", price: 45, category: "Bebida", available: true }
-{ name: "Coca Cola", description: "Refresco de cola", price: 25, category: "Bebida", available: true }
-{ name: "Agua Natural", description: "Agua purificada", price: 15, category: "Bebida", available: true }
+### Impresión de Tickets
+- Impresión manual desde el checkout
+- Impresión automática al llegar pedidos a cocina/barra
+- Selección de estación destino (cocina o barra)
+- Tamaños de papel: 58mm (thermal) y 80mm
+- Formato de ticket personalizado
 
-// Comidas
-{ name: "Hamburguesa Clásica", description: "Carne, lechuga, tomate, cebolla", price: 120, category: "Comida", available: true }
-{ name: "Tacos al Pastor", description: "3 tacos con piña y cebolla", price: 85, category: "Comida", available: true }
-{ name: "Quesadillas", description: "Tortilla con queso derretido", price: 65, category: "Comida", available: true }
+---
 
-// Postres
-{ name: "Flan Napolitano", description: "Postre tradicional mexicano", price: 45, category: "Postre", available: true }
-{ name: "Helado de Vainilla", description: "2 bolas de helado", price: 35, category: "Postre", available: true }
-```
+### Configuración del Negocio
+- Nombre del negocio y URL del logo
+- Datos de contacto (dirección, teléfono)
+- Configuración almacenada en Firestore (`general`)
 
-## 🔐 Credenciales de Prueba
+---
 
-Una vez que hayas creado los usuarios en Firebase Authentication, puedes usar:
-
-- **Admin**: admin@bar.com / password123
-- **Mesero**: mesero@bar.com / password123
-- **Cocina**: cocina@bar.com / password123
-
-## 🚀 Uso de la Aplicación
-
-### Flujo de Trabajo
-
-1. **Login**: Cada usuario accede con su rol específico
-2. **Admin**: Puede ver todas las mesas, gestionar productos, ver kanban de cocina
-3. **Mesero**: Puede abrir mesas, tomar pedidos, ver estado de órdenes
-4. **Cocina**: Ve el kanban con pedidos pendientes, puede actualizar estados
-
-### Rutas Principales
-
-- `/admin/login` - Login de administrador
-- `/admin/home` - Dashboard de mesas (admin)
-- `/admin/kanban` - Kanban de cocina (admin)
-- `/waiter/login` - Login de mesero
-- `/waiter/home` - Dashboard de mesas (mesero)
-- `/kitchen/login` - Login de cocina
-- `/kitchen/kanban` - Kanban de cocina
-
-## 🏗️ Arquitectura
+## Estructura del Proyecto
 
 ```
 src/
-├── components/
-│   ├── ui/           # Componentes reutilizables (Button, Input, Modal)
-│   └── common/       # Componentes específicos (TableCard, ProductCard)
-├── contexts/         # Context de autenticación
-├── hooks/           # Hooks personalizados
-├── layouts/         # Layouts por rol
-├── pages/           # Páginas organizadas por rol
-├── routes/          # Rutas protegidas
-├── services/        # Firebase y Firestore
-└── utils/           # Tipos y utilidades
+├── contexts/          # AuthContext (autenticación global)
+├── hooks/             # useOrders, useTables, useProducts, usePromotions, etc.
+├── layouts/           # AdminLayout, WaiterLayout, KitchenLayout
+├── pages/
+│   ├── admin/         # Panel completo del admin
+│   ├── waiter/        # Vistas del mesero
+│   └── kitchen/       # Vistas de cocina/barra
+├── routes/            # ProtectedRoute por rol
+├── services/          # Firebase, Firestore, orderService, printQueueService
+└── utils/             # Tipos TypeScript, constantes, helpers
 ```
 
-## 🔧 Scripts Disponibles
+---
+
+## Estructura de Firestore
+
+| Colección | Descripción |
+|---|---|
+| `users` | Cuentas de usuario con rol y estado activo |
+| `tables` | Mesas del local con estado y mesero asignado |
+| `products` | Catálogo de productos con categoría y precio |
+| `orders` | Órdenes con ítems, pagos, propinas y estado |
+| `promotions` | Reglas de descuento con horario y tipo |
+| `reservations` | Reservaciones con estado y prioridad |
+| `general` | Configuración global del negocio |
+
+---
+
+## Variables de Entorno
+
+Crear un archivo `.env` en la raíz con las credenciales de Firebase:
+
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+```
+
+---
+
+## Instalación y Desarrollo
 
 ```bash
-npm run dev      # Servidor de desarrollo
-npm run build    # Build de producción
-npm run preview  # Preview del build
-npm run lint     # Linter ESLint
+# Instalar dependencias
+npm install
+
+# Servidor de desarrollo
+npm run dev
+
+# Build de producción
+npm run build
+
+# Vista previa del build
+npm run preview
+
+# Linter
+npm run lint
 ```
 
-## 📝 Próximas Características
+---
 
-- [ ] Gestión completa de productos (CRUD)
-- [ ] Sistema de reportes y estadísticas
-- [ ] Gestión de inventario
-- [ ] Sistema de reservaciones
-- [ ] Integración con sistemas de pago
-- [ ] Impresión de tickets
-- [ ] Dashboard de analytics
+## Workstations por Categoría
 
-## 🤝 Contribución
+| Estación | Categorías |
+|---|---|
+| Barra | Bebida, Botella, Shot, Servicio |
+| Cocina | Entrada, Comida, Postre |
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+---
 
-## 📄 Licencia
+## Rutas Principales
 
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+| Ruta | Descripción |
+|---|---|
+| `/login` | Login unificado |
+| `/admin/home` | Dashboard de mesas (admin) |
+| `/admin/kanban/cocina` | Kanban de cocina (admin) |
+| `/admin/kanban/barra` | Kanban de barra (admin) |
+| `/admin/cierre` | Resumen diario / cierre |
+| `/admin/ventas` | Corte de ventas |
+| `/admin/analytics` | Dashboard de analítica |
+| `/admin/manage-products` | Gestión de productos |
+| `/admin/promotions` | Gestión de promociones |
+| `/admin/inventory` | Inventario |
+| `/admin/settings` | Configuración del negocio |
+| `/waiter/home` | Mesas del mesero |
+| `/waiter/kanban` | Kanban personal del mesero |
+| `/waiter/mis-ventas` | Ventas personales |
+| `/kitchen/cocina` | Kanban de cocina |
+| `/kitchen/barra` | Kanban de barra |

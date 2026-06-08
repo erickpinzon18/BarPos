@@ -165,6 +165,42 @@ const DailySummary: React.FC = () => {
     return sum + activeItems.reduce((s, i) => s + (i.productPrice || 0) * (i.quantity || 0), 0);
   }, 0);
 
+  useEffect(() => {
+    if (shiftActiveOrders.length === 0) {
+      console.log(`⏳ SALDO POR COBRAR — Turno ${shiftStart.toLocaleDateString('es-MX')}: sin mesas activas en este turno`);
+      return;
+    }
+    console.group(`⏳ SALDO POR COBRAR — Turno ${shiftStart.toLocaleDateString('es-MX')} (${shiftActiveOrders.length} mesas activas)`);
+    console.log(`Rango del turno: ${shiftStart.toLocaleString('es-MX')} → ${shiftEnd.toLocaleString('es-MX')}`);
+    let total = 0;
+    shiftActiveOrders.forEach(order => {
+      const activeItems = order.items?.filter(i => !i.isDeleted) || [];
+      const orderTotal = activeItems.reduce((s, i) => s + (i.productPrice || 0) * (i.quantity || 0), 0);
+      total += orderTotal;
+      const tableLabel = order.tableNumber === 0 ? 'Barra' : `Mesa ${order.tableNumber}`;
+      console.group(`${tableLabel}${order.tableName ? ` (${order.tableName})` : ''} — $${orderTotal.toFixed(2)}`);
+      console.log('ID orden:', order.id);
+      console.log('Mesero:', order.waiterName || '—', '| ID:', order.waiterId || '—');
+      console.log('Abierta desde:', order.createdAt ? new Date(order.createdAt).toLocaleString('es-MX') : '—');
+      console.log('Personas:', order.peopleCount ?? 1);
+      const allItems = order.items || [];
+      const deletedItems = allItems.filter(i => i.isDeleted);
+      console.log(`Items activos (${activeItems.length}):`);
+      activeItems.forEach(i => {
+        console.log(`  ✅ ${i.productName} x${i.quantity} = $${((i.productPrice || 0) * (i.quantity || 0)).toFixed(2)}`);
+      });
+      if (deletedItems.length > 0) {
+        console.log(`Items eliminados/devueltos (${deletedItems.length}) — NO cuentan en el saldo:`);
+        deletedItems.forEach(i => {
+          console.log(`  ❌ ${i.productName} x${i.quantity} = $${((i.productPrice || 0) * (i.quantity || 0)).toFixed(2)} | isDeleted: ${i.isDeleted} | razón: ${(i as any).cancelReason || (i as any).deletedByName || '—'}`);
+        });
+      }
+      console.groupEnd();
+    });
+    console.log(`TOTAL SALDO POR COBRAR: $${total.toFixed(2)}`);
+    console.groupEnd();
+  }, [shiftActiveOrders, selectedDate]);
+
   const handlePrintPDF = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Cierre_Caja_${selectedDate.toISOString().split("T")[0]}`,

@@ -60,7 +60,7 @@ export interface Reservation {
   updatedAt: Date;
 }
 
-export type OrderStatus = 'activo' | 'pagado' | 'cancelado';
+export type OrderStatus = 'activo' | 'pagado' | 'cancelado' | 'cortesia';
 export type OrderItemStatus = 'pendiente' | 'entregado';
 
 export interface OrderItem {
@@ -105,6 +105,10 @@ export interface Order {
   tax?: number;
   total?: number;
   adminComments?: string; // Comentarios administrativos (no visibles en ticket de cliente)
+  // Campos de cortesía (cuando la mesa se cierra sin cobro)
+  courtesyBy?: string;
+  courtesyByName?: string;
+  courtesyAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;

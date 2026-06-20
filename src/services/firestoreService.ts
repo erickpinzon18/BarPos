@@ -988,6 +988,44 @@ export const updateOrderItemPrice = async (
   }
 };
 
+// Cierra una mesa como cortesía: $0 de cobro, no afecta reportes de ventas.
+// Solo disponible para usuarios con superAdmin = true.
+export const closeTableAsCourtesy = async (
+  tableId: string,
+  orderId: string,
+  courtesyById: string,
+  courtesyByName: string
+): Promise<FirestoreResponse<void>> => {
+  try {
+    const batch = writeBatch(db);
+
+    batch.update(doc(db, 'orders', orderId), {
+      status: 'cortesia',
+      courtesyBy: courtesyById,
+      courtesyByName: courtesyByName,
+      courtesyAt: Timestamp.now(),
+      subtotal: 0,
+      total: 0,
+      updatedAt: Timestamp.now(),
+      completedAt: Timestamp.now(),
+    });
+
+    batch.update(doc(db, 'tables', tableId), {
+      status: 'libre',
+      currentOrderId: null,
+      waiterId: null,
+      waiterName: null,
+      updatedAt: Timestamp.now(),
+    });
+
+    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    console.error('Error closing table as courtesy:', error);
+    return { success: false, error: 'Error al cerrar mesa como cortesía' };
+  }
+};
+
 export const cancelEmptyOrder = async (tableId: string, orderId: string): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);

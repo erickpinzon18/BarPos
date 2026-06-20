@@ -3,7 +3,7 @@ import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useOrderById, useOrderByTableId } from "../../hooks/useOrders";
 import type { Order } from "../../utils/types";
-import { closeTable, getConfig, checkOperationNumberUnique } from "../../services/firestoreService";
+import { closeTable, closeTableAsCourtesy, getConfig, checkOperationNumberUnique } from "../../services/firestoreService";
 import { verifyUserPin } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import { printTicket } from "../../utils/printTicket";
@@ -13,7 +13,8 @@ import {
   useActivePromotions,
   isPromotionWithinSchedule,
 } from "../../hooks/usePromotions";
-import { Tag, Clock } from "lucide-react";
+import { Tag, Clock, Gift } from "lucide-react";
+import toast from "react-hot-toast";
 
 const AdminCheckout: React.FC = () => {
   const location = useLocation();
@@ -72,6 +73,7 @@ const AdminCheckout: React.FC = () => {
   const [cardOperationNumber, setCardOperationNumber] = useState<string>("");
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
   const [config, setConfig] = useState<any | null>(null);
+  const [pinMode, setPinMode] = useState<"payment" | "courtesy">("payment");
 
   // Fetch active promotions
   const { promotions: activePromotions } = useActivePromotions();
@@ -242,6 +244,7 @@ const AdminCheckout: React.FC = () => {
       }
     }
 
+    setPinMode("payment");
     setShowPinModal(true);
   };
 
@@ -336,12 +339,52 @@ const AdminCheckout: React.FC = () => {
     }
   };
 
+  const finalizeAsCourtesy = async (authorizedUser: any) => {
+    if (!order) return;
+    setClosing(true);
+    try {
+      const res = await closeTableAsCourtesy(
+        order.tableId,
+        order.id,
+        authorizedUser.id,
+        authorizedUser.displayName ?? authorizedUser.email
+      );
+      if (!res.success) throw new Error(res.error || "Error al registrar cortesía");
+      setIsReadOnly(true);
+      toast.success(`Cortesía registrada por ${authorizedUser.displayName ?? authorizedUser.email}`);
+      // Imprimir ticket con $0
+      handlePrint({
+        ...order,
+        status: "cortesia",
+        subtotal: 0,
+        total: 0,
+        courtesyByName: authorizedUser.displayName ?? authorizedUser.email,
+      } as Order);
+    } catch (err: any) {
+      console.error("Error registering courtesy:", err);
+      alert(err.message || "Error al registrar cortesía");
+    } finally {
+      setClosing(false);
+      setShowPinModal(false);
+      setPinLoading(false);
+    }
+  };
+
+  const handleCourtesy = () => {
+    if (!order || !currentUser?.superAdmin) return;
+    setPinMode("courtesy");
+    setShowPinModal(true);
+  };
+
   const handleConfirmPin = async (pin: string) => {
     setPinLoading(true);
     try {
       const authorizedUser = await verifyUserPin(pin);
-      // proceed to finalize with the authorized user
-      await finalizeWithAuthorizedUser(authorizedUser);
+      if (pinMode === "courtesy") {
+        await finalizeAsCourtesy(authorizedUser);
+      } else {
+        await finalizeWithAuthorizedUser(authorizedUser);
+      }
     } catch (err: any) {
       console.error("PIN verification failed:", err);
       setPinLoading(false);
@@ -363,7 +406,7 @@ const AdminCheckout: React.FC = () => {
         setPaymentMethod(order.paymentMethod);
       }
     }
-    if (order.status === "pagado") {
+    if (order.status === "pagado" || order.status === "cortesia") {
       setIsReadOnly(true);
     }
   }, [order]);
@@ -435,6 +478,8 @@ const AdminCheckout: React.FC = () => {
               className={`px-3 py-1 rounded-full text-sm font-semibold ${
                 order.status === "pagado"
                   ? "bg-green-600 text-white"
+                  : order.status === "cortesia"
+                  ? "bg-amber-500 text-gray-900"
                   : order.status === "cancelado"
                   ? "bg-red-600 text-white"
                   : "bg-yellow-500 text-gray-900"
@@ -442,6 +487,8 @@ const AdminCheckout: React.FC = () => {
             >
               {order.status === "pagado"
                 ? "PAGADO"
+                : order.status === "cortesia"
+                ? "CORTESÍA"
                 : order.status === "cancelado"
                 ? "CANCELADO"
                 : "PENDIENTE"}
@@ -969,19 +1016,46 @@ const AdminCheckout: React.FC = () => {
             >
               {closing ? "Cerrando..." : "Finalizar y Cerrar Mesa"}
             </button>
+
+            {/* Botón de cortesía — solo superAdmin */}
+            {currentUser?.superAdmin && !isReadOnly && (
+              <button
+                disabled={closing}
+                onClick={handleCourtesy}
+                className="w-full flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 font-semibold py-3 px-4 rounded-lg transition disabled:opacity-50"
+              >
+                <Gift size={18} />
+                Cerrar como Cortesía
+              </button>
+            )}
+
+            {/* Badge informativo cuando ya es cortesía */}
+            {order.status === "cortesia" && order.courtesyByName && (
+              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-3">
+                <Gift size={16} className="text-amber-400 shrink-0" />
+                <p className="text-sm text-amber-300">
+                  Cortesía autorizada por <span className="font-bold">{order.courtesyByName}</span>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
-      {/* PIN modal shown when finalizing to identify cashier */}
+      {/* PIN modal — título y mensaje cambian según el modo */}
       <PinModal
         isOpen={showPinModal}
         onClose={() => {
           setShowPinModal(false);
           setPinLoading(false);
+          setPinMode("payment");
         }}
         onConfirm={handleConfirmPin}
-        title="Confirmar Cobro"
-        message="Ingresa tu PIN para autorizar el cobro y registrar quién recibió el pago."
+        title={pinMode === "courtesy" ? "Autorizar Cortesía" : "Confirmar Cobro"}
+        message={
+          pinMode === "courtesy"
+            ? "Ingresa tu PIN de superAdmin para registrar esta mesa como cortesía (sin cobro)."
+            : "Ingresa tu PIN para autorizar el cobro y registrar quién recibió el pago."
+        }
         loading={pinLoading}
       />
     </div>

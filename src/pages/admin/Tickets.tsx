@@ -177,6 +177,15 @@ const AdminTickets: React.FC = () => {
             groups[key].push(o);
           });
 
+          // Sort each group by completedAt descending (most recently closed first)
+          Object.keys(groups).forEach(key => {
+            groups[key].sort((a, b) => {
+              const tA = new Date(a.completedAt || a.createdAt || 0).getTime();
+              const tB = new Date(b.completedAt || b.createdAt || 0).getTime();
+              return tB - tA;
+            });
+          });
+
           // sort dates descending (most recent first)
           const dateKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 

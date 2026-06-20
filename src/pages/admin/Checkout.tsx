@@ -109,7 +109,7 @@ const AdminCheckout: React.FC = () => {
   // Auto-apply the first promotion that is within schedule and applies to at least one item
   const selectedPromo = useMemo(() => {
     return activePromotions.find(promo => {
-      if (!isPromotionWithinSchedule(promo.cutoffTime)) return false;
+      if (!isPromotionWithinSchedule(promo.cutoffTime, undefined, promo.activeDays)) return false;
       return activeItems.some(i => {
         const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
         const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
@@ -134,9 +134,9 @@ const AdminCheckout: React.FC = () => {
           selectedPromo.productIds.includes(i.productId)
         );
       }
-      // 3. Only apply to items ordered before the promo's cutoff time
+      // 3. Only apply to items ordered before the promo's cutoff time and on active days
       items = items.filter((i) =>
-        isPromotionWithinSchedule(selectedPromo.cutoffTime, i.createdAt)
+        isPromotionWithinSchedule(selectedPromo.cutoffTime, i.createdAt, selectedPromo.activeDays)
       );
       return items;
     })();

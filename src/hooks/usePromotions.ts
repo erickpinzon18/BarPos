@@ -54,18 +54,28 @@ export const useActivePromotions = () => {
 };
 
 /**
- * Verifica si una promoción está dentro de su horario válido (antes de la hora de corte).
+ * Verifica si una promoción está dentro de su horario y día válidos.
  * @param cutoffTime Hora de corte en formato "HH:mm" (24h)
- * @returns true si la promoción aún se puede aplicar
+ * @param referenceTime Fecha/hora de referencia (default: ahora)
+ * @param activeDays Días de la semana activos (0=Dom…6=Sáb). Vacío = todos los días.
  */
-export const isPromotionWithinSchedule = (cutoffTime: string, referenceTime?: Date | any): boolean => {
-  if (!cutoffTime) return true; // Sin hora de corte = siempre aplica
-
+export const isPromotionWithinSchedule = (
+  cutoffTime: string,
+  referenceTime?: Date | any,
+  activeDays?: number[]
+): boolean => {
   const timeToCheck = referenceTime ? new Date(referenceTime) : new Date();
-  if (isNaN(timeToCheck.getTime())) return true; // Fallback if invalid date
+  if (isNaN(timeToCheck.getTime())) return true; // Fallback si fecha inválida
+
+  // Validar día de la semana
+  if (activeDays && activeDays.length > 0) {
+    const dayOfWeek = timeToCheck.getDay(); // 0=Dom, 4=Jue, 6=Sáb
+    if (!activeDays.includes(dayOfWeek)) return false;
+  }
+
+  if (!cutoffTime) return true; // Sin hora de corte = siempre aplica en días válidos
 
   const [hours, minutes] = cutoffTime.split(':').map(Number);
-
   if (isNaN(hours) || isNaN(minutes)) return true;
 
   const cutoff = new Date(timeToCheck);

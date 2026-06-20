@@ -24,6 +24,7 @@ import DailySummary from "./pages/admin/DailySummary";
 import Analytics from "./pages/admin/Analytics";
 import Inventory from "./pages/admin/Inventory";
 import InventoryStats from "./pages/admin/InventoryStats";
+import AdminPrices from "./pages/admin/AdminPrices";
 
 // Waiter Pages
 import WaiterHome from "./pages/waiter/Home";
@@ -71,6 +72,7 @@ function App() {
           <Route path="analytics" element={<Analytics />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="inventory-stats" element={<InventoryStats />} />
+          <Route path="prices" element={<AdminPrices />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Route>

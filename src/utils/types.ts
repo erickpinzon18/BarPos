@@ -10,6 +10,7 @@ export interface User {
   active?: boolean; // true = activo, false = inactivo
   role: UserRole;
   pin?: string; // PIN para autorizar eliminaciones
+  superAdmin?: boolean; // Acceso a módulo de modificación de precios en cuenta
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +80,11 @@ export interface OrderItem {
   swapFromName?: string; // Nombre del producto anterior cuando se cambió por swap (para reimprimir ticket de cambio)
   cancelReason?: string; // Motivo de cancelación del item
   pendingCancelPrint?: boolean; // Marca un item recién cancelado para que se imprima ticket de cancelación en barra/cocina
+  // Auditoría de modificación de precio por superAdmin
+  originalPrice?: number;
+  priceModifiedBy?: string;
+  priceModifiedByName?: string;
+  priceModifiedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

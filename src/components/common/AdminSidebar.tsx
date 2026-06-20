@@ -20,6 +20,7 @@ import {
   CalendarDays,
   Archive,
   FlaskConical,
+  CircleDollarSign,
 } from "lucide-react";
 
 // Estilos para los enlaces de navegación, cambia el color si está activo
@@ -154,6 +155,12 @@ export const AdminSidebar: React.FC = () => {
             <Tag size={20} />
             <span>Promociones</span>
           </NavLink>
+          {currentUser?.superAdmin && (
+            <NavLink to="/admin/prices" className={navLinkClass}>
+              <CircleDollarSign size={20} />
+              <span>Modificar Precios</span>
+            </NavLink>
+          )}
         </nav>
 
         {/* Sección Inferior: Configuración y Usuario */}

@@ -20,6 +20,7 @@ import {
   Tag,
   CalendarDays,
   Archive,
+  CircleDollarSign,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -201,6 +202,16 @@ const AdminLayout: React.FC = () => {
                   <Tag size={20} />
                   <span>Promociones</span>
                 </NavLink>
+                {currentUser?.superAdmin && (
+                  <NavLink
+                    to="/admin/prices"
+                    className={navLinkClassMobile}
+                    onClick={closeMobileMenu}
+                  >
+                    <CircleDollarSign size={20} />
+                    <span>Modificar Precios</span>
+                  </NavLink>
+                )}
                 <NavLink
                   to="/admin/settings"
                   className={navLinkClassMobile}

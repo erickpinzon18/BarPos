@@ -942,6 +942,52 @@ export const deletePromotion = async (promotionId: string): Promise<FirestoreRes
   }
 };
 
+// Modifica el precio de un ítem dentro de una orden activa. Solo superAdmin.
+// Guarda auditoría: precio original, quién lo cambió y cuándo.
+export const updateOrderItemPrice = async (
+  orderId: string,
+  itemId: string,
+  newPrice: number,
+  modifiedBy: string,
+  modifiedByName: string
+): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    if (!orderDoc.exists()) return { success: false, error: 'Pedido no encontrado' };
+
+    const orderData = orderDoc.data() as Order;
+    const updatedItems = orderData.items.map((item: any) => {
+      if (item.id !== itemId) return item;
+      return {
+        ...item,
+        originalPrice: item.originalPrice ?? item.productPrice,
+        productPrice: newPrice,
+        priceModifiedBy: modifiedBy,
+        priceModifiedByName: modifiedByName,
+        priceModifiedAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
+    });
+
+    const subtotal = updatedItems
+      .filter((i: any) => !i.isDeleted)
+      .reduce((sum: number, i: any) => sum + i.productPrice * i.quantity, 0);
+
+    await updateDoc(orderRef, {
+      items: updatedItems,
+      subtotal,
+      total: subtotal,
+      updatedAt: Timestamp.now(),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating item price:', error);
+    return { success: false, error: 'Error al actualizar el precio del ítem' };
+  }
+};
+
 export const cancelEmptyOrder = async (tableId: string, orderId: string): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);

@@ -141,6 +141,7 @@ const DailySummary: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentShiftDate());
   const [waiterTab, setWaiterTab] = useState<'resumen' | 'detalle'>('resumen');
+  const [pendingTab, setPendingTab] = useState<'resumen' | 'detalle'>('resumen');
 
   // Expenses State
   const [djExpense, setDjExpense] = useState<number>(0);
@@ -1176,35 +1177,104 @@ const DailySummary: React.FC = () => {
 
             {/* Saldo Por Cobrar */}
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-              <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-                <Clock className="text-orange-500" size={20} />
-                Saldo Por Cobrar (Mesas Abiertas)
-              </h3>
-              <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 rounded-xl p-6 flex flex-col items-center justify-center text-center h-[calc(100%-3.5rem)] border border-orange-500/20">
-                <p className="text-sm text-gray-400 mb-2">Total regado en mesas</p>
-                <p className="text-5xl font-bold text-orange-400 mb-4">
-                  {formatCurrency(livePendingBalance)}
-                </p>
-                <div className="bg-gray-900/60 border border-gray-700 rounded-lg px-4 py-2 inline-block mb-6">
-                  <span className="text-white font-medium">{livePendingOrders}</span>
-                  <span className="text-gray-400 ml-2">Mesas activas</span>
-                </div>
-
-                <div className="w-full grid grid-cols-2 gap-4 border-t border-orange-500/20 pt-4 mt-auto">
-                  <div>
-                    <p className="text-xs text-gray-400 mb-1">Ya Cobrado</p>
-                    <p className="text-xl font-bold text-green-400">
-                      {formatCurrency(summary.totalSales)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400 mb-1">Proyección Total</p>
-                    <p className="text-xl font-bold text-blue-400">
-                      {formatCurrency(summary.totalSales + livePendingBalance)}
-                    </p>
-                  </div>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Clock className="text-orange-500" size={20} />
+                  Saldo Por Cobrar
+                </h3>
+                <div className="flex bg-gray-700 rounded-lg p-1 gap-1">
+                  <button
+                    onClick={() => setPendingTab('resumen')}
+                    className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${pendingTab === 'resumen' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    Resumen
+                  </button>
+                  <button
+                    onClick={() => setPendingTab('detalle')}
+                    className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${pendingTab === 'detalle' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    Detalle
+                  </button>
                 </div>
               </div>
+
+              {pendingTab === 'resumen' ? (
+                <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 rounded-xl p-6 flex flex-col items-center justify-center text-center border border-orange-500/20">
+                  <p className="text-sm text-gray-400 mb-2">Total regado en mesas</p>
+                  <p className="text-5xl font-bold text-orange-400 mb-4">
+                    {formatCurrency(livePendingBalance)}
+                  </p>
+                  <div className="bg-gray-900/60 border border-gray-700 rounded-lg px-4 py-2 inline-block mb-6">
+                    <span className="text-white font-medium">{livePendingOrders}</span>
+                    <span className="text-gray-400 ml-2">Mesas activas</span>
+                  </div>
+                  <div className="w-full grid grid-cols-2 gap-4 border-t border-orange-500/20 pt-4">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Ya Cobrado</p>
+                      <p className="text-xl font-bold text-green-400">
+                        {formatCurrency(summary.totalSales)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Proyección Total</p>
+                      <p className="text-xl font-bold text-blue-400">
+                        {formatCurrency(summary.totalSales + livePendingBalance)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                  {shiftActiveOrders.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Clock size={32} className="mx-auto mb-2 opacity-40" />
+                      <p>No hay mesas activas en este turno</p>
+                    </div>
+                  ) : (
+                    <>
+                      {shiftActiveOrders
+                        .slice()
+                        .sort((a, b) => {
+                          const aItems = (a.items || []).filter(i => !i.isDeleted).reduce((s, i) => s + i.productPrice * i.quantity, 0);
+                          const bItems = (b.items || []).filter(i => !i.isDeleted).reduce((s, i) => s + i.productPrice * i.quantity, 0);
+                          return bItems - aItems;
+                        })
+                        .map(order => {
+                          const activeItems = (order.items || []).filter(i => !i.isDeleted);
+                          const orderTotal = activeItems.reduce((s, i) => s + i.productPrice * i.quantity, 0);
+                          const tableLabel = order.tableNumber === 0 ? 'Barra' : `Mesa ${order.tableNumber}`;
+                          return (
+                            <div key={order.id} className="bg-gray-700/40 border border-gray-600/50 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <span className="text-white font-semibold text-sm">{tableLabel}</span>
+                                  {order.tableName && (
+                                    <span className="text-gray-500 text-xs ml-1">({order.tableName})</span>
+                                  )}
+                                  <span className="text-gray-400 text-xs ml-2">· {order.waiterName}</span>
+                                </div>
+                                <span className="text-orange-400 font-bold text-sm">{formatCurrency(orderTotal)}</span>
+                              </div>
+                              <div className="space-y-0.5">
+                                {activeItems.map(item => (
+                                  <div key={item.id} className="flex justify-between text-xs text-gray-400">
+                                    <span>{item.quantity}× {item.productName}</span>
+                                    <span>{formatCurrency(item.productPrice * item.quantity)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      }
+                      <div className="sticky bottom-0 bg-gray-800 border-t border-orange-500/30 pt-2 mt-2 flex justify-between items-center text-sm font-bold">
+                        <span className="text-gray-300">{livePendingOrders} mesas abiertas</span>
+                        <span className="text-orange-400">{formatCurrency(livePendingBalance)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

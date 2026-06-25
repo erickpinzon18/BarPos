@@ -609,7 +609,7 @@ const OrderDetails: React.FC = () => {
       const applicable = activeItems.filter(i => {
         const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
         const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
-        const timeOk = isPromotionWithinSchedule(promo.cutoffTime, i.createdAt);
+        const timeOk = isPromotionWithinSchedule(promo.cutoffTime, i.createdAt, promo.activeDays);
         return catOk && prodOk && timeOk;
       });
       if (applicable.length === 0) continue;
@@ -624,7 +624,6 @@ const OrderDetails: React.FC = () => {
           if (diff > 0) total += diff * item.quantity;
         }
       }
-      break;
     }
     return total;
   })();
@@ -633,7 +632,7 @@ const OrderDetails: React.FC = () => {
   const getItemDiscountedTotal = (item: OrderItem): number | null => {
     const promo = getItemPromo(item);
     if (!promo) return null;
-    const valid = isPromotionWithinSchedule(promo.cutoffTime, item.createdAt);
+    const valid = isPromotionWithinSchedule(promo.cutoffTime, item.createdAt, promo.activeDays);
     if (!valid) return null;
     const original = item.productPrice * item.quantity;
     if (promo.discountType === 'percentage') return original * (1 - promo.discountValue / 100);
@@ -871,7 +870,7 @@ const OrderDetails: React.FC = () => {
             order.items.map((item: OrderItem) => {
               const isDeleted = item.isDeleted;
               const itemPromo = !isDeleted ? getItemPromo(item) : null;
-              const promoValid = itemPromo ? isPromotionWithinSchedule(itemPromo.cutoffTime, item.createdAt) : false;
+              const promoValid = itemPromo ? isPromotionWithinSchedule(itemPromo.cutoffTime, item.createdAt, itemPromo.activeDays) : false;
 
               return (
                 <div
@@ -1017,7 +1016,7 @@ const OrderDetails: React.FC = () => {
                       {!isDeleted && (() => {
                         const promo = getItemPromo(item);
                         if (!promo) return null;
-                        const valid = isPromotionWithinSchedule(promo.cutoffTime, item.createdAt);
+                        const valid = isPromotionWithinSchedule(promo.cutoffTime, item.createdAt, promo.activeDays);
                         return valid ? (
                           <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-900/40 border border-green-700/50 text-xs text-green-400">
                             <Tag size={11} />

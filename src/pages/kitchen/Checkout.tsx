@@ -65,58 +65,64 @@ const KitchenCheckout: React.FC = () => {
   const subtotal = useMemo(() => activeItems.reduce((s, it) => s + it.productPrice * it.quantity, 0), [activeItems]);
   const tipAmount = useMemo(() => subtotal * tipPercent, [subtotal, tipPercent]);
 
-  const selectedPromo = useMemo(() => {
-    return activePromotions.find(promo => {
-      if (!isPromotionWithinSchedule(promo.cutoffTime, undefined, promo.activeDays)) return false;
-      return activeItems.some(i => {
-        const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
-        const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
-        return catOk && prodOk;
-      });
-    }) ?? null;
+  const itemPromoMap = useMemo(() => {
+    const map: Record<string, (typeof activePromotions)[0] | null> = {};
+    for (const item of activeItems) {
+      map[item.id] = activePromotions.find(p => {
+        const catOk = p.categories.length === 0 || p.categories.includes(item.category);
+        const prodOk = !p.productIds || p.productIds.length === 0 || p.productIds.includes(item.productId);
+        return catOk && prodOk && isPromotionWithinSchedule(p.cutoffTime, item.createdAt, p.activeDays);
+      }) ?? null;
+    }
+    return map;
   }, [activePromotions, activeItems]);
 
-  const discountAmount = useMemo(() => {
-    if (!selectedPromo) return 0;
-    const applicableItems = (() => {
-      let items = selectedPromo.categories.length > 0
-        ? activeItems.filter(i => selectedPromo.categories.includes(i.category))
-        : activeItems;
-      if (selectedPromo.productIds && selectedPromo.productIds.length > 0) {
-        items = items.filter(i => selectedPromo.productIds.includes(i.productId));
-      }
-      // Solo aplicar a items ordenados antes de la hora de corte y en días activos
-      items = items.filter(i => isPromotionWithinSchedule(selectedPromo.cutoffTime, i.createdAt, selectedPromo.activeDays));
-      return items;
-    })();
-    const applicableSubtotal = applicableItems.reduce((s, i) => s + (i.productPrice * i.quantity), 0);
-    switch (selectedPromo.discountType) {
-      case 'percentage':
-        return applicableSubtotal * (selectedPromo.discountValue / 100);
-      case 'fixed':
-        return Math.min(selectedPromo.discountValue, applicableSubtotal);
-      case '2x1': {
-        let discount = 0;
-        for (const item of applicableItems) {
-          const freeItems = Math.floor(item.quantity / 2);
-          discount += freeItems * item.productPrice;
-        }
-        return discount;
-      }
-      case 'fixedprice': {
-        let discount = 0;
-        for (const item of applicableItems) {
-          const diff = item.productPrice - selectedPromo.discountValue;
-          if (diff > 0) discount += diff * item.quantity;
-        }
-        return discount;
-      }
-      default:
-        return 0;
+  const itemDiscountMap = useMemo(() => {
+    const promoGroups: Record<string, (typeof activeItems)[0][]> = {};
+    for (const item of activeItems) {
+      const promo = itemPromoMap[item.id];
+      if (!promo) continue;
+      if (!promoGroups[promo.id]) promoGroups[promo.id] = [];
+      promoGroups[promo.id].push(item);
     }
-  }, [selectedPromo, activeItems]);
+    const map: Record<string, number> = {};
+    for (const item of activeItems) {
+      const promo = itemPromoMap[item.id];
+      if (!promo) continue;
+      switch (promo.discountType) {
+        case 'percentage': map[item.id] = item.productPrice * item.quantity * (promo.discountValue / 100); break;
+        case '2x1': map[item.id] = Math.floor(item.quantity / 2) * item.productPrice; break;
+        case 'fixedprice': map[item.id] = Math.max(0, item.productPrice - promo.discountValue) * item.quantity; break;
+        case 'fixed': {
+          const groupItems = promoGroups[promo.id] ?? [];
+          const groupSubtotal = groupItems.reduce((s, i) => s + i.productPrice * i.quantity, 0);
+          if (groupSubtotal > 0) map[item.id] = (item.productPrice * item.quantity / groupSubtotal) * Math.min(promo.discountValue, groupSubtotal);
+          break;
+        }
+      }
+    }
+    return map;
+  }, [activeItems, itemPromoMap]);
+
+  const discountAmount = useMemo(
+    () => Object.values(itemDiscountMap).reduce((s, d) => s + d, 0),
+    [itemDiscountMap]
+  );
 
   const total = useMemo(() => subtotal - discountAmount + tipAmount, [subtotal, discountAmount, tipAmount]);
+
+  const activePromos = useMemo(() => {
+    const seen = new Set<string>();
+    const promos: (typeof activePromotions)[0][] = [];
+    for (const item of activeItems) {
+      const promo = itemPromoMap[item.id];
+      if (promo && !seen.has(promo.id)) {
+        seen.add(promo.id);
+        promos.push(promo);
+      }
+    }
+    return promos;
+  }, [activeItems, itemPromoMap]);
 
   const updateTotalWithPercent = (percent: number) => {
     setTipPercent(prev => prev === percent ? 0 : percent);
@@ -353,6 +359,12 @@ const KitchenCheckout: React.FC = () => {
                         <span>$0.00</span>
                       </div>
                     ))}
+                    {itemDiscountMap[item.id] > 0 && (
+                      <div className="flex justify-between text-green-400 text-xs pl-4">
+                        <span>↳ {itemPromoMap[item.id]?.name}</span>
+                        <span>-${itemDiscountMap[item.id].toFixed(2)}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -361,9 +373,14 @@ const KitchenCheckout: React.FC = () => {
             <div className="border-t border-dashed border-gray-600 mt-4 pt-2">
               <div className="flex justify-between"><span className="font-bold">Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="font-bold">Propina ({(tipPercent * 100).toFixed(0)}%):</span><span>${tipAmount.toFixed(2)}</span></div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-green-400"><span className="font-bold">Desc. {selectedPromo?.name}:</span><span>-${discountAmount.toFixed(2)}</span></div>
-              )}
+              {activePromos.map(promo => {
+                const promoDiscount = activeItems
+                  .filter(i => itemPromoMap[i.id]?.id === promo.id)
+                  .reduce((s, i) => s + (itemDiscountMap[i.id] ?? 0), 0);
+                return promoDiscount > 0 ? (
+                  <div key={promo.id} className="flex justify-between text-green-400"><span className="font-bold">Desc. {promo.name}:</span><span>-${promoDiscount.toFixed(2)}</span></div>
+                ) : null;
+              })}
               <div className="flex justify-between text-xl mt-2 text-orange-400"><span className="font-bold">TOTAL:</span><span>${total.toFixed(2)}</span></div>
               <div className="flex justify-between mt-2 items-center border-t border-gray-800 pt-2">
                 <span className="text-sm text-gray-300">Total por persona ({order.peopleCount ?? 1})</span>
@@ -394,20 +411,25 @@ const KitchenCheckout: React.FC = () => {
             <div className="mt-2 text-sm text-gray-400">Seleccionado: {(tipPercent * 100).toFixed(0)}%</div>
           </div>
 
-          {selectedPromo && (
-            <div className="bg-green-900/20 border border-green-700/50 p-4 rounded-2xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag size={16} className="text-green-400 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-green-300">{selectedPromo.name}</p>
-                  <p className="text-xs text-green-600 flex items-center gap-1">
-                    <Clock size={10} /> Hasta {selectedPromo.cutoffTime} hrs
-                  </p>
+          {activePromos.map(promo => {
+            const promoDiscount = activeItems
+              .filter(i => itemPromoMap[i.id]?.id === promo.id)
+              .reduce((s, i) => s + (itemDiscountMap[i.id] ?? 0), 0);
+            return (
+              <div key={promo.id} className="bg-green-900/20 border border-green-700/50 p-4 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Tag size={16} className="text-green-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-300">{promo.name}</p>
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Clock size={10} /> Hasta {promo.cutoffTime} hrs
+                    </p>
+                  </div>
                 </div>
+                <span className="text-green-400 font-bold text-sm">-${promoDiscount.toFixed(2)}</span>
               </div>
-              <span className="text-green-400 font-bold text-sm">-${discountAmount.toFixed(2)}</span>
-            </div>
-          )}
+            );
+          })}
 
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Método de Pago</h3>

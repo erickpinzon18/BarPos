@@ -110,75 +110,70 @@ const AdminCheckout: React.FC = () => {
     [subtotal, tipPercent]
   );
 
-  // Auto-apply the first promotion that is within schedule and applies to at least one item
-  const selectedPromo = useMemo(() => {
-    return activePromotions.find(promo => {
-      if (!isPromotionWithinSchedule(promo.cutoffTime, undefined, promo.activeDays)) return false;
-      return activeItems.some(i => {
-        const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
-        const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
-        return catOk && prodOk;
-      });
-    }) ?? null;
+  // Map each item to its applicable promo (checked against item's createdAt, supports multiple simultaneous promos)
+  const itemPromoMap = useMemo(() => {
+    const map: Record<string, (typeof activePromotions)[0] | null> = {};
+    for (const item of activeItems) {
+      map[item.id] = activePromotions.find(p => {
+        const catOk = p.categories.length === 0 || p.categories.includes(item.category);
+        const prodOk = !p.productIds || p.productIds.length === 0 || p.productIds.includes(item.productId);
+        return catOk && prodOk && isPromotionWithinSchedule(p.cutoffTime, item.createdAt, p.activeDays);
+      }) ?? null;
+    }
+    return map;
   }, [activePromotions, activeItems]);
 
-  const discountAmount = useMemo(() => {
-    if (!selectedPromo) return 0;
-    const applicableItems = (() => {
-      // 1. Filter by category (if any selected)
-      let items =
-        selectedPromo.categories.length > 0
-          ? activeItems.filter((i) =>
-              selectedPromo.categories.includes(i.category)
-            )
-          : activeItems;
-      // 2. Further filter by specific productIds (if any set)
-      if (selectedPromo.productIds && selectedPromo.productIds.length > 0) {
-        items = items.filter((i) =>
-          selectedPromo.productIds.includes(i.productId)
-        );
-      }
-      // 3. Only apply to items ordered before the promo's cutoff time and on active days
-      items = items.filter((i) =>
-        isPromotionWithinSchedule(selectedPromo.cutoffTime, i.createdAt, selectedPromo.activeDays)
-      );
-      return items;
-    })();
-    const applicableSubtotal = applicableItems.reduce(
-      (s, i) => s + i.productPrice * i.quantity,
-      0
-    );
-    switch (selectedPromo.discountType) {
-      case "percentage":
-        return applicableSubtotal * (selectedPromo.discountValue / 100);
-      case "fixed":
-        return Math.min(selectedPromo.discountValue, applicableSubtotal);
-      case "2x1": {
-        let discount = 0;
-        for (const item of applicableItems) {
-          const freeItems = Math.floor(item.quantity / 2);
-          discount += freeItems * item.productPrice;
-        }
-        return discount;
-      }
-      case "fixedprice": {
-        // Descuento = (precio original - precio fijo) × cantidad, solo si precio original > precio fijo
-        let discount = 0;
-        for (const item of applicableItems) {
-          const diff = item.productPrice - selectedPromo.discountValue;
-          if (diff > 0) discount += diff * item.quantity;
-        }
-        return discount;
-      }
-      default:
-        return 0;
+  // Per-item discount amounts (each item uses its own matched promo)
+  const itemDiscountMap = useMemo(() => {
+    const promoGroups: Record<string, (typeof activeItems)[0][]> = {};
+    for (const item of activeItems) {
+      const promo = itemPromoMap[item.id];
+      if (!promo) continue;
+      if (!promoGroups[promo.id]) promoGroups[promo.id] = [];
+      promoGroups[promo.id].push(item);
     }
-  }, [selectedPromo, activeItems]);
+    const map: Record<string, number> = {};
+    for (const item of activeItems) {
+      const promo = itemPromoMap[item.id];
+      if (!promo) continue;
+      switch (promo.discountType) {
+        case 'percentage': map[item.id] = item.productPrice * item.quantity * (promo.discountValue / 100); break;
+        case '2x1': map[item.id] = Math.floor(item.quantity / 2) * item.productPrice; break;
+        case 'fixedprice': map[item.id] = Math.max(0, item.productPrice - promo.discountValue) * item.quantity; break;
+        case 'fixed': {
+          const groupItems = promoGroups[promo.id] ?? [];
+          const groupSubtotal = groupItems.reduce((s, i) => s + i.productPrice * i.quantity, 0);
+          if (groupSubtotal > 0) map[item.id] = (item.productPrice * item.quantity / groupSubtotal) * Math.min(promo.discountValue, groupSubtotal);
+          break;
+        }
+      }
+    }
+    return map;
+  }, [activeItems, itemPromoMap]);
+
+  const discountAmount = useMemo(
+    () => Object.values(itemDiscountMap).reduce((s, d) => s + d, 0),
+    [itemDiscountMap]
+  );
 
   const total = useMemo(
     () => subtotal - discountAmount + tipAmount,
     [subtotal, discountAmount, tipAmount]
   );
+
+  // Unique promos active on this order (for display in UI)
+  const activePromos = useMemo(() => {
+    const seen = new Set<string>();
+    const promos: (typeof activePromotions)[0][] = [];
+    for (const item of activeItems) {
+      const promo = itemPromoMap[item.id];
+      if (promo && !seen.has(promo.id)) {
+        seen.add(promo.id);
+        promos.push(promo);
+      }
+    }
+    return promos;
+  }, [activeItems, itemPromoMap]);
 
   const updateTotalWithPercent = (percent: number) => {
     setTipPercent(prev => prev === percent ? 0 : percent);
@@ -582,6 +577,12 @@ const AdminCheckout: React.FC = () => {
                         <span>$0.00</span>
                       </div>
                     ))}
+                    {itemDiscountMap[item.id] > 0 && (
+                      <div className="flex justify-between text-green-400 text-xs pl-4">
+                        <span>↳ {itemPromoMap[item.id]?.name}</span>
+                        <span>-${itemDiscountMap[item.id].toFixed(2)}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -603,14 +604,17 @@ const AdminCheckout: React.FC = () => {
                 </span>
                 <span id="tip-amount">${tipAmount.toFixed(2)}</span>
               </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-green-400">
-                  <span className="font-bold">
-                    Desc. {selectedPromo?.name}:
-                  </span>
-                  <span>-${discountAmount.toFixed(2)}</span>
-                </div>
-              )}
+              {activePromos.map(promo => {
+                const promoDiscount = activeItems
+                  .filter(i => itemPromoMap[i.id]?.id === promo.id)
+                  .reduce((s, i) => s + (itemDiscountMap[i.id] ?? 0), 0);
+                return promoDiscount > 0 ? (
+                  <div key={promo.id} className="flex justify-between text-green-400">
+                    <span className="font-bold">Desc. {promo.name}:</span>
+                    <span>-${promoDiscount.toFixed(2)}</span>
+                  </div>
+                ) : null;
+              })}
               <div className="flex justify-between text-xl mt-2 text-red-500">
                 <span className="font-bold">TOTAL:</span>
                 <span id="total-amount">${total.toFixed(2)}</span>
@@ -759,21 +763,26 @@ const AdminCheckout: React.FC = () => {
             )}
           </div>
 
-          {/* Promoción auto-aplicada */}
-          {selectedPromo && (
-            <div className="bg-green-900/20 border border-green-700/50 p-4 rounded-2xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag size={16} className="text-green-400 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-green-300">{selectedPromo.name}</p>
-                  <p className="text-xs text-green-600 flex items-center gap-1">
-                    <Clock size={10} /> Hasta {selectedPromo.cutoffTime} hrs
-                  </p>
+          {/* Promociones auto-aplicadas */}
+          {activePromos.map(promo => {
+            const promoDiscount = activeItems
+              .filter(i => itemPromoMap[i.id]?.id === promo.id)
+              .reduce((s, i) => s + (itemDiscountMap[i.id] ?? 0), 0);
+            return (
+              <div key={promo.id} className="bg-green-900/20 border border-green-700/50 p-4 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Tag size={16} className="text-green-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-300">{promo.name}</p>
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Clock size={10} /> Hasta {promo.cutoffTime} hrs
+                    </p>
+                  </div>
                 </div>
+                <span className="text-green-400 font-bold text-sm">-${promoDiscount.toFixed(2)}</span>
               </div>
-              <span className="text-green-400 font-bold text-sm">-${discountAmount.toFixed(2)}</span>
-            </div>
-          )}
+            );
+          })}
 
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Método de Pago</h3>

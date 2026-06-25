@@ -155,6 +155,11 @@ export interface Promotion {
   productIds: string[];
   /** Hora límite para aplicar la promoción, formato "HH:mm" (24h). Después de esta hora ya no se puede usar */
   cutoffTime: string;
+  /**
+   * Días de la semana en los que aplica la promoción (0=Dom, 1=Lun, ..., 6=Sáb).
+   * Vacío o undefined = todos los días.
+   */
+  activeDays?: number[];
   active: boolean;
   createdAt: Date;
   updatedAt: Date;

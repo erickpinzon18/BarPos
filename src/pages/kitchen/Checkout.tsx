@@ -67,7 +67,7 @@ const KitchenCheckout: React.FC = () => {
 
   const selectedPromo = useMemo(() => {
     return activePromotions.find(promo => {
-      if (!isPromotionWithinSchedule(promo.cutoffTime)) return false;
+      if (!isPromotionWithinSchedule(promo.cutoffTime, undefined, promo.activeDays)) return false;
       return activeItems.some(i => {
         const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
         const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
@@ -85,8 +85,8 @@ const KitchenCheckout: React.FC = () => {
       if (selectedPromo.productIds && selectedPromo.productIds.length > 0) {
         items = items.filter(i => selectedPromo.productIds.includes(i.productId));
       }
-      // Solo aplicar a items ordenados antes de la hora de corte de la promo
-      items = items.filter(i => isPromotionWithinSchedule(selectedPromo.cutoffTime, i.createdAt));
+      // Solo aplicar a items ordenados antes de la hora de corte y en días activos
+      items = items.filter(i => isPromotionWithinSchedule(selectedPromo.cutoffTime, i.createdAt, selectedPromo.activeDays));
       return items;
     })();
     const applicableSubtotal = applicableItems.reduce((s, i) => s + (i.productPrice * i.quantity), 0);

@@ -6,8 +6,17 @@ import { CATEGORIES } from '../../utils/categories';
 import { useProducts } from '../../hooks/useProducts';
 import type { Promotion, DiscountType } from '../../utils/types';
 import type { CategoryKey } from '../../utils/categories';
-import { Plus, Pencil, Trash2, Clock, Tag, X, Check, AlertTriangle, ChevronDown, ChevronUp, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Clock, Tag, X, Check, AlertTriangle, ChevronDown, ChevronUp, Package, CalendarDays } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
+const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+const formatActiveDays = (days?: number[]): string => {
+  if (!days || days.length === 0) return 'Todos los días';
+  if (days.length === 7) return 'Todos los días';
+  return days.map(d => DAY_LABELS[d]).join(', ');
+};
 
 // --- Form state shape ---
 interface PromoForm {
@@ -19,6 +28,8 @@ interface PromoForm {
   /** IDs específicos de productos. Vacío = todos los productos de las categorías seleccionadas */
   productIds: string[];
   cutoffTime: string;
+  /** Días de la semana activos (0=Dom…6=Sáb). Vacío = todos los días */
+  activeDays: number[];
   active: boolean;
 }
 
@@ -30,6 +41,7 @@ const emptyForm: PromoForm = {
   categories: [],
   productIds: [],
   cutoffTime: '23:59',
+  activeDays: [],
   active: true,
 };
 
@@ -69,6 +81,7 @@ const Promotions: React.FC = () => {
       categories: promo.categories ?? [],
       productIds: promo.productIds ?? [],
       cutoffTime: promo.cutoffTime ?? '23:59',
+      activeDays: promo.activeDays ?? [],
       active: promo.active,
     });
     setExpandedCats([]);
@@ -100,6 +113,15 @@ const Promotions: React.FC = () => {
         productIds: newProductIds,
       };
     });
+  };
+
+  const toggleDay = (day: number) => {
+    setForm(prev => ({
+      ...prev,
+      activeDays: prev.activeDays.includes(day)
+        ? prev.activeDays.filter(d => d !== day)
+        : [...prev.activeDays, day].sort(),
+    }));
   };
 
   const toggleProduct = (productId: string) => {
@@ -151,6 +173,7 @@ const Promotions: React.FC = () => {
         categories: form.categories,
         productIds: form.productIds,
         cutoffTime: form.cutoffTime,
+        activeDays: form.activeDays,
         active: form.active,
       };
 
@@ -328,6 +351,16 @@ const Promotions: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Active Days */}
+                  {promo.activeDays && promo.activeDays.length > 0 && promo.activeDays.length < 7 && (
+                    <div className="flex items-center gap-2 bg-gray-900/50 rounded-lg px-3 py-2">
+                      <CalendarDays size={15} className="text-amber-400 shrink-0" />
+                      <span className="text-sm text-gray-300">
+                        Solo: <span className="font-semibold text-amber-300">{formatActiveDays(promo.activeDays)}</span>
+                      </span>
+                    </div>
+                  )}
+
                   {/* Categories + Products summary */}
                   {promo.categories && promo.categories.length > 0 ? (
                     <div>
@@ -495,6 +528,36 @@ const Promotions: React.FC = () => {
                   Después de esta hora, la promoción <span className="text-amber-400 font-semibold">NO podrá ser aplicada</span> aunque esté activa.
                   Por ejemplo, si pones 18:00, después de las 6pm ya no podrán agregar esta promoción a ninguna cuenta.
                 </p>
+              </div>
+
+              {/* Active Days */}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                  <CalendarDays size={15} />
+                  Días activos
+                  <span className="text-xs text-gray-500">(vacío = todos los días)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {DAY_LABELS.map((label, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => toggleDay(index)}
+                      className={`w-12 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                        form.activeDays.includes(index)
+                          ? 'bg-red-600 text-white ring-1 ring-red-400'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {form.activeDays.length > 0 && (
+                  <p className="text-xs text-amber-400 mt-2">
+                    Solo aplica los: {formatActiveDays(form.activeDays)}
+                  </p>
+                )}
               </div>
 
               {/* Categories + Products */}

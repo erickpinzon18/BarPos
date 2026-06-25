@@ -116,7 +116,7 @@ const WaiterCheckout: React.FC = () => {
   // Auto-apply the first promotion that is within schedule and applies to at least one item
   const selectedPromo = useMemo(() => {
     return activePromotions.find(promo => {
-      if (!isPromotionWithinSchedule(promo.cutoffTime)) return false;
+      if (!isPromotionWithinSchedule(promo.cutoffTime, undefined, promo.activeDays)) return false;
       return activeItems.some(i => {
         const catOk = promo.categories.length === 0 || promo.categories.includes(i.category);
         const prodOk = !promo.productIds || promo.productIds.length === 0 || promo.productIds.includes(i.productId);
@@ -140,9 +140,9 @@ const WaiterCheckout: React.FC = () => {
           selectedPromo.productIds.includes(i.productId)
         );
       }
-      // Solo aplicar a items ordenados antes de la hora de corte de la promo
+      // Solo aplicar a items ordenados antes de la hora de corte y en días activos
       items = items.filter((i) =>
-        isPromotionWithinSchedule(selectedPromo.cutoffTime, i.createdAt)
+        isPromotionWithinSchedule(selectedPromo.cutoffTime, i.createdAt, selectedPromo.activeDays)
       );
       return items;
     })();

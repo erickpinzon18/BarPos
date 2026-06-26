@@ -113,6 +113,9 @@ type PrintOptions = {
   subtotal: number;
   tipAmount: number;
   tipPercent?: number; // Decimal e.g. 0.15 for 15%
+  discountAmount?: number;
+  /** Per-item discount: { [itemId]: { amount, promoName } } */
+  itemDiscounts?: Record<string, { amount: number; promoName: string }>;
   total: number;
   perPerson?: number;
   paperSize?: PaperSize;
@@ -130,6 +133,8 @@ export const generateTicketContent = (opts: PrintOptions): string => {
     order,
     subtotal,
     total,
+    discountAmount,
+    itemDiscounts,
     perPerson,
     paperSize = '80mm',
     businessName,
@@ -198,7 +203,15 @@ export const generateTicketContent = (opts: PrintOptions): string => {
 
     // Same layout for both paper sizes: wrap name then show importe inline
     wrapText(`${qty}x ${name}`, W).forEach(line => lines.push(line));
-    pushLabeledValue(lines, '  Importe:', formatMoney(lineTotal), W);
+
+    const itemDisc = itemDiscounts?.[item.id];
+    if (itemDisc && itemDisc.amount > 0) {
+      pushLabeledValue(lines, '  Precio:', formatMoney(lineTotal), W);
+      pushLabeledValue(lines, `  ${itemDisc.promoName}:`, `-${formatMoney(itemDisc.amount)}`, W);
+      pushLabeledValue(lines, '  Total:', formatMoney(lineTotal - itemDisc.amount), W);
+    } else {
+      pushLabeledValue(lines, '  Importe:', formatMoney(lineTotal), W);
+    }
 
     // Print services (mezcladores) if present in notes
     const serviceMatch = (item.notes || '').match(/^Servicios:\s*(.+)$/s);
@@ -216,6 +229,10 @@ export const generateTicketContent = (opts: PrintOptions): string => {
 
   // ── Totals ────────────────────────────────────────────────────────────────
   pushLabeledValue(lines, 'Subtotal:', formatMoney(subtotal), W);
+
+  if (typeof discountAmount === 'number' && discountAmount > 0) {
+    pushLabeledValue(lines, 'Descuento:', `-${formatMoney(discountAmount)}`, W);
+  }
 
   lines.push(s('='));
   pushLabeledValue(lines, 'TOTAL:', formatMoney(total), W);

@@ -103,14 +103,14 @@ const AdminTickets: React.FC = () => {
   };
 
   const handlePrint = (order: Order) => {
-    // Use the already calculated values from the order
     const subtotal = order.subtotal ?? 0;
     const total = order.total ?? 0;
-    const tip = total - subtotal;
+    const discountAmount = (order as any).discount ?? 0;
+    const tipAmount = (order as any).tipAmount ?? order.payments?.[0]?.tipAmount ?? Math.max(0, total - subtotal + discountAmount);
     const tipPercent = order.payments?.[0]?.tipPercent;
     const perPerson = order.peopleCount ? total / order.peopleCount : undefined;
 
-    printTicket({ order, subtotal, tipAmount: tip, tipPercent, total, perPerson, paperSize, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
+    printTicket({ order, subtotal, tipAmount, tipPercent, discountAmount, total, perPerson, paperSize, businessName: config?.name, businessAddress: config?.address, businessPhone: config?.phone });
   };
 
   return (
@@ -309,14 +309,24 @@ const AdminTickets: React.FC = () => {
                   <span className="text-gray-300">Subtotal:</span>
                   <span className="font-semibold text-white">${(selected.subtotal ?? 0).toFixed(2)}</span>
                 </div>
+                {(() => {
+                  const discount = (selected as any).discount ?? 0;
+                  return discount > 0 ? (
+                    <div className="flex justify-between items-center text-md">
+                      <span className="text-green-400">Descuento:</span>
+                      <span className="font-semibold text-green-400">-${discount.toFixed(2)}</span>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex justify-between items-center text-md">
                   <span className="text-gray-300">Propina{(() => {
                     const tipPercent = selected.payments?.[0]?.tipPercent ?? 0;
                     return tipPercent > 0 ? ` (${(tipPercent * 100).toFixed(0)}%)` : '';
                   })()}:</span>
-                  <span className="font-semibold text-white">${(() => { 
-                    const tip = (selected.total ?? 0) - (selected.subtotal ?? 0);
-                    return tip.toFixed(2); 
+                  <span className="font-semibold text-white">${(() => {
+                    const discount = (selected as any).discount ?? 0;
+                    const tip = (selected as any).tipAmount ?? selected.payments?.[0]?.tipAmount ?? Math.max(0, (selected.total ?? 0) - (selected.subtotal ?? 0) + discount);
+                    return tip.toFixed(2);
                   })()}</span>
                 </div>
                 <div className="flex justify-between items-center text-2xl mt-2">

@@ -214,11 +214,19 @@ const AdminCheckout: React.FC = () => {
     if (!order && !customOrder) return;
     const orderToPrint = customOrder || order;
     const perPerson = total / Math.max(1, orderToPrint!.peopleCount ?? 1);
+    const itemDiscounts: Record<string, { amount: number; promoName: string }> = {};
+    for (const item of activeItems) {
+      const disc = itemDiscountMap[item.id];
+      const promo = itemPromoMap[item.id];
+      if (disc > 0 && promo) itemDiscounts[item.id] = { amount: disc, promoName: promo.name };
+    }
     printTicket({
       order: orderToPrint as Order,
       subtotal,
       tipAmount,
       tipPercent,
+      discountAmount,
+      itemDiscounts,
       total,
       perPerson,
       paperSize,
@@ -278,6 +286,7 @@ const AdminCheckout: React.FC = () => {
           change: 0,
           tipAmount: tipAmount,
           tipPercent: tipPercent,
+          discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
         };
@@ -299,6 +308,7 @@ const AdminCheckout: React.FC = () => {
         paymentDetails = {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
+          discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
           splitPayments,
@@ -307,6 +317,7 @@ const AdminCheckout: React.FC = () => {
         paymentDetails = {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
+          discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
           cardOperationNumber: paymentMethod === 'tarjeta' ? cardOperationNumber : undefined

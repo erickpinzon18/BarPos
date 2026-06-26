@@ -345,7 +345,7 @@ export const closeTable = async (
   orderId: string,
   paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto',
   peopleCount?: number,
-  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string; cashierName?: string; cardOperationNumber?: string; splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string }[] }
+  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string; cashierName?: string; cardOperationNumber?: string; discountAmount?: number; splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string }[] }
 ): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);
@@ -364,12 +364,13 @@ export const closeTable = async (
       .filter((item: any) => !item.isDeleted)
       .reduce((sum: number, item: any) => sum + (item.productPrice * item.quantity), 0);
     
-    // Get tip amount (default to 0 if not provided)
+    // Get tip and discount amounts (default to 0 if not provided)
     const tipAmount = paymentDetails?.tipAmount ?? 0;
-    
-    // Calculate total (subtotal + tip, NO TAX)
-    const total = subtotal + tipAmount;
-    
+    const discountAmount = paymentDetails?.discountAmount ?? 0;
+
+    // Calculate total (subtotal + tip - discount, NO TAX)
+    const total = subtotal + tipAmount - discountAmount;
+
     // Update table status
     const tableRef = doc(db, 'tables', tableId);
     batch.update(tableRef, {
@@ -379,7 +380,7 @@ export const closeTable = async (
       currentOrderId: null,
       updatedAt: Timestamp.now()
     });
-    
+
     // Update order status with calculated totals
     const orderRef = doc(db, 'orders', orderId);
     const orderUpdate: any = {
@@ -387,6 +388,8 @@ export const closeTable = async (
       paymentMethod,
       subtotal,
       total,
+      tipAmount,
+      discount: discountAmount > 0 ? discountAmount : null,
       tax: null, // Explicitly set to null to remove any old tax values
       completedAt: Timestamp.now(),
       updatedAt: Timestamp.now()

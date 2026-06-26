@@ -1235,9 +1235,9 @@ const DailySummary: React.FC = () => {
                       {shiftActiveOrders
                         .slice()
                         .sort((a, b) => {
-                          const aItems = (a.items || []).filter(i => !i.isDeleted).reduce((s, i) => s + i.productPrice * i.quantity, 0);
-                          const bItems = (b.items || []).filter(i => !i.isDeleted).reduce((s, i) => s + i.productPrice * i.quantity, 0);
-                          return bItems - aItems;
+                          const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+                          const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+                          return bTime - aTime;
                         })
                         .map(order => {
                           const activeItems = (order.items || []).filter(i => !i.isDeleted);
@@ -1252,6 +1252,16 @@ const DailySummary: React.FC = () => {
                                     <span className="text-gray-500 text-xs ml-1">({order.tableName})</span>
                                   )}
                                   <span className="text-gray-400 text-xs ml-2">· {order.waiterName}</span>
+                                  <p className="text-gray-600 text-xs mt-0.5">
+                                    Abierta{" "}
+                                    {order.createdAt
+                                      ? new Date(order.createdAt).toLocaleTimeString("es-MX", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          hour12: false,
+                                        })
+                                      : "—"}
+                                  </p>
                                 </div>
                                 <span className="text-orange-400 font-bold text-sm">{formatCurrency(orderTotal)}</span>
                               </div>

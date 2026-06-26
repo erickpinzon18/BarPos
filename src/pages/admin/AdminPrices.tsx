@@ -45,7 +45,6 @@ const OrderCard: React.FC<{
 }> = ({ order, editing, saving, onEdit, onSave, onCancel, onChangeValue }) => {
   const activeItems = order.items.filter((i) => !i.isDeleted);
 
-  const displayName = order.tableName || `Mesa ${order.tableNumber}`;
   const subtotal = activeItems.reduce(
     (s, i) => s + i.productPrice * i.quantity,
     0
@@ -56,7 +55,12 @@ const OrderCard: React.FC<{
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
         <div>
-          <h3 className="font-bold text-white text-base">{displayName}</h3>
+          <h3 className="font-bold text-white text-base">
+            Mesa {order.tableNumber}
+          </h3>
+          {order.tableName && (
+            <p className="text-xs text-red-400 mt-0.5">{order.tableName}</p>
+          )}
           <p className="text-xs text-gray-400 mt-0.5">{order.waiterName}</p>
         </div>
         <div className="text-right">

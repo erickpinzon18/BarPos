@@ -16,7 +16,7 @@ import {
   Calculator,
   BarChart3,
   BarChart2,
-  Tag,
+  // Tag,
   CalendarDays,
   Archive,
   FlaskConical,

@@ -59,7 +59,7 @@ const AdminCheckout: React.FC = () => {
   }, [order]);
 
   // Tip and payment state (percentage)
-  const [tipPercent, setTipPercent] = useState<number>(0.15);
+  const [tipPercent] = useState<number>(0.15);
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);

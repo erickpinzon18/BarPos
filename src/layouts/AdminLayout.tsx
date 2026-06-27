@@ -194,14 +194,14 @@ const AdminLayout: React.FC = () => {
                   <Package size={20} />
                   <span>Productos</span>
                 </NavLink>
-                <NavLink
+                {/* <NavLink
                   to="/admin/promotions"
                   className={navLinkClassMobile}
                   onClick={closeMobileMenu}
                 >
                   <Tag size={20} />
                   <span>Promociones</span>
-                </NavLink>
+                </NavLink> */}
                 {currentUser?.superAdmin && (
                   <NavLink
                     to="/admin/prices"

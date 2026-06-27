@@ -151,10 +151,10 @@ export const AdminSidebar: React.FC = () => {
             <Package size={20} />
             <span>Productos</span>
           </NavLink>
-          <NavLink to="/admin/promotions" className={navLinkClass}>
+          {/* <NavLink to="/admin/promotions" className={navLinkClass}>
             <Tag size={20} />
             <span>Promociones</span>
-          </NavLink>
+          </NavLink> */}
           {currentUser?.superAdmin && (
             <NavLink to="/admin/prices" className={navLinkClass}>
               <CircleDollarSign size={20} />

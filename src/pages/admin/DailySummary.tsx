@@ -138,8 +138,11 @@ const DailySummary: React.FC = () => {
   };
 
   const [summary, setSummary] = useState<ShiftSummary | null>(null);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentShiftDate());
+  const [mainTab, setMainTab] = useState<'resumen' | 'cuentas'>('resumen');
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [waiterTab, setWaiterTab] = useState<'resumen' | 'detalle'>('resumen');
   const [pendingTab, setPendingTab] = useState<'resumen' | 'detalle'>('resumen');
 
@@ -149,6 +152,7 @@ const DailySummary: React.FC = () => {
   const [extraExpense, setExtraExpense] = useState<number>(0);
   const [extraExpenseDesc, setExtraExpenseDesc] = useState<string>("");
   const [savingExpenses, setSavingExpenses] = useState(false);
+  const [cajaIngresada, setCajaIngresada] = useState<Record<string, string>>({});
 
   const printRef = useRef<HTMLDivElement>(null);
   
@@ -285,7 +289,10 @@ const DailySummary: React.FC = () => {
       ordersData.forEach((order) => {
         const subtotal = order.subtotal ?? 0;
         const total = order.total ?? 0;
-        const tip = total - subtotal;
+        const discount = (order as any).discount ?? 0;
+        // Use saved tipAmount when available (orders closed after discount fix);
+        // fall back to total - subtotal + discount for older orders.
+        const tip = (order as any).tipAmount ?? (total - subtotal + discount);
         const people = order.peopleCount ?? 1;
 
         summary.totalSales += total;
@@ -540,6 +547,11 @@ const DailySummary: React.FC = () => {
         setExtraExpenseDesc("");
       }
 
+      setAllOrders(ordersData.slice().sort((a, b) => {
+        const tA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt ?? 0).getTime();
+        const tB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt ?? 0).getTime();
+        return tA - tB;
+      }));
       setSummary(summary);
     } catch (error) {
       console.error("Error loading shift data:", error);
@@ -790,6 +802,22 @@ const DailySummary: React.FC = () => {
         )}
       </div>
 
+      {/* Tabs principales */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setMainTab('resumen')}
+          className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${mainTab === 'resumen' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white border border-gray-700'}`}
+        >
+          Resumen
+        </button>
+        <button
+          onClick={() => setMainTab('cuentas')}
+          className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${mainTab === 'cuentas' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white border border-gray-700'}`}
+        >
+          Cuentas Cobradas {allOrders.length > 0 && <span className="ml-1 bg-gray-700 text-gray-300 text-xs px-1.5 py-0.5 rounded-full">{allOrders.length}</span>}
+        </button>
+      </div>
+
       {/* Selector de Fecha */}
       <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -826,12 +854,640 @@ const DailySummary: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Pestaña: Cuentas Cobradas ──────────────────────────────────────── */}
+      {mainTab === 'cuentas' && !loading && (
+        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+          {allOrders.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Package className="mx-auto mb-3 opacity-40" size={40} />
+              <p>No hay cuentas cobradas en este turno</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-700 text-gray-400 text-xs uppercase">
+                    <th className="text-left px-4 py-3">#</th>
+                    <th className="text-left px-4 py-3">Mesa</th>
+                    <th className="text-left px-4 py-3">Mesero</th>
+                    <th className="text-right px-4 py-3">Apertura</th>
+                    <th className="text-right px-4 py-3">Cierre</th>
+                    <th className="text-right px-4 py-3">Personas</th>
+                    <th className="text-right px-4 py-3">Subtotal</th>
+                    <th className="text-right px-4 py-3">Descuento</th>
+                    <th className="text-right px-4 py-3">Propina</th>
+                    <th className="text-right px-4 py-3">Total</th>
+                    <th className="text-left px-4 py-3">Pago</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allOrders.map((o, idx) => {
+                    const discount = (o as any).discount ?? 0;
+                    const subtotalO = o.subtotal ?? 0;
+                    const totalO = o.total ?? 0;
+                    const tipO = (o as any).tipAmount ?? Math.max(0, totalO - subtotalO + discount);
+                    const hasDiscount = discount > 0;
+                    const openedAt = o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt ?? 0);
+                    const closedAt = o.completedAt instanceof Date ? o.completedAt : o.completedAt ? new Date(o.completedAt as any) : null;
+                    const fmt = (d: Date) => d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    const payLabel: Record<string, string> = { efectivo: '💵 Efectivo', tarjeta: '💳 Tarjeta', transferencia: '🏦 Transf.', mixto: '🔀 Mixto' };
+                    const isExpanded = expandedOrderId === o.id;
+                    const activeItems = (o.items ?? []).filter((i: any) => !i.isDeleted);
+                    // Per-item price modification: if productPrice differs from what subtotal implies, flag it
+                    return (
+                      <React.Fragment key={o.id}>
+                        <tr
+                          onClick={() => setExpandedOrderId(isExpanded ? null : o.id)}
+                          className={`cursor-pointer border-t border-gray-700/50 transition-colors ${hasDiscount ? 'bg-green-900/5 hover:bg-green-900/10' : 'hover:bg-gray-700/30'} ${isExpanded ? 'bg-gray-700/40' : ''}`}
+                        >
+                          <td className="px-4 py-3 text-gray-500 text-xs">{idx + 1}</td>
+                          <td className="px-4 py-3 text-white font-medium">
+                            <span className="flex items-center gap-1">
+                              <span className="text-gray-500 text-xs">{isExpanded ? '▼' : '▶'}</span>
+                              {o.tableNumber === 0 ? 'Barra' : `Mesa ${o.tableNumber}`}
+                            </span>
+                            {o.tableName && <span className="text-gray-500 text-xs block pl-4">{o.tableName}</span>}
+                          </td>
+                          <td className="px-4 py-3 text-gray-300">{o.waiterName ?? '—'}</td>
+                          <td className="px-4 py-3 text-right text-gray-400">{fmt(openedAt)}</td>
+                          <td className="px-4 py-3 text-right text-gray-400">{closedAt ? fmt(closedAt) : '—'}</td>
+                          <td className="px-4 py-3 text-right text-gray-300">{o.peopleCount ?? 1}</td>
+                          <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(subtotalO)}</td>
+                          <td className="px-4 py-3 text-right">
+                            {hasDiscount
+                              ? <span className="text-green-400 font-semibold">-{formatCurrency(discount)}</span>
+                              : <span className="text-gray-600">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(tipO)}</td>
+                          <td className="px-4 py-3 text-right text-white font-bold">{formatCurrency(totalO)}</td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">{payLabel[o.paymentMethod ?? ''] ?? o.paymentMethod ?? '—'}</td>
+                        </tr>
+                        {isExpanded && (() => {
+                          const NACIONALES = ['bacardi','centenario','etiqueta roja','torres 5','absolut azul','smirnoff'];
+                          const PREMIUM    = ['maestro dobel','1800 cristalino','etiqueta negra','grey goose','hypnotic'];
+                          const PRECIO_NACIONAL = 899;
+                          const PRECIO_PREMIUM  = 1699;
+
+                          const getPromoType = (name: string): 'nacional' | 'premium' | null => {
+                            const n = name.toLowerCase();
+                            if (n.includes('trago')) return null; // tragos no aplican
+                            if (n.includes('promo')) return null; // ya vendido a precio promo
+                            if (NACIONALES.some(k => n.includes(k))) return 'nacional';
+                            if (PREMIUM.some(k => n.includes(k))) return 'premium';
+                            return null;
+                          };
+                          const getItemDate = (item: any): Date | null => {
+                            if (!item.createdAt) return null;
+                            if (item.createdAt instanceof Date) return item.createdAt;
+                            if (typeof item.createdAt.toDate === 'function') return item.createdAt.toDate();
+                            return new Date(item.createdAt);
+                          };
+                          const qualifiesPromo = (item: any): boolean => {
+                            if (!getPromoType(item.productName ?? '')) return false;
+                            const d = getItemDate(item);
+                            if (!d) return false;
+                            return d.getDay() === 4 && d.getHours() < 23;
+                          };
+                          const getPromoPrice = (item: any): number => {
+                            const t = getPromoType(item.productName ?? '');
+                            return t === 'nacional' ? PRECIO_NACIONAL : t === 'premium' ? PRECIO_PREMIUM : item.productPrice;
+                          };
+
+                          const fmtItem = (d: Date) => d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+                          // Calculate what this order SHOULD cost with promo applied
+                          let promoSubtotal = 0;
+                          let realSubtotal = 0;
+                          for (const item of activeItems) {
+                            const linReal = item.productPrice * item.quantity;
+                            realSubtotal += linReal;
+                            promoSubtotal += qualifiesPromo(item)
+                              ? getPromoPrice(item) * item.quantity
+                              : linReal;
+                          }
+                          const promoDiff = realSubtotal - promoSubtotal; // cuánto se debió descontar
+                          const hasPromoBottles = activeItems.some((i: any) => qualifiesPromo(i));
+
+                          return (
+                            <tr className="border-t border-gray-700/30">
+                              <td colSpan={11} className="px-0 py-0 bg-gray-900/60">
+                                <div className="px-6 py-4">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <span className="text-gray-500 text-xs uppercase font-semibold">Productos</span>
+                                    <span className="text-xs text-green-500 bg-green-900/30 px-2 py-0.5 rounded">🟢 = botella con promo (jue antes 11pm)</span>
+                                  </div>
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="text-gray-500 uppercase border-b border-gray-700/50">
+                                        <th className="text-left py-1.5 pr-4">Hora</th>
+                                        <th className="text-left py-1.5 pr-4">Producto</th>
+                                        <th className="text-right py-1.5 pr-4">Cant.</th>
+                                        <th className="text-right py-1.5 pr-4">Precio real</th>
+                                        <th className="text-right py-1.5 pr-4">Precio promo</th>
+                                        <th className="text-right py-1.5 pr-4">Cobrado</th>
+                                        <th className="text-right py-1.5">Ahorro promo</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-700/30">
+                                      {activeItems.length === 0 ? (
+                                        <tr><td colSpan={7} className="py-2 text-gray-600 text-center">Sin productos</td></tr>
+                                      ) : activeItems.map((item: any) => {
+                                        const lineReal  = item.productPrice * item.quantity;
+                                        const itemDate  = getItemDate(item);
+                                        const promoOk   = qualifiesPromo(item);
+                                        const promoP    = getPromoPrice(item);
+                                        const linePromo = promoOk ? promoP * item.quantity : lineReal;
+                                        const ahorro    = promoOk ? lineReal - linePromo : 0;
+                                        const serviceMatch = (item.notes ?? '').match(/^Servicios:\s*(.+)$/s);
+                                        const services = serviceMatch ? serviceMatch[1].split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+                                        return (
+                                          <React.Fragment key={item.id}>
+                                            <tr className={promoOk ? 'bg-green-900/20 text-green-200' : 'text-gray-300'}>
+                                              <td className="py-1.5 pr-4 font-mono text-gray-400">
+                                                {itemDate ? fmtItem(itemDate) : '—'}
+                                                {promoOk && <span className="ml-1">🟢</span>}
+                                              </td>
+                                              <td className="py-1.5 pr-4 font-medium">{item.productName}</td>
+                                              <td className="py-1.5 pr-4 text-right">{item.quantity}</td>
+                                              <td className="py-1.5 pr-4 text-right text-gray-400">{formatCurrency(item.productPrice)}</td>
+                                              <td className="py-1.5 pr-4 text-right">
+                                                {promoOk
+                                                  ? <span className="text-green-400 font-semibold">{formatCurrency(promoP)}</span>
+                                                  : <span className="text-gray-600">—</span>}
+                                              </td>
+                                              <td className="py-1.5 pr-4 text-right">{formatCurrency(lineReal)}</td>
+                                              <td className="py-1.5 text-right">
+                                                {ahorro > 0
+                                                  ? <span className="text-green-400 font-semibold">-{formatCurrency(ahorro)}</span>
+                                                  : <span className="text-gray-600">—</span>}
+                                              </td>
+                                            </tr>
+                                            {services.map((svc: string, si: number) => (
+                                              <tr key={si} className="text-gray-600">
+                                                <td className="py-0.5 text-gray-700">—</td>
+                                                <td className="py-0.5 pl-3">↳ {svc}</td>
+                                                <td colSpan={5} className="py-0.5 text-right">$0.00</td>
+                                              </tr>
+                                            ))}
+                                          </React.Fragment>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+
+                                  {/* Resumen faltante */}
+                                  {hasPromoBottles && (
+                                    <div className="mt-3 pt-3 border-t border-gray-700/50 grid grid-cols-3 gap-3">
+                                      <div className="bg-gray-800 rounded-lg p-3 text-center">
+                                        <p className="text-gray-500 text-xs mb-1">Cobrado (sin promo)</p>
+                                        <p className="text-white font-bold text-base">{formatCurrency(realSubtotal)}</p>
+                                      </div>
+                                      <div className="bg-green-900/30 border border-green-700/40 rounded-lg p-3 text-center">
+                                        <p className="text-green-500 text-xs mb-1">Debió cobrarse (con promo)</p>
+                                        <p className="text-green-300 font-bold text-base">{formatCurrency(promoSubtotal)}</p>
+                                      </div>
+                                      <div className={`rounded-lg p-3 text-center border ${promoDiff > 0 ? 'bg-red-900/30 border-red-700/40' : 'bg-gray-800 border-gray-700'}`}>
+                                        <p className={`text-xs mb-1 ${promoDiff > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                                          {promoDiff > 0 ? 'Se cobró de más' : 'Diferencia'}
+                                        </p>
+                                        <p className={`font-bold text-base ${promoDiff > 0 ? 'text-red-300' : 'text-gray-400'}`}>
+                                          {promoDiff > 0 ? `+${formatCurrency(promoDiff)}` : formatCurrency(Math.abs(promoDiff))}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })()}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-600 bg-gray-700/40 font-bold text-sm">
+                    <td className="px-4 py-3 text-white" colSpan={6}>TOTAL ({allOrders.length} cuentas)</td>
+                    <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(allOrders.reduce((s, o) => s + (o.subtotal ?? 0), 0))}</td>
+                    <td className="px-4 py-3 text-right text-green-400">
+                      {(() => { const t = allOrders.reduce((s, o) => s + ((o as any).discount ?? 0), 0); return t > 0 ? `-${formatCurrency(t)}` : '—'; })()}
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-300">
+                      {formatCurrency(allOrders.reduce((s, o) => {
+                        const disc = (o as any).discount ?? 0;
+                        const tip = (o as any).tipAmount ?? Math.max(0, (o.total ?? 0) - (o.subtotal ?? 0) + disc);
+                        return s + tip;
+                      }, 0))}
+                    </td>
+                    <td className="px-4 py-3 text-right text-white">{formatCurrency(allOrders.reduce((s, o) => s + (o.total ?? 0), 0))}</td>
+                    <td className="px-4 py-3" />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Resumen excedentes promo (solo pestaña Cuentas) ─────────────────── */}
+      {mainTab === 'cuentas' && !loading && allOrders.length > 0 && (() => {
+        const NACIONALES = ['bacardi','centenario','etiqueta roja','torres 5','absolut azul','smirnoff'];
+        const PREMIUM    = ['maestro dobel','1800 cristalino','etiqueta negra','grey goose','hypnotic'];
+        const PRECIO_NACIONAL = 899;
+        const PRECIO_PREMIUM  = 1699;
+
+        const getPromoType = (name: string): 'nacional' | 'premium' | null => {
+          const n = name.toLowerCase();
+          if (n.includes('trago') || n.includes('promo')) return null;
+          if (NACIONALES.some(k => n.includes(k))) return 'nacional';
+          if (PREMIUM.some(k => n.includes(k))) return 'premium';
+          return null;
+        };
+        const getItemDate = (item: any): Date | null => {
+          if (!item.createdAt) return null;
+          if (item.createdAt instanceof Date) return item.createdAt;
+          if (typeof item.createdAt.toDate === 'function') return item.createdAt.toDate();
+          return new Date(item.createdAt);
+        };
+        const qualifiesPromo = (item: any): boolean => {
+          if (!getPromoType(item.productName ?? '')) return false;
+          const d = getItemDate(item);
+          if (!d) return false;
+          return d.getDay() === 4 && d.getHours() < 23;
+        };
+        const getPromoPrice = (item: any): number => {
+          const t = getPromoType(item.productName ?? '');
+          return t === 'nacional' ? PRECIO_NACIONAL : t === 'premium' ? PRECIO_PREMIUM : item.productPrice;
+        };
+
+        // Compute per-order excess and payment breakdown
+        let totalCobrado = 0;
+        let totalExcedente = 0;
+        let efectivoCobrado = 0;
+        let tarjetaCobrada = 0;
+        let transferenciaCobrada = 0;
+        let efectivoCorregido = 0;
+        let tarjetaCorregida = 0;
+        let transferenciaCorregida = 0;
+
+        for (const o of allOrders) {
+          const orderTotal = o.total ?? 0;
+          totalCobrado += orderTotal;
+
+          // Calculate promo excess for this order
+          const activeItems = (o.items ?? []).filter((i: any) => !i.isDeleted);
+          let realSub = 0, promoSub = 0;
+          for (const item of activeItems) {
+            const line = item.productPrice * item.quantity;
+            realSub += line;
+            promoSub += qualifiesPromo(item) ? getPromoPrice(item) * item.quantity : line;
+          }
+          const excedente = Math.max(0, realSub - promoSub);
+          totalExcedente += excedente;
+          const correctedTotal = orderTotal - excedente;
+
+          // Payment breakdown
+          if (o.paymentMethod === 'mixto' && Array.isArray(o.payments)) {
+            const totalPmt = o.payments.reduce((s: number, p: any) => s + (p.amount ?? 0), 0);
+            for (const p of o.payments) {
+              const ratio = totalPmt > 0 ? (p.amount ?? 0) / totalPmt : 0;
+              const pCobrado = p.amount ?? 0;
+              const pCorregido = correctedTotal * ratio;
+              if (p.method === 'efectivo')       { efectivoCobrado += pCobrado; efectivoCorregido += pCorregido; }
+              else if (p.method === 'tarjeta')    { tarjetaCobrada  += pCobrado; tarjetaCorregida  += pCorregido; }
+              else if (p.method === 'transferencia') { transferenciaCobrada += pCobrado; transferenciaCorregida += pCorregido; }
+            }
+          } else {
+            if (o.paymentMethod === 'efectivo')       { efectivoCobrado += orderTotal; efectivoCorregido += correctedTotal; }
+            else if (o.paymentMethod === 'tarjeta')    { tarjetaCobrada  += orderTotal; tarjetaCorregida  += correctedTotal; }
+            else if (o.paymentMethod === 'transferencia') { transferenciaCobrada += orderTotal; transferenciaCorregida += correctedTotal; }
+          }
+        }
+
+        const totalCorregido = totalCobrado - totalExcedente;
+        if (totalExcedente === 0) return null;
+
+        return (
+          <div className="mt-4 bg-gray-800 rounded-xl border border-gray-700 p-6">
+            <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+              <DollarSign size={18} className="text-red-500" />
+              Resumen de Excedentes de Promo
+            </h3>
+
+            {/* Totales globales */}
+            <div className="grid grid-cols-3 gap-4 mb-5">
+              <div className="bg-gray-700/40 rounded-lg p-4 text-center">
+                <p className="text-gray-400 text-xs mb-1">Total cobrado</p>
+                <p className="text-white font-bold text-xl">{formatCurrency(totalCobrado)}</p>
+              </div>
+              <div className="bg-red-900/20 border border-red-700/40 rounded-lg p-4 text-center">
+                <p className="text-red-400 text-xs mb-1">Excedente (no se descontó promo)</p>
+                <p className="text-red-300 font-bold text-xl">+{formatCurrency(totalExcedente)}</p>
+              </div>
+              <div className="bg-green-900/20 border border-green-700/40 rounded-lg p-4 text-center">
+                <p className="text-green-400 text-xs mb-1">Debió cobrarse (con promo)</p>
+                <p className="text-green-300 font-bold text-xl">{formatCurrency(totalCorregido)}</p>
+              </div>
+            </div>
+
+            {/* Desglose por método de pago */}
+            <p className="text-gray-500 text-xs uppercase font-semibold mb-3">Desglose por método de pago</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                { label: '💵 Efectivo',       cobrado: efectivoCobrado,       corregido: efectivoCorregido },
+                { label: '💳 Tarjeta',         cobrado: tarjetaCobrada,         corregido: tarjetaCorregida },
+                { label: '🏦 Transferencia',   cobrado: transferenciaCobrada,   corregido: transferenciaCorregida },
+              ].filter(m => m.cobrado > 0).map(m => (
+                <div key={m.label} className="bg-gray-700/30 rounded-lg p-4 border border-gray-700/50">
+                  <p className="text-gray-300 font-semibold text-sm mb-3">{m.label}</p>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Cobrado</span>
+                      <span className="text-white font-semibold">{formatCurrency(m.cobrado)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-red-400">Excedente</span>
+                      <span className="text-red-300 font-semibold">-{formatCurrency(m.cobrado - m.corregido)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-gray-600 pt-1.5 mt-1.5">
+                      <span className="text-green-400 font-semibold">Con promo</span>
+                      <span className="text-green-300 font-bold">{formatCurrency(m.corregido)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Desglose por Mesa + Reparto de Propinas ──────────────────────────── */}
+      {mainTab === 'cuentas' && !loading && allOrders.length > 0 && (() => {
+        // Promo helpers (same logic as the other sections)
+        const NACIONALES_D = ['bacardi','centenario','etiqueta roja','torres 5','absolut azul','smirnoff'];
+        const PREMIUM_D    = ['maestro dobel','1800 cristalino','etiqueta negra','grey goose','hypnotic'];
+        const getPromoTypeD = (name: string): 'nacional' | 'premium' | null => {
+          const n = name.toLowerCase();
+          if (n.includes('trago') || n.includes('promo')) return null;
+          if (NACIONALES_D.some(k => n.includes(k))) return 'nacional';
+          if (PREMIUM_D.some(k => n.includes(k))) return 'premium';
+          return null;
+        };
+        const getItemDateD = (item: any): Date | null => {
+          if (!item.createdAt) return null;
+          if (item.createdAt instanceof Date) return item.createdAt;
+          if (typeof item.createdAt.toDate === 'function') return item.createdAt.toDate();
+          return new Date(item.createdAt);
+        };
+        const qualifiesPromoD = (item: any): boolean => {
+          if (!getPromoTypeD(item.productName ?? '')) return false;
+          const d = getItemDateD(item);
+          if (!d) return false;
+          return d.getDay() === 4 && d.getHours() < 23;
+        };
+
+        // Compute per-order payment breakdown
+        type MesaRow = {
+          idx: number;
+          mesa: string;
+          waiter: string;
+          efectivo: number;
+          tarjeta: number;
+          transferencia: number;
+          propina: number;
+          subtotal: number;
+          total: number;
+          hasPromo: boolean;
+        };
+        const rows: MesaRow[] = allOrders.map((o, idx) => {
+          const totalO    = o.total ?? 0;
+          const subtotalO = o.subtotal ?? 0;
+          // tipAmount may live at order root OR only inside payments — fall back to total−subtotal
+          const propina   = (o as any).tipAmount ?? (totalO - subtotalO);
+          let efectivo = 0, tarjeta = 0, transferencia = 0;
+
+          if (o.paymentMethod === 'mixto' && Array.isArray(o.payments)) {
+            // payment.amount is the subtotal portion per method (tip not yet added).
+            // Distribute tip proportionally so each method's total = amount + tip share.
+            const baseSum = o.payments.reduce((s: number, p: any) => s + (p.amount ?? 0), 0);
+            for (const p of o.payments) {
+              const base = p.amount ?? 0;
+              const tipShare = baseSum > 0 ? propina * (base / baseSum) : 0;
+              const withTip = base + tipShare;
+              if (p.method === 'efectivo') efectivo += withTip;
+              else if (p.method === 'tarjeta') tarjeta += withTip;
+              else if (p.method === 'transferencia') transferencia += withTip;
+            }
+          } else if (o.paymentMethod === 'efectivo') {
+            efectivo = totalO;
+          } else if (o.paymentMethod === 'tarjeta') {
+            tarjeta = totalO;
+          } else if (o.paymentMethod === 'transferencia') {
+            transferencia = totalO;
+          }
+
+          const activeItems = (o.items ?? []).filter((i: any) => !i.isDeleted);
+          const hasPromo = activeItems.some((i: any) => qualifiesPromoD(i));
+
+          return {
+            idx: idx + 1,
+            mesa: o.tableNumber === 0 ? 'Barra' : `Mesa ${o.tableNumber}`,
+            waiter: o.waiterName ?? '—',
+            efectivo,
+            tarjeta,
+            transferencia,
+            propina,
+            subtotal: subtotalO,
+            total: totalO,
+            hasPromo,
+          };
+        });
+
+        const totEfectivo = rows.reduce((s, r) => s + r.efectivo, 0);
+        const totTarjeta  = rows.reduce((s, r) => s + r.tarjeta, 0);
+        const totTransferencia = rows.reduce((s, r) => s + r.transferencia, 0);
+        const totPropina  = rows.reduce((s, r) => s + r.propina, 0);
+        const totSubtotal = rows.reduce((s, r) => s + r.subtotal, 0);
+        const totTotal    = rows.reduce((s, r) => s + r.total, 0);
+
+        // Tip distribution by waiter
+        const tipByWaiter: Record<string, number> = {};
+        for (const r of rows) {
+          tipByWaiter[r.waiter] = (tipByWaiter[r.waiter] ?? 0) + r.propina;
+        }
+        const waiters = Object.entries(tipByWaiter).sort((a, b) => b[1] - a[1]);
+
+        return (
+          <div className="mt-4 space-y-4">
+            {/* ── Tabla por mesa ── */}
+            <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-700 flex items-center gap-2">
+                <Users size={18} className="text-blue-400" />
+                <h3 className="text-base font-bold text-white">Desglose por Mesa</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-400 text-xs uppercase border-b border-gray-700">
+                      <th className="text-left px-4 py-3">#</th>
+                      <th className="text-left px-4 py-3">Mesa</th>
+                      <th className="text-left px-4 py-3">Mesero</th>
+                      <th className="text-right px-4 py-3">💵 Efectivo</th>
+                      <th className="text-right px-4 py-3">💳 Tarjeta</th>
+                      {totTransferencia > 0 && <th className="text-right px-4 py-3">🏦 Transf.</th>}
+                      <th className="text-right px-4 py-3">Subtotal</th>
+                      <th className="text-right px-4 py-3">Propina</th>
+                      <th className="text-right px-4 py-3">Total</th>
+                      <th className="text-right px-4 py-3">Diferencia</th>
+                      <th className="text-right px-4 py-3">En caja</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(r => (
+                      <tr key={r.idx} className={`border-t border-gray-700/50 transition-colors ${r.hasPromo ? 'bg-green-900/10 hover:bg-green-900/20' : 'hover:bg-gray-700/20'}`}>
+                        <td className="px-4 py-3 text-gray-500 text-xs">{r.idx}</td>
+                        <td className="px-4 py-3 text-white font-medium">
+                          {r.hasPromo && <span className="mr-1 text-green-400">🟢</span>}{r.mesa}
+                        </td>
+                        <td className="px-4 py-3 text-gray-300">{r.waiter}</td>
+                        <td className="px-4 py-3 text-right text-green-400 font-semibold">
+                          {r.efectivo > 0 ? formatCurrency(r.efectivo) : <span className="text-gray-600">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right text-blue-400 font-semibold">
+                          {r.tarjeta > 0 ? formatCurrency(r.tarjeta) : <span className="text-gray-600">—</span>}
+                        </td>
+                        {totTransferencia > 0 && (
+                          <td className="px-4 py-3 text-right text-purple-400 font-semibold">
+                            {r.transferencia > 0 ? formatCurrency(r.transferencia) : <span className="text-gray-600">—</span>}
+                          </td>
+                        )}
+                        <td className="px-4 py-3 text-right text-gray-300">
+                          {r.subtotal > 0 ? formatCurrency(r.subtotal) : <span className="text-gray-600">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right text-yellow-400 font-semibold">
+                          {r.propina > 0 ? formatCurrency(r.propina) : <span className="text-gray-600">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right text-white font-bold">{formatCurrency(r.total)}</td>
+                        <td className="px-4 py-3 text-right">
+                          {(() => {
+                            const suma = r.efectivo + r.tarjeta + r.transferencia;
+                            const d = suma - r.total;
+                            if (Math.abs(d) < 0.01) return <span className="text-green-400 text-xs font-semibold">✓</span>;
+                            return <span className={`text-xs font-semibold ${d > 0 ? 'text-blue-400' : 'text-red-400'}`}>{d > 0 ? '+' : ''}{formatCurrency(d)}</span>;
+                          })()}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {(() => {
+                            const key = String(r.idx);
+                            const val = cajaIngresada[key] ?? '';
+                            const ingresado = parseFloat(val);
+                            const diff = val !== '' && !isNaN(ingresado) ? ingresado - r.total : null;
+                            return (
+                              <div className="flex flex-col items-end gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  value={val}
+                                  onChange={e => setCajaIngresada(prev => ({ ...prev, [key]: e.target.value }))}
+                                  className="w-24 bg-gray-600 text-white text-right rounded px-2 py-1 text-xs border border-gray-500 focus:border-yellow-400 focus:outline-none"
+                                />
+                                {diff !== null && (
+                                  <span className={`text-xs font-semibold ${diff === 0 ? 'text-green-400' : diff > 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                                    {diff === 0 ? '✓' : diff > 0 ? `+${formatCurrency(diff)}` : formatCurrency(diff)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    {(() => {
+                      const totIngresado = rows.reduce((s, r) => {
+                        const val = cajaIngresada[String(r.idx)] ?? '';
+                        const n = parseFloat(val);
+                        return s + (val !== '' && !isNaN(n) ? n : 0);
+                      }, 0);
+                      const filledCount = rows.filter(r => {
+                        const val = cajaIngresada[String(r.idx)] ?? '';
+                        return val !== '' && !isNaN(parseFloat(val));
+                      }).length;
+                      const totEsperado = rows.reduce((s, r) => {
+                        const val = cajaIngresada[String(r.idx)] ?? '';
+                        return s + (val !== '' && !isNaN(parseFloat(val)) ? r.total : 0);
+                      }, 0);
+                      const diff = filledCount > 0 ? totIngresado - totEsperado : null;
+                      return (
+                        <tr className="border-t-2 border-gray-600 bg-gray-700/40 font-bold text-sm">
+                          <td className="px-4 py-3 text-white" colSpan={3}>TOTAL</td>
+                          <td className="px-4 py-3 text-right text-green-400">{formatCurrency(totEfectivo)}</td>
+                          <td className="px-4 py-3 text-right text-blue-400">{formatCurrency(totTarjeta)}</td>
+                          {totTransferencia > 0 && <td className="px-4 py-3 text-right text-purple-400">{formatCurrency(totTransferencia)}</td>}
+                          <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(totSubtotal)}</td>
+                          <td className="px-4 py-3 text-right text-yellow-400">{formatCurrency(totPropina)}</td>
+                          <td className="px-4 py-3 text-right text-white">{formatCurrency(totTotal)}</td>
+                          <td className="px-4 py-3 text-right">
+                            {(() => {
+                              const suma = totEfectivo + totTarjeta + totTransferencia;
+                              const d = suma - totTotal;
+                              if (Math.abs(d) < 0.01) return <span className="text-green-400 text-sm font-bold">✓</span>;
+                              return <span className={`text-sm font-bold ${d > 0 ? 'text-blue-400' : 'text-red-400'}`}>{d > 0 ? '+' : ''}{formatCurrency(d)}</span>;
+                            })()}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {diff !== null && (
+                              <div className="flex flex-col items-end gap-0.5">
+                                <span className="text-gray-400 text-xs font-normal">{formatCurrency(totIngresado)} ingresado</span>
+                                <span className={`text-sm font-bold ${diff === 0 ? 'text-green-400' : diff > 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                                  {diff === 0 ? '✓ Exacto' : diff > 0 ? `+${formatCurrency(diff)} de más` : `${formatCurrency(Math.abs(diff))} falta`}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* ── Reparto de propinas ── */}
+            <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Users size={18} className="text-yellow-400" />
+                <h3 className="text-base font-bold text-white">Reparto de Propinas</h3>
+                <span className="ml-auto text-yellow-300 font-bold text-lg">{formatCurrency(totPropina)} total</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {waiters.map(([waiter, tip]) => (
+                  <div key={waiter} className="bg-yellow-900/10 border border-yellow-700/30 rounded-lg p-4 text-center">
+                    <p className="text-gray-300 font-semibold text-sm truncate mb-2">{waiter}</p>
+                    <p className="text-yellow-300 font-bold text-2xl">{formatCurrency(tip)}</p>
+                    <p className="text-gray-500 text-xs mt-1">{totPropina > 0 ? ((tip / totPropina) * 100).toFixed(0) : 0}% del total</p>
+                  </div>
+                ))}
+              </div>
+              {waiters.length > 1 && (
+                <p className="text-gray-500 text-xs mt-4 text-center">
+                  Proporcional a las cuentas atendidas por cada mesero en el turno
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500" />
           <p className="mt-4 text-gray-400">Cargando resumen...</p>
         </div>
-      ) : summary ? (
+      ) : summary && mainTab === 'resumen' ? (
         <>
           {/* ── KPIs Principales ─────────────────────────────────────────── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -1410,7 +2066,8 @@ const DailySummary: React.FC = () => {
                       .map(o => {
                         const total = o.total ?? 0;
                         const subtotal = o.subtotal ?? 0;
-                        const tip = total - subtotal;
+                        const discount = (o as any).discount ?? 0;
+                        const tip = (o as any).tipAmount ?? (total - subtotal + discount);
                         let cashAmt = 0, cardAmt = 0;
                         if (o.paymentMethod === 'mixto' && Array.isArray(o.payments)) {
                           o.payments.forEach(p => {

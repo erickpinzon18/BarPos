@@ -604,10 +604,6 @@ const AdminCheckout: React.FC = () => {
                 <span className="font-bold">Subtotal:</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
               {/* <div className="flex justify-between"><span>Propina ({(tipPercent * 100).toFixed(0)}%):</span><span>${tipAmount.toFixed(2)}</span></div> */}
               <div className="flex justify-between">
                 <span className="font-bold">

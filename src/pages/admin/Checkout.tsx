@@ -60,9 +60,6 @@ const AdminCheckout: React.FC = () => {
 
   // Tip and payment state (percentage)
   const [tipPercent, setTipPercent] = useState<number>(0.15);
-  const [customTipPercent, setCustomTipPercent] = useState<string>(""); // user's input like '15' means 15%
-  const [tipMode, setTipMode] = useState<"percent" | "amount">("percent");
-  const [customTipAmount, setCustomTipAmount] = useState<string>("");
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);
@@ -174,41 +171,6 @@ const AdminCheckout: React.FC = () => {
     }
     return promos;
   }, [activeItems, itemPromoMap]);
-
-  const updateTotalWithPercent = (percent: number) => {
-    setTipPercent(prev => prev === percent ? 0 : percent);
-    setCustomTipPercent("");
-  };
-
-  const handleCustomTipChange = (value: string) => {
-    setCustomTipPercent(value);
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed) && parsed >= 0) {
-      // Interpret numbers >= 1 as percentage values (e.g. 15 -> 15%), numbers < 1 as decimals (e.g. 0.15)
-      const bounded = Math.min(Math.max(parsed, 0), 100); // clamp between 0 and 100
-      const percent = bounded >= 1 ? bounded / 100 : bounded; // 1 -> 0.01 (1%)
-      setTipPercent(percent);
-    } else if (value === "") {
-      setTipPercent(0);
-    }
-  };
-
-  const handleCustomTipAmountChange = (value: string) => {
-    setCustomTipAmount(value);
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed) && parsed >= 0 && subtotal > 0) {
-      setTipPercent(parsed / subtotal);
-    } else if (value === "" || subtotal === 0) {
-      setTipPercent(0);
-    }
-  };
-
-  const switchTipMode = (mode: "percent" | "amount") => {
-    setTipMode(mode);
-    setCustomTipPercent("");
-    setCustomTipAmount("");
-    setTipPercent(0);
-  };
 
   const handlePrint = (customOrder?: Order) => {
     if (!order && !customOrder) return;
@@ -664,114 +626,10 @@ const AdminCheckout: React.FC = () => {
 
         <div className="space-y-6">
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-white">Propina</h3>
-              {/* Toggle modo: porcentaje vs monto fijo */}
-              <div className="flex bg-gray-900 rounded-lg overflow-hidden border border-gray-700 text-sm">
-                <button
-                  disabled={isReadOnly}
-                  onClick={() => switchTipMode("percent")}
-                  className={`px-3 py-1.5 font-semibold transition-colors ${
-                    tipMode === "percent" ? "bg-red-600 text-white" : "text-gray-400 hover:text-white disabled:cursor-not-allowed"
-                  }`}
-                >
-                  %
-                </button>
-                <button
-                  disabled={isReadOnly}
-                  onClick={() => switchTipMode("amount")}
-                  className={`px-3 py-1.5 font-semibold transition-colors ${
-                    tipMode === "amount" ? "bg-red-600 text-white" : "text-gray-400 hover:text-white disabled:cursor-not-allowed"
-                  }`}
-                >
-                  $
-                </button>
-              </div>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-white">Propina (15%)</h3>
+              <span className="text-white font-bold text-lg">${tipAmount.toFixed(2)}</span>
             </div>
-
-            {tipMode === "percent" ? (
-              <>
-                <div className="flex space-x-2 items-center">
-                  <button
-                    disabled={isReadOnly}
-                    onClick={() => updateTotalWithPercent(0.1)}
-                    className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${
-                      tipPercent === 0.1
-                        ? "bg-red-600 text-gray-900"
-                        : isReadOnly
-                        ? "bg-gray-800 text-gray-400 cursor-not-allowed"
-                        : "bg-gray-700 hover:bg-gray-600"
-                    }`}
-                  >
-                    10%
-                  </button>
-                  <button
-                    disabled={isReadOnly}
-                    onClick={() => updateTotalWithPercent(0.15)}
-                    className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${
-                      tipPercent === 0.15
-                        ? "bg-red-600 text-gray-900"
-                        : isReadOnly
-                        ? "bg-gray-800 text-gray-400 cursor-not-allowed"
-                        : "bg-gray-700 hover:bg-gray-600"
-                    }`}
-                  >
-                    15%
-                  </button>
-                  <button
-                    disabled={isReadOnly}
-                    onClick={() => updateTotalWithPercent(0.2)}
-                    className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${
-                      tipPercent === 0.2
-                        ? "bg-red-600 text-gray-900"
-                        : isReadOnly
-                        ? "bg-gray-800 text-gray-400 cursor-not-allowed"
-                        : "bg-gray-700 hover:bg-gray-600"
-                    }`}
-                  >
-                    20%
-                  </button>
-                  <input
-                    disabled={isReadOnly}
-                    type="number"
-                    value={customTipPercent}
-                    onChange={(e) => handleCustomTipChange(e.target.value)}
-                    placeholder="Otro %"
-                    className="w-24 bg-gray-900 border border-gray-800 text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3"
-                  />
-                </div>
-                <div className="mt-2 text-sm text-gray-400">
-                  Propina: {(tipPercent * 100).toFixed(1)}% · <span className="text-white font-semibold">${tipAmount.toFixed(2)}</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-400 text-sm font-semibold">$</span>
-                  <input
-                    disabled={isReadOnly}
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={customTipAmount}
-                    onChange={(e) => handleCustomTipAmountChange(e.target.value)}
-                    placeholder="Monto de propina"
-                    className="flex-1 bg-gray-900 border border-gray-700 text-white text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3 px-3 disabled:cursor-not-allowed"
-                  />
-                </div>
-                <div className="mt-2 text-sm text-gray-400">
-                  {subtotal > 0 && tipAmount > 0 ? (
-                    <>
-                      Equivale al{" "}
-                      <span className="text-white font-semibold">{(tipPercent * 100).toFixed(1)}%</span>
-                      {" "}del subtotal
-                    </>
-                  ) : (
-                    "Ingresa el monto de propina"
-                  )}
-                </div>
-              </>
-            )}
           </div>
 
           {/* Promociones auto-aplicadas */}

@@ -41,10 +41,8 @@ const Settings: React.FC = () => {
   const [testPaymentReferenceId, setTestPaymentReferenceId] = useState('');
   const [terminals, setTerminals] = useState<Terminal[]>([]);
   const [terminalsLoading, setTerminalsLoading] = useState(false);
-  const [terminalsConfig, setTerminalsConfig] = useState<Record<string, boolean>>({});
-  const [terminalsNames, setTerminalsNames] = useState<Record<string, string>>({});
-  
-  // console.log(terminalsConfig, terminalsNames);
+  const [, setTerminalsConfig] = useState<Record<string, boolean>>({});
+  const [, setTerminalsNames] = useState<Record<string, string>>({});
   // Edit terminal name modal states
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [editingTerminal, setEditingTerminal] = useState<Terminal | null>(null);

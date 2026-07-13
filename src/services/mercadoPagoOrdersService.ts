@@ -189,13 +189,13 @@ export const setTerminalOperatingMode = async (
   try {
     // console.log(`🔄 [MercadoPago] Cambiando terminal ${deviceId} a modo ${mode}...`);
     
-    const response = await apiRequest<{ id: string; operating_mode: string }>(
+    await apiRequest<{ id: string; operating_mode: string }>(
       endpoint,
       'PATCH' as any, // TypeScript fix
       { operating_mode: mode }
     );
-    
-    // console.log(`✅ [MercadoPago] Terminal ${deviceId} ahora en modo ${response.operating_mode}`);
+
+    // console.log(`✅ [MercadoPago] Terminal ${deviceId} ahora en modo ${mode}`);
     return { success: true };
   } catch (error: any) {
     console.error(`❌ [MercadoPago] Error al cambiar modo de terminal ${deviceId}:`, error);

@@ -15,10 +15,10 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
     const orderStartTime = new Date(now.getTime() - (1 * 60 + 45) * 60 * 1000); // 9:00 PM
     
     // console.log('⏰ Fechas calculadas:', {
-      ahora: now.toLocaleString(),
-      inicioOrden: orderStartTime.toLocaleString(),
-      tiempoTranscurrido: '1h 45min'
-    });
+    //   ahora: now.toLocaleString(),
+    //   inicioOrden: orderStartTime.toLocaleString(),
+    //   tiempoTranscurrido: '1h 45min'
+    // });
 
     // Items de ejemplo con fechas escalonadas (agregados en diferentes momentos)
     const sampleItems: CreateData<OrderItem>[] = [
@@ -75,10 +75,10 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
     });
 
     // console.log('📋 Items con fechas:', itemsWithTimestamps.map((item) => ({
-      name: item.productName,
-      createdAt: item.createdAt.toDate().toLocaleString(),
-      status: item.status
-    })));
+    //   name: item.productName,
+    //   createdAt: item.createdAt.toDate().toLocaleString(),
+    //   status: item.status
+    // })));
 
     // Crear la orden
     const orderData: CreateData<Order> = {

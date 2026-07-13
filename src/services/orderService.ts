@@ -257,10 +257,10 @@ export const createEmptyOrder = async (
 export const restoreOrderItem = async (
   orderId: string,
   itemId: string,
-  authorizedUser: User
+  _authorizedUser: User
 ): Promise<void> => {
   try {
-    // console.log('🔄 Restaurando item:', { orderId, itemId, authorizedBy: authorizedUser.displayName });
+    // console.log('🔄 Restaurando item:', { orderId, itemId, authorizedBy: _authorizedUser.displayName });
 
     // Obtener la orden actual
     const orderRef = doc(db, 'orders', orderId);

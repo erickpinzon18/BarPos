@@ -78,7 +78,7 @@ const AdminLogin: React.FC = () => {
             </svg>
           )}
           <h1 className="text-4xl font-bold tracking-tighter text-white mb-2">
-            {config?.name ?? 'Bar POS'}
+            {config?.name ?? 'Rest POS'}
           </h1>
           <p className="text-lg text-red-500 font-semibold">Administrador</p>
           <p className="text-sm text-gray-500 mt-2">Acceso al panel de control</p>

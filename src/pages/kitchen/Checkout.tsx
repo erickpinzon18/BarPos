@@ -328,7 +328,7 @@ const KitchenCheckout: React.FC = () => {
           <div className="ticket bg-gray-900 p-6 rounded-lg text-sm text-white">
             <div className="text-center mb-4">
               <h2 className="text-2xl font-extrabold text-orange-400">PASE DE SALIDA</h2>
-              <p className="text-sm text-gray-400">{config?.name ?? 'Bar POS'} — Ticket de salida</p>
+              <p className="text-sm text-gray-400">{config?.name ?? 'Rest POS'} — Ticket de salida</p>
               <p className="text-xs text-gray-500 mt-2">Fecha: {new Date().toLocaleString()}</p>
               <p className="text-xs text-gray-500 mt-1">Id: {order.id}</p>
             </div>

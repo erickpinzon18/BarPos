@@ -130,7 +130,7 @@ const Login: React.FC = () => {
             </svg>
           )}
           <h1 className="text-4xl font-bold tracking-tighter text-white mb-2">
-            {config?.name ?? 'Bar POS'}
+            {config?.name ?? 'Rest POS'}
           </h1>
           <p className="text-lg text-red-500 font-semibold">Sistema de Punto de Venta</p>
           <p className="text-sm text-gray-500 mt-2">Ingresa tus credenciales para continuar</p>

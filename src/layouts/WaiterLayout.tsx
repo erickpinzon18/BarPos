@@ -43,7 +43,7 @@ const WaiterLayout: React.FC = () => {
                 <svg className="w-8 h-8 mr-2 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 22h8"/><path d="M12 12v10"/><path d="m19 2-7 10-7-10"/></svg>
               )}
               <span className="text-xl font-bold tracking-tighter text-white">
-                {config?.name ?? 'Bar POS'}
+                {config?.name ?? 'Rest POS'}
               </span>
             </Link>
             <nav className="flex items-center gap-4 text-sm">

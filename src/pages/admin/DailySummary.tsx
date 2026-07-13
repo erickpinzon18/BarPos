@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { db } from "../../services/firebase";
-import type { Order } from "../../utils/types";
+import type { Order } from "../../utils/types"; 
 import {
   Calendar,
   DollarSign,

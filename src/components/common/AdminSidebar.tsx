@@ -96,7 +96,7 @@ export const AdminSidebar: React.FC = () => {
           </svg>
         )}
         <span className="text-2xl font-bold tracking-tighter text-white">
-          {businessName ?? "Bar POS"}
+          {businessName ?? "Rest POS"}
         </span>
       </div>
 

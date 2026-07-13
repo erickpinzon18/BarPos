@@ -104,7 +104,7 @@ const KitchenLayout: React.FC = () => {
                 </svg>
               )}
               <span className="text-xl font-bold tracking-tighter text-white">
-                {config?.name ?? 'Bar POS'}
+                {config?.name ?? 'Rest POS'}
               </span>
             </div>
 

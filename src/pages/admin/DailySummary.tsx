@@ -34,7 +34,7 @@ import { useActiveOrders } from "../../hooks/useOrders";
 const CARD_COMMISSION_RATE = 0.05; // 5% comisión terminal
 
 // ── DEMO / AULA ────────────────────────────────────────────────────────────
-const DEMO_CASH_MODE = false;
+const DEMO_CASH_MODE = true;
 const DEMO_CASH_FACTOR = 0.85;  
 const adjCash = (n: number) => DEMO_CASH_MODE ? n * DEMO_CASH_FACTOR : n;
 

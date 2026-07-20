@@ -9,6 +9,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { db } from "../../services/firebase";
@@ -34,9 +35,10 @@ import { useActiveOrders } from "../../hooks/useOrders";
 const CARD_COMMISSION_RATE = 0.05; // 5% comisión terminal
 
 // ── DEMO / AULA ────────────────────────────────────────────────────────────
-const DEMO_CASH_MODE = false;
-const DEMO_CASH_FACTOR = 0.85;  
-const adjCash = (n: number) => DEMO_CASH_MODE ? n * DEMO_CASH_FACTOR : n;
+// El modo demo ya NO se controla desde aquí. Se activa/desactiva desde el
+// portal externo (/control.html) y se lee en tiempo real del documento
+// Firestore `config/demoCash` = { enabled: boolean, factor: number }.
+const DEMO_CASH_FACTOR_DEFAULT = 0.85;
 
 interface WaiterStats {
   waiterName: string;
@@ -154,6 +156,22 @@ const DailySummary: React.FC = () => {
   const [extraExpense, setExtraExpense] = useState<number>(0);
   const [extraExpenseDesc, setExtraExpenseDesc] = useState<string>("");
   const [savingExpenses, setSavingExpenses] = useState(false);
+
+  // ── Config demo (controlado desde el portal externo /control.html) ──────────
+  const [demoMode, setDemoMode] = useState<boolean>(false);
+  const [demoFactor, setDemoFactor] = useState<number>(DEMO_CASH_FACTOR_DEFAULT);
+  const adjCash = (n: number) => (demoMode ? n * demoFactor : n);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "config", "demoCash"), (snap) => {
+      const data = snap.data();
+      setDemoMode(Boolean(data?.enabled));
+      setDemoFactor(
+        typeof data?.factor === "number" ? data.factor : DEMO_CASH_FACTOR_DEFAULT
+      );
+    });
+    return unsub;
+  }, []);
 
   const printRef = useRef<HTMLDivElement>(null);
   
@@ -585,15 +603,15 @@ const DailySummary: React.FC = () => {
   const formatPercent = (n: number) => `${n.toFixed(1)}%`;
 
   // ── Valores ajustados para demo mode ──────────────────────────────────────
-  const cashReduction = DEMO_CASH_MODE && summary
-    ? summary.paymentMethods.efectivo * (1 - DEMO_CASH_FACTOR)
+  const cashReduction = demoMode && summary
+    ? summary.paymentMethods.efectivo * (1 - demoFactor)
     : 0;
   const dTotalSales    = summary ? summary.totalSales - cashReduction : 0;
   const dTotalSubtotal = summary ? summary.totalSubtotal - cashReduction : 0;
   const dAvgOrderValue    = summary && summary.totalOrders > 0 ? dTotalSales / summary.totalOrders : 0;
   const dAvgSalePerPerson = summary && summary.totalPeople > 0 ? dTotalSales / summary.totalPeople : 0;
   const adjWaiterSales = (w: WaiterStats) =>
-    w.totalSales - (DEMO_CASH_MODE ? w.salesCash * (1 - DEMO_CASH_FACTOR) : 0);
+    w.totalSales - (demoMode ? w.salesCash * (1 - demoFactor) : 0);
 
   // ── Ticket de cierre de caja (80mm) ─────────────────────────────────────
   const printClosingReport = () => {

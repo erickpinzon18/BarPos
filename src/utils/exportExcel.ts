@@ -1,9 +1,12 @@
 /**
  * Export Excel Utility — BarPos
- * Genera el reporte de cierre de caja (.xlsx) usando SheetJS.
+ * Genera el reporte de cierre de caja (.xlsx) usando SheetJS, imitando el formato de la
+ * hoja "VENTAS" que usa la contadora (FECHA, HORA, FOLIO, IMPORTE, PAGADO, DIFERENCIA,
+ * SUGERIDA 15%, PROPINA SUG, bloques de TARJETA con marcadores V/M/A/O, TRANSFERENCIA,
+ * EFECTIVO, TOTAL, DIFERENCIA, con fila de TOTALES al final).
  */
 import * as XLSX from "xlsx";
-import type { Order, Payment } from "./types";
+import type { Order, Payment, CardType } from "./types";
 
 export interface ExcelGasto {
   concepto: string;
@@ -24,6 +27,8 @@ export interface ExcelSummaryTotals {
   totalPeople: number;
 }
 
+type Cell = string | number;
+
 /** Resuelve el monto de un pago individual, con fallback para órdenes antiguas
  * (pago único sin campo `amount` explícito). */
 const getPaymentAmount = (order: Order, payment: Payment): number => {
@@ -31,6 +36,13 @@ const getPaymentAmount = (order: Order, payment: Payment): number => {
   if (Array.isArray(order.payments) && order.payments.length === 1) return order.total ?? 0;
   return 0;
 };
+
+const CARD_MARKERS: { type: CardType; label: string }[] = [
+  { type: "Visa", label: "V" },
+  { type: "Mastercard", label: "M" },
+  { type: "Amex", label: "A" },
+  { type: "Otra", label: "O" },
+];
 
 export const exportShiftReportToExcel = (
   orders: Order[],
@@ -42,14 +54,26 @@ export const exportShiftReportToExcel = (
 ): void => {
   const sortedOrders = orders.slice().sort((a, b) => (a.folioSeq ?? 0) - (b.folioSeq ?? 0));
 
-  // ── Hoja 1: Tickets — un renglón por cuenta, con cada cargo de tarjeta en su
-  // propia columna (sin sumarlos), igual que la hoja de referencia de la contadora.
+  // ── Hoja "Ventas" ────────────────────────────────────────────────────────
   const perOrderCardPayments = sortedOrders.map((order) =>
     (order.payments ?? []).filter((p) => p.method === "tarjeta")
   );
   const maxCards = Math.max(0, ...perOrderCardPayments.map((c) => c.length));
+  const hasNotes = sortedOrders.some((o) => o.cashNotes);
 
-  const ticketRows: Record<string, string | number>[] = sortedOrders.map((order, orderIdx) => {
+  // Construye el encabezado de columnas: FECHA, HORA, FOLIO, IMPORTE, PAGADO, DIFERENCIA,
+  // SUGERIDA 15%, PROPINA SUG, [TARJETA N, V, M, A, O] x maxCards, TRANSFERENCIA, EFECTIVO,
+  // TOTAL, DIFERENCIA, [NOTAS]
+  const header: Cell[] = [
+    "FECHA", "HORA", "FOLIO", "IMPORTE", "PAGADO", "DIFERENCIA", "SUGERIDA 15%", "PROPINA SUG",
+  ];
+  for (let i = 1; i <= maxCards; i++) {
+    header.push(`TARJETA ${i}`, "V", "M", "A", "O");
+  }
+  header.push("TRANSFERENCIA", "EFECTIVO", "TOTAL", "DIFERENCIA");
+  if (hasNotes) header.push("NOTAS");
+
+  const buildRow = (order: Order, cardPayments: Payment[]): Cell[] => {
     const payments: Payment[] = order.payments ?? [];
     const efectivoAmt = payments
       .filter((p) => p.method === "efectivo")
@@ -57,42 +81,76 @@ export const exportShiftReportToExcel = (
     const transferenciaAmt = payments
       .filter((p) => p.method === "transferencia")
       .reduce((s, p) => s + getPaymentAmount(order, p), 0);
-    const cardPayments = perOrderCardPayments[orderIdx];
 
     const completedAt = order.completedAt ? new Date(order.completedAt) : null;
     const subtotal = order.subtotal ?? 0;
     const total = order.total ?? 0;
-    const propina = total - subtotal;
+    const tip = total - subtotal;
+    const sugerida15 = subtotal * 0.15;
+    const propinaSug = subtotal + sugerida15;
+    const cardTotal = cardPayments.reduce((s, p) => s + getPaymentAmount(order, p), 0);
+    const grandTotal = efectivoAmt + transferenciaAmt + cardTotal;
 
-    const row: Record<string, string | number> = {
-      Folio: order.folio ?? order.id.slice(0, 6).toUpperCase(),
-      Fecha: completedAt ? completedAt.toLocaleDateString("es-MX") : "",
-      Hora: completedAt ? completedAt.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "",
-      Mesa: order.tableNumber === 0 ? "Barra" : `Mesa ${order.tableNumber}`,
-      Mesero: order.waiterName ?? "",
-      Importe: subtotal,
-      Propina: propina,
-      Pagado: total,
-    };
+    const row: Cell[] = [
+      completedAt ? completedAt.toLocaleDateString("es-MX") : "",
+      completedAt ? completedAt.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "",
+      order.folio ?? order.id.slice(0, 6).toUpperCase(),
+      subtotal,
+      total,
+      tip,
+      sugerida15,
+      propinaSug,
+    ];
 
     for (let i = 0; i < maxCards; i++) {
       const p = cardPayments[i];
-      row[`Tarjeta ${i + 1}`] = p ? getPaymentAmount(order, p) : "";
-      row[`Tipo ${i + 1}`] = p?.cardType ?? "";
-      row[`Operación ${i + 1}`] = p?.cardOperationNumber ?? "";
+      row.push(p ? getPaymentAmount(order, p) : "");
+      CARD_MARKERS.forEach((m) => row.push(p?.cardType === m.type ? m.label : ""));
     }
 
-    row["Efectivo"] = efectivoAmt || "";
-    row["Transferencia"] = transferenciaAmt || "";
-    row["Total"] = total;
-    if (order.cashNotes) row["Notas"] = order.cashNotes;
+    row.push(transferenciaAmt || "", efectivoAmt || "", grandTotal, grandTotal - total);
+    if (hasNotes) row.push(order.cashNotes ?? "");
 
     return row;
+  };
+
+  const dateLabel = shiftStart.toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" });
+  const rows: Cell[][] = [
+    [`VENTAS DEL TURNO ${dateLabel}`],
+    [],
+    header,
+  ];
+
+  let sumImporte = 0, sumPagado = 0, sumDiferencia = 0, sumTransferencia = 0, sumEfectivo = 0, sumTotal = 0;
+  const sumPerCard: number[] = new Array(maxCards).fill(0);
+
+  sortedOrders.forEach((order, idx) => {
+    const cardPayments = perOrderCardPayments[idx];
+    const row = buildRow(order, cardPayments);
+    rows.push(row);
+
+    sumImporte += order.subtotal ?? 0;
+    sumPagado += order.total ?? 0;
+    sumDiferencia += (order.total ?? 0) - (order.subtotal ?? 0);
+    cardPayments.forEach((p, i) => { sumPerCard[i] += getPaymentAmount(order, p); });
+    const payments: Payment[] = order.payments ?? [];
+    sumTransferencia += payments.filter((p) => p.method === "transferencia").reduce((s, p) => s + getPaymentAmount(order, p), 0);
+    sumEfectivo += payments.filter((p) => p.method === "efectivo").reduce((s, p) => s + getPaymentAmount(order, p), 0);
+    sumTotal += order.total ?? 0;
   });
 
-  const ticketsSheet = XLSX.utils.json_to_sheet(ticketRows);
+  const totalsRow: Cell[] = ["TOTALES DEL TURNO", "", "", sumImporte, sumPagado, sumDiferencia, "", ""];
+  for (let i = 0; i < maxCards; i++) {
+    totalsRow.push(sumPerCard[i] || "", "", "", "", "");
+  }
+  totalsRow.push(sumTransferencia || "", sumEfectivo || "", sumTotal, "");
+  if (hasNotes) totalsRow.push("");
+  rows.push(totalsRow);
 
-  // ── Hoja 2: Resumen ──────────────────────────────────────────────────────
+  const ventasSheet = XLSX.utils.aoa_to_sheet(rows);
+  ventasSheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: header.length - 1 } }];
+
+  // ── Hoja "Resumen" ───────────────────────────────────────────────────────
   const totalExpenses = expenses.gastos.reduce((s, g) => s + g.monto, 0);
   const cashInRegister = summary.paymentMethods.efectivo - summary.totalTipsNet;
   const grandTotal =
@@ -133,7 +191,7 @@ export const exportShiftReportToExcel = (
   const resumenSheet = XLSX.utils.json_to_sheet(resumenRows);
 
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, ticketsSheet, "Tickets");
+  XLSX.utils.book_append_sheet(workbook, ventasSheet, "Ventas");
   XLSX.utils.book_append_sheet(workbook, resumenSheet, "Resumen");
 
   const dateStr = shiftStart.toISOString().split("T")[0];

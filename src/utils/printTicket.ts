@@ -155,6 +155,9 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   lines.push('');
 
   // ── Order info ────────────────────────────────────────────────────────────
+  if (typeof order.folio === 'number') {
+    pushLabeledValue(lines, 'Folio:', `#${order.folio}`, W);
+  }
   pushLabeledValue(lines, 'Fecha:', new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }), W);
 
   const statusLabel = order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE';
@@ -167,12 +170,14 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   if (Array.isArray(order.payments) && order.payments.length > 0) {
     if (order.payments.length === 1) {
       const p = order.payments[0];
-      const paymentInfo = `${p.method}${p.receivedAmount ? ' $' + Number(p.receivedAmount).toFixed(2) : ''}`;
+      const cardSuffix = p.method === 'tarjeta' && p.cardType ? ` (${p.cardType})` : '';
+      const paymentInfo = `${p.method}${cardSuffix}${p.receivedAmount ? ' $' + Number(p.receivedAmount).toFixed(2) : ''}`;
       pushLabeledValue(lines, 'Pago:', paymentInfo, W);
     } else {
-      pushLabeledValue(lines, 'Pago:', 'Mixto', W);
+      pushLabeledValue(lines, 'Pago:', order.paymentMethod === 'tarjeta' ? 'Tarjeta (varios cargos)' : 'Mixto', W);
       order.payments.forEach(p => {
-        lines.push(`  ${p.method}: ${p.amount ? '$' + p.amount.toFixed(2) : ''}`);
+        const cardSuffix = p.method === 'tarjeta' && p.cardType ? ` ${p.cardType}` : '';
+        lines.push(`  ${p.method}${cardSuffix}: ${p.amount ? '$' + p.amount.toFixed(2) : ''}`);
       });
     }
   }

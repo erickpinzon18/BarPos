@@ -1,22 +1,23 @@
 // src/pages/waiter/OrderDetails.tsx
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Package, User, Plus, Trash2, Tag, ArrowLeftRight, Scissors, Pencil } from 'lucide-react';
+import { ArrowLeft, Clock, Package, User, Plus, Trash2, Tag, ArrowLeftRight, Scissors, Pencil, Repeat } from 'lucide-react';
 import { useOrderByTableId } from '../../hooks/useOrders';
 import { useProducts } from '../../hooks/useProducts';
+import { useTables } from '../../hooks/useTables';
 import SplitOrderModal from '../../components/common/SplitOrderModal';
 import BottleQuantityModal, { MIXERS } from '../../components/common/BottleQuantityModal';
 import DrinkMixerModal, { parseDrinkNotes } from '../../components/common/DrinkMixerModal';
 import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/usePromotions';
-import { deleteOrderItem, addItemToOrder, verifyUserPin, swapOrderItem, updateBottleMixers } from '../../services/orderService';
-import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments, updateOrderStatusInKanban, cancelEmptyOrder } from '../../services/firestoreService';
+import { deleteOrderItem, addItemToOrder, verifyUserPin, swapOrderItem, updateBottleMixers, moveOrderToTable, reassignOrderWaiter } from '../../services/orderService';
+import { updateOrderPeopleCount, updateOrderTableName, updateOrderAdminComments, updateOrderStatusInKanban, cancelEmptyOrder, getUsers } from '../../services/firestoreService';
 import PinModal from '../../components/common/PinModal';
 import CancelReasonModal from '../../components/common/CancelReasonModal';
 import AddItemModal from '../../components/common/AddItemModal';
 import QuantityModal from '../../components/common/QuantityModal';
 import SwapServiceModal from '../../components/common/SwapServiceModal';
 import { getCategoryInfo } from '../../utils/categories';
-import type { OrderItem, Product } from '../../utils/types';
+import type { OrderItem, Product, User as AppUser } from '../../utils/types';
 
 const WaiterOrderDetails: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
@@ -48,6 +49,15 @@ const WaiterOrderDetails: React.FC = () => {
 
     // Estados para el modal de separar cuenta
     const [showSplitModal, setShowSplitModal] = useState(false);
+
+    // Estados para mover cuenta a otra mesa / reasignar mesero
+    const { tables } = useTables();
+    const [showMoveModal, setShowMoveModal] = useState(false);
+    const [waiters, setWaiters] = useState<AppUser[]>([]);
+    const [selectedTargetTableId, setSelectedTargetTableId] = useState<string>('');
+    const [selectedWaiterId, setSelectedWaiterId] = useState<string>('');
+    const [showMovePinModal, setShowMovePinModal] = useState(false);
+    const [movePinLoading, setMovePinLoading] = useState(false);
 
     // Estados para editar mixers de botella
     const [showEditBottleModal, setShowEditBottleModal] = useState(false);
@@ -231,6 +241,60 @@ const WaiterOrderDetails: React.FC = () => {
             alert(err.message || 'Error al cambiar servicio');
         } finally {
             setSwapLoading(false);
+        }
+    };
+
+    // Mover cuenta a otra mesa / reasignar mesero (requiere PIN de administrador)
+    const handleOpenMoveModal = () => {
+        if (!order) return;
+        setSelectedTargetTableId('');
+        setSelectedWaiterId(order.waiterId ?? '');
+        setShowMoveModal(true);
+    };
+
+    React.useEffect(() => {
+        if (!showMoveModal) return;
+        (async () => {
+            const res = await getUsers();
+            if (res.success && Array.isArray(res.data)) {
+                setWaiters(res.data.filter((u: AppUser) => u.role === 'waiter' || u.role === 'capitan'));
+            }
+        })();
+    }, [showMoveModal]);
+
+    const freeTables = tables.filter(t => t.status === 'libre');
+
+    const handleConfirmMovePin = async (pin: string) => {
+        if (!order) return;
+        setMovePinLoading(true);
+        try {
+            const authorizedUser = await verifyUserPin(pin);
+            if (authorizedUser.role !== 'admin') {
+                throw new Error('PIN válido, pero el usuario no tiene permisos. Solo administradores pueden mover cuentas o reasignar mesero.');
+            }
+
+            const isMovingTable = !!selectedTargetTableId && selectedTargetTableId !== order.tableId;
+            const isReassigningWaiter = !!selectedWaiterId && selectedWaiterId !== order.waiterId;
+
+            if (isMovingTable) {
+                await moveOrderToTable(order.id, selectedTargetTableId);
+            }
+            if (isReassigningWaiter) {
+                const waiter = waiters.find(w => w.id === selectedWaiterId);
+                await reassignOrderWaiter(order.id, selectedWaiterId, waiter?.displayName || waiter?.email || 'Mesero');
+            }
+
+            setShowMovePinModal(false);
+            setShowMoveModal(false);
+
+            if (isMovingTable) {
+                // La orden ya no vive en esta mesa; regresamos al panel de mesas.
+                navigate('/waiter/home');
+            }
+        } catch (err: any) {
+            throw new Error(err.message || 'Error al mover/reasignar la cuenta');
+        } finally {
+            setMovePinLoading(false);
         }
     };
 
@@ -932,6 +996,14 @@ const WaiterOrderDetails: React.FC = () => {
                         <Scissors className="w-5 h-5" />
                     </button>
 
+                    <button
+                        onClick={handleOpenMoveModal}
+                        className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        title="Mover mesa / Reasignar mesero"
+                    >
+                        <Repeat className="w-5 h-5" />
+                    </button>
+
                     {activeItems.length === 0 ? (
                         <button
                             onClick={() => setShowCancelConfirm(true)}
@@ -1093,6 +1165,93 @@ const WaiterOrderDetails: React.FC = () => {
                 currentItem={itemToSwap}
                 products={products}
                 loading={swapLoading}
+            />
+
+            {/* Mover Mesa / Reasignar Mesero Modal */}
+            {showMoveModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                    <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-md border border-gray-700 flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Repeat className="text-green-400" size={20} />
+                                Mover / Reasignar
+                            </h3>
+                            <button
+                                onClick={() => setShowMoveModal(false)}
+                                className="text-gray-400 hover:text-white text-3xl leading-none"
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-400 mb-2">
+                                    Mover cuenta a mesa libre
+                                </label>
+                                <select
+                                    value={selectedTargetTableId}
+                                    onChange={(e) => setSelectedTargetTableId(e.target.value)}
+                                    className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                >
+                                    <option value="">No mover (dejar en esta mesa)</option>
+                                    {freeTables.map(t => (
+                                        <option key={t.id} value={t.id}>
+                                            {t.number === 0 ? 'Barra' : `Mesa ${t.number}`}
+                                        </option>
+                                    ))}
+                                </select>
+                                {freeTables.length === 0 && (
+                                    <p className="text-xs text-gray-500 mt-1">No hay mesas libres disponibles.</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-400 mb-2">
+                                    Reasignar mesero
+                                </label>
+                                <select
+                                    value={selectedWaiterId}
+                                    onChange={(e) => setSelectedWaiterId(e.target.value)}
+                                    className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                >
+                                    <option value={order?.waiterId ?? ''}>{order?.waiterName ?? 'Mesero actual'} (sin cambio)</option>
+                                    {waiters.filter(w => w.id !== order?.waiterId).map(w => (
+                                        <option key={w.id} value={w.id}>{w.displayName || w.email}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                                Esta acción requiere autorización de administrador (PIN).
+                            </p>
+                        </div>
+                        <div className="p-6 bg-gray-900/50 rounded-b-2xl flex gap-3">
+                            <button
+                                onClick={() => setShowMoveModal(false)}
+                                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => setShowMovePinModal(true)}
+                                disabled={
+                                    (!selectedTargetTableId || selectedTargetTableId === order?.tableId) &&
+                                    (!selectedWaiterId || selectedWaiterId === order?.waiterId)
+                                }
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Continuar → PIN
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <PinModal
+                isOpen={showMovePinModal}
+                onClose={() => setShowMovePinModal(false)}
+                onConfirm={handleConfirmMovePin}
+                loading={movePinLoading}
+                title="Autorizar Cambio"
+                message="Se moverá la cuenta y/o se reasignará el mesero. Esta acción requiere autorización de administrador."
             />
         </div>
     );

@@ -105,6 +105,7 @@ export interface Order {
   tax?: number;
   total?: number;
   adminComments?: string; // Comentarios administrativos (no visibles en ticket de cliente)
+  folio?: number; // Folio consecutivo global, asignado al cerrar la cuenta
   // Campos de cortesía (cuando la mesa se cierra sin cobro)
   courtesyBy?: string;
   courtesyByName?: string;
@@ -113,6 +114,8 @@ export interface Order {
   updatedAt: Date;
   completedAt?: Date;
 }
+
+export type CardType = 'Visa' | 'Mastercard' | 'Amex' | 'Otra';
 
 export interface Payment {
   id?: string;
@@ -125,6 +128,8 @@ export interface Payment {
   cashierId?: string;
   cashierName?: string;
   cardOperationNumber?: string;
+  cardType?: CardType; // Tipo de tarjeta (solo cuando method === 'tarjeta')
+  cardDetail?: string; // Detalle opcional (ej: "últimos 4 dígitos", nota libre)
   closedAt?: Date;
   createdAt: Date;
 }

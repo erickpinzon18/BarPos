@@ -14,7 +14,8 @@ import {
   onSnapshot,
   Timestamp,
   arrayUnion,
-  writeBatch
+  writeBatch,
+  runTransaction
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type {
@@ -340,36 +341,69 @@ export const checkOperationNumberUnique = async (operationNumber: string): Promi
   }
 };
 
+/**
+ * Obtiene el siguiente folio consecutivo global (nunca reinicia).
+ * Usa una transacción de Firestore para garantizar unicidad ante escrituras concurrentes.
+ */
+export const getNextFolio = async (): Promise<number> => {
+  const counterRef = doc(db, 'counters', 'orderFolio');
+  const nextFolio = await runTransaction(db, async (transaction) => {
+    const counterDoc = await transaction.get(counterRef);
+    const current = counterDoc.exists() ? (counterDoc.data().value || 0) : 0;
+    const next = current + 1;
+    transaction.set(counterRef, { value: next }, { merge: true });
+    return next;
+  });
+  return nextFolio;
+};
+
 export const closeTable = async (
   tableId: string,
   orderId: string,
   paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto',
   peopleCount?: number,
-  paymentDetails?: { receivedAmount?: number; change?: number; tipAmount?: number; tipPercent?: number; cashierId?: string; cashierName?: string; cardOperationNumber?: string; discountAmount?: number; splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string }[] }
+  paymentDetails?: {
+    receivedAmount?: number;
+    change?: number;
+    tipAmount?: number;
+    tipPercent?: number;
+    cashierId?: string;
+    cashierName?: string;
+    cardOperationNumber?: string;
+    cardType?: string;
+    cardDetail?: string;
+    discountAmount?: number;
+    /** Cargos individuales (efectivo/tarjeta/transferencia). Se usa tanto para pago mixto
+     * como para pago 100% tarjeta con varios cargos (distintos tipos de tarjeta). */
+    splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string, cardType?: string, cardDetail?: string }[]
+  }
 ): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);
-    
+
     // Get current order to calculate totals
     const orderDoc = await getDoc(doc(db, 'orders', orderId));
     if (!orderDoc.exists()) {
       return { success: false, error: 'Orden no encontrada' };
     }
-    
+
     const orderData = orderDoc.data();
     const items = orderData.items || [];
-    
+
     // Calculate subtotal from active items
     const subtotal = items
       .filter((item: any) => !item.isDeleted)
       .reduce((sum: number, item: any) => sum + (item.productPrice * item.quantity), 0);
-    
+
     // Get tip and discount amounts (default to 0 if not provided)
     const tipAmount = paymentDetails?.tipAmount ?? 0;
     const discountAmount = paymentDetails?.discountAmount ?? 0;
 
     // Calculate total (subtotal + tip - discount, NO TAX)
     const total = subtotal + tipAmount - discountAmount;
+
+    // Assign the next consecutive folio (global, never resets)
+    const folio = await getNextFolio();
 
     // Update table status
     const tableRef = doc(db, 'tables', tableId);
@@ -391,6 +425,7 @@ export const closeTable = async (
       tipAmount,
       discount: discountAmount > 0 ? discountAmount : null,
       tax: null, // Explicitly set to null to remove any old tax values
+      folio,
       completedAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
@@ -403,7 +438,7 @@ export const closeTable = async (
     // If payment details were provided, append payment objects to the order document's payments array
     if (paymentDetails) {
       let newPayments: any[] = [];
-      if (paymentMethod === 'mixto' && paymentDetails.splitPayments && paymentDetails.splitPayments.length > 0) {
+      if ((paymentMethod === 'mixto' || paymentMethod === 'tarjeta') && paymentDetails.splitPayments && paymentDetails.splitPayments.length > 0) {
         newPayments = paymentDetails.splitPayments.map((p, index) => ({
           id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${index}`,
           method: p.method,
@@ -411,6 +446,8 @@ export const closeTable = async (
           receivedAmount: typeof p.receivedAmount === 'number' ? p.receivedAmount : null,
           change: typeof p.change === 'number' ? p.change : null,
           cardOperationNumber: p.cardOperationNumber ?? null,
+          cardType: p.cardType ?? null,
+          cardDetail: p.cardDetail ?? null,
           tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
           tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
           cashierId: paymentDetails.cashierId ?? null,
@@ -425,6 +462,8 @@ export const closeTable = async (
           receivedAmount: typeof paymentDetails.receivedAmount === 'number' ? paymentDetails.receivedAmount : null,
           change: typeof paymentDetails.change === 'number' ? paymentDetails.change : null,
           cardOperationNumber: paymentDetails.cardOperationNumber ?? null,
+          cardType: paymentDetails.cardType ?? null,
+          cardDetail: paymentDetails.cardDetail ?? null,
           tipAmount: typeof paymentDetails.tipAmount === 'number' ? paymentDetails.tipAmount : 0,
           tipPercent: typeof paymentDetails.tipPercent === 'number' ? paymentDetails.tipPercent : 0,
           cashierId: paymentDetails.cashierId ?? null,
@@ -444,10 +483,11 @@ export const closeTable = async (
         payments: arrayUnion(...newPayments)
       });
     }
-    
+
     await batch.commit();
     console.log('✅ Mesa cerrada correctamente:', {
       orderId,
+      folio,
       subtotal,
       tipAmount,
       total,
@@ -1030,6 +1070,7 @@ export const closeTableAsCourtesy = async (
 ): Promise<FirestoreResponse<void>> => {
   try {
     const batch = writeBatch(db);
+    const folio = await getNextFolio();
 
     batch.update(doc(db, 'orders', orderId), {
       status: 'cortesia',
@@ -1038,6 +1079,7 @@ export const closeTableAsCourtesy = async (
       courtesyAt: Timestamp.now(),
       subtotal: 0,
       total: 0,
+      folio,
       updatedAt: Timestamp.now(),
       completedAt: Timestamp.now(),
     });

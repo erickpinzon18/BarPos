@@ -27,10 +27,12 @@ import {
   FileText,
   Save,
   Receipt,
+  Download,
 } from "lucide-react";
 import { sendToPrinter } from "../../utils/printTicket";
 import { PrintableDailySummary } from "../../components/admin/PrintableDailySummary";
 import { useActiveOrders } from "../../hooks/useOrders";
+import { exportShiftReportToExcel } from "../../utils/exportExcel";
 
 const CARD_COMMISSION_RATE = 0.05; // 5% comisión terminal
 
@@ -39,6 +41,13 @@ const CARD_COMMISSION_RATE = 0.05; // 5% comisión terminal
 // portal externo (/control.html) y se lee en tiempo real del documento
 // Firestore `config/demoCash` = { enabled: boolean, factor: number }.
 const DEMO_CASH_FACTOR_DEFAULT = 0.85;
+
+interface Nomina {
+  id: string;
+  person: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+}
 
 interface WaiterStats {
   waiterName: string;
@@ -157,6 +166,19 @@ const DailySummary: React.FC = () => {
   const [extraExpenseDesc, setExtraExpenseDesc] = useState<string>("");
   const [savingExpenses, setSavingExpenses] = useState(false);
 
+  // Órdenes crudas del turno (para detalle de tickets y export a Excel)
+  const [shiftOrders, setShiftOrders] = useState<Order[]>([]);
+
+  // Nóminas del turno
+  const [nominas, setNominas] = useState<Nomina[]>([]);
+  const [showNominasModal, setShowNominasModal] = useState(false);
+  const [nominaPersonInput, setNominaPersonInput] = useState("");
+  const [nominaAmountInput, setNominaAmountInput] = useState("");
+  const [nominaDateInput, setNominaDateInput] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [savingNominas, setSavingNominas] = useState(false);
+
   // ── Config demo (controlado desde el portal externo /control.html) ──────────
   const [demoMode, setDemoMode] = useState<boolean>(false);
   const [demoFactor, setDemoFactor] = useState<number>(DEMO_CASH_FACTOR_DEFAULT);
@@ -225,6 +247,42 @@ const DailySummary: React.FC = () => {
     console.groupEnd();
   }, [shiftActiveOrders, selectedDate]);
 
+  /** Resuelve el monto de un pago individual, con fallback para pagos únicos antiguos sin `amount`. */
+  const getPaymentAmount = (order: Order, payment: NonNullable<Order["payments"]>[number]): number => {
+    if (typeof payment.amount === "number") return payment.amount;
+    if (Array.isArray(order.payments) && order.payments.length === 1) return order.total ?? 0;
+    return 0;
+  };
+
+  // Desglose de cargos con tarjeta por tipo (Visa/Mastercard/Amex/Otra)
+  const cardTypeBreakdown = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    shiftOrders.forEach((order) => {
+      (order.payments || []).forEach((p) => {
+        if (p.method === "tarjeta") {
+          const key = p.cardType || "Otra";
+          map[key] = (map[key] || 0) + getPaymentAmount(order, p);
+        }
+      });
+    });
+    return map;
+  }, [shiftOrders]);
+
+  // Detalle de tickets del turno, ordenado por folio (consecutivo)
+  const ticketDetails = React.useMemo(() => {
+    return shiftOrders
+      .slice()
+      .sort((a, b) => (a.folio ?? 0) - (b.folio ?? 0))
+      .map((o) => ({
+        folio: o.folio,
+        id: o.id,
+        table: o.tableNumber === 0 ? "Barra" : `Mesa ${o.tableNumber}`,
+        waiter: o.waiterName,
+        method: o.paymentMethod,
+        total: o.total ?? 0,
+      }));
+  }, [shiftOrders]);
+
   const handlePrintPDF = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Cierre_Caja_${selectedDate.toISOString().split("T")[0]}`,
@@ -266,6 +324,8 @@ const DailySummary: React.FC = () => {
           updatedAt: data.updatedAt?.toDate(),
         } as Order);
       });
+
+      setShiftOrders(ordersData);
 
       // ── Inicializar resumen ──────────────────────────────────────────────
       const summary: ShiftSummary = {
@@ -556,11 +616,13 @@ const DailySummary: React.FC = () => {
         setVarietyExpense(d.varietyExpense || 0);
         setExtraExpense(d.extraExpense || 0);
         setExtraExpenseDesc(d.extraExpenseDesc || "");
+        setNominas(Array.isArray(d.nominas) ? d.nominas : []);
       } else {
         setDjExpense(0);
         setVarietyExpense(0);
         setExtraExpense(0);
         setExtraExpenseDesc("");
+        setNominas([]);
       }
 
       setSummary(summary);
@@ -584,12 +646,17 @@ const DailySummary: React.FC = () => {
     setSavingExpenses(true);
     try {
       const shiftDateStr = selectedDate.toISOString().split("T")[0];
-      await setDoc(doc(db, "shiftExpenses", shiftDateStr), {
-        djExpense,
-        varietyExpense,
-        extraExpense,
-        extraExpenseDesc: extraExpenseDesc.trim(),
-      });
+      await setDoc(
+        doc(db, "shiftExpenses", shiftDateStr),
+        {
+          djExpense,
+          varietyExpense,
+          extraExpense,
+          extraExpenseDesc: extraExpenseDesc.trim(),
+          nominas,
+        },
+        { merge: true }
+      );
       toast.success("Gastos guardados correctamente");
     } catch (error) {
       console.error(error);
@@ -597,6 +664,48 @@ const DailySummary: React.FC = () => {
     } finally {
       setSavingExpenses(false);
     }
+  };
+
+  const nominasTotal = nominas.reduce((s, n) => s + n.amount, 0);
+
+  const saveNominasToDB = async (list: Nomina[]) => {
+    setSavingNominas(true);
+    try {
+      const shiftDateStr = selectedDate.toISOString().split("T")[0];
+      await setDoc(doc(db, "shiftExpenses", shiftDateStr), { nominas: list }, { merge: true });
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al guardar nóminas");
+    } finally {
+      setSavingNominas(false);
+    }
+  };
+
+  const handleAddNomina = () => {
+    const amount = Number(nominaAmountInput);
+    if (!nominaPersonInput.trim() || !amount || amount <= 0) {
+      toast.error("Ingresa persona y cantidad válidas.");
+      return;
+    }
+    const next: Nomina[] = [
+      ...nominas,
+      {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        person: nominaPersonInput.trim(),
+        amount,
+        date: nominaDateInput,
+      },
+    ];
+    setNominas(next);
+    setNominaPersonInput("");
+    setNominaAmountInput("");
+    void saveNominasToDB(next);
+  };
+
+  const handleRemoveNomina = (id: string) => {
+    const next = nominas.filter((n) => n.id !== id);
+    setNominas(next);
+    void saveNominasToDB(next);
   };
 
   const formatCurrency = (n: number) => `$${n.toFixed(2)}`;
@@ -687,11 +796,32 @@ const DailySummary: React.FC = () => {
     lines.push(
       fmtLine("Transferencia:", fmtM(summary.paymentMethods.transferencia))
     );
+    lines.push(sep("-"));
+    lines.push(
+      fmtLine(
+        "GRAN TOTAL:",
+        fmtM(
+          summary.paymentMethods.efectivo +
+            summary.paymentMethods.tarjeta +
+            summary.paymentMethods.transferencia
+        )
+      )
+    );
     lines.push("");
+
+    // ── Desglose de Tarjeta por Tipo ─────────────────────────────────────────
+    if (Object.keys(cardTypeBreakdown).length > 0) {
+      lines.push(center("TARJETA POR TIPO"));
+      lines.push(sep());
+      Object.entries(cardTypeBreakdown).forEach(([type, amount]) => {
+        lines.push(fmtLine(`  ${type}:`, fmtM(amount)));
+      });
+      lines.push("");
+    }
 
     // ── Gastos del Turno ────────────────────────────────────────────────────
     const totalExpenses =
-      (djExpense || 0) + (varietyExpense || 0) + (extraExpense || 0);
+      (djExpense || 0) + (varietyExpense || 0) + (extraExpense || 0) + nominasTotal;
     if (totalExpenses > 0) {
       lines.push(center("GASTOS DEL TURNO"));
       lines.push(sep());
@@ -705,6 +835,8 @@ const DailySummary: React.FC = () => {
             `-${fmtM(extraExpense)}`
           )
         );
+      if (nominasTotal > 0)
+        lines.push(fmtLine("Nómina:", `-${fmtM(nominasTotal)}`));
       lines.push(sep("-"));
       lines.push(fmtLine("Total Gastos:", `-${fmtM(totalExpenses)}`));
       lines.push(
@@ -785,6 +917,20 @@ const DailySummary: React.FC = () => {
       lines.push("");
     }
 
+    // ── Detalle de Tickets (folios consecutivos) ─────────────────────────────
+    if (ticketDetails.length > 0) {
+      lines.push(center("DETALLE DE TICKETS"));
+      lines.push(sep("="));
+      ticketDetails.forEach((t) => {
+        const folioLabel =
+          typeof t.folio === "number" ? `Folio #${t.folio}` : t.id.slice(0, 6).toUpperCase();
+        lines.push(fmtLine(`${folioLabel} — ${t.table}`, fmtM(t.total)));
+        lines.push(`  ${t.waiter ?? "-"} · ${t.method ?? "-"}`);
+      });
+      lines.push(sep());
+      lines.push("");
+    }
+
     lines.push(sep("="));
     lines.push(center("FIN DE CIERRE"));
     lines.push(sep("="));
@@ -819,6 +965,28 @@ const DailySummary: React.FC = () => {
             >
               <FileText size={18} />
               Imprimir en PDF
+            </button>
+            <button
+              onClick={() =>
+                exportShiftReportToExcel(
+                  shiftOrders,
+                  summary,
+                  cardTypeBreakdown,
+                  {
+                    dj: djExpense || 0,
+                    variety: varietyExpense || 0,
+                    extra: extraExpense || 0,
+                    extraDesc: extraExpenseDesc,
+                    nominas,
+                  },
+                  shiftStart,
+                  shiftEnd
+                )
+              }
+              className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-bold px-4 py-2.5 rounded-xl transition-colors shadow-lg text-sm"
+            >
+              <Download size={18} />
+              Exportar a Excel
             </button>
           </div>
         )}
@@ -1162,6 +1330,21 @@ const DailySummary: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="flex items-center justify-between bg-gray-900/60 rounded-xl border border-gray-700 px-4 py-3">
+                  <div>
+                    <p className="text-xs text-gray-400">Nómina del turno</p>
+                    <p className="text-white font-bold">{formatCurrency(nominasTotal)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowNominasModal(true)}
+                    className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
+                  >
+                    <Users size={16} />
+                    Registrar Nómina
+                  </button>
+                </div>
+
                 <div className="mt-4 p-4 bg-gray-900/60 rounded-xl border border-gray-700">
                   <div className="flex justify-between items-center text-sm mb-2">
                     <span className="text-gray-400">Efectivo en caja</span>
@@ -1172,13 +1355,14 @@ const DailySummary: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-sm mb-2">
-                    <span className="text-gray-400">Total Gastos</span>
+                    <span className="text-gray-400">Total Gastos (incl. nómina)</span>
                     <span className="text-red-400 font-medium">
                       -
                       {formatCurrency(
                         (djExpense || 0) +
                           (varietyExpense || 0) +
-                          (extraExpense || 0)
+                          (extraExpense || 0) +
+                          nominasTotal
                       )}
                     </span>
                   </div>
@@ -1192,7 +1376,8 @@ const DailySummary: React.FC = () => {
                           summary.totalTipsNet -
                           ((djExpense || 0) +
                             (varietyExpense || 0) +
-                            (extraExpense || 0))
+                            (extraExpense || 0) +
+                            nominasTotal)
                       )}
                     </span>
                   </div>
@@ -1625,9 +1810,106 @@ const DailySummary: React.FC = () => {
             variety: varietyExpense || 0,
             extra: extraExpense || 0,
             extraDesc: extraExpenseDesc,
+            nominas,
           }}
+          cardTypeBreakdown={cardTypeBreakdown}
+          ticketDetails={ticketDetails}
         />
       </div>
+
+      {/* Modal de Nóminas */}
+      {showNominasModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg border border-gray-700 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Users className="text-amber-500" size={20} />
+                Nóminas del Turno
+              </h3>
+              <button
+                onClick={() => setShowNominasModal(false)}
+                className="text-gray-400 hover:text-white text-3xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  value={nominaPersonInput}
+                  onChange={(e) => setNominaPersonInput(e.target.value)}
+                  placeholder="Persona"
+                  className="sm:col-span-1 bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={nominaAmountInput}
+                  onChange={(e) => setNominaAmountInput(e.target.value)}
+                  placeholder="Cantidad"
+                  className="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm"
+                />
+                <input
+                  type="date"
+                  value={nominaDateInput}
+                  onChange={(e) => setNominaDateInput(e.target.value)}
+                  className="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <button
+                onClick={handleAddNomina}
+                disabled={savingNominas}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 rounded-lg text-sm disabled:opacity-50 transition-colors"
+              >
+                + Agregar
+              </button>
+
+              {nominas.length > 0 ? (
+                <div className="space-y-2 pt-2 border-t border-gray-700">
+                  {nominas.map((n) => (
+                    <div
+                      key={n.id}
+                      className="flex items-center justify-between bg-gray-900/60 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <div>
+                        <p className="text-white font-medium">{n.person}</p>
+                        <p className="text-xs text-gray-400">{n.date}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-white font-semibold">{formatCurrency(n.amount)}</span>
+                        <button
+                          onClick={() => handleRemoveNomina(n.id)}
+                          className="text-red-400 hover:text-red-300 text-xs"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  Sin nóminas registradas para este turno.
+                </p>
+              )}
+            </div>
+            <div className="p-6 bg-gray-900/50 rounded-b-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-gray-400 text-sm">Suma total</span>
+                <span className="text-xl font-bold text-white">{formatCurrency(nominasTotal)}</span>
+              </div>
+              <button
+                onClick={() => setShowNominasModal(false)}
+                className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

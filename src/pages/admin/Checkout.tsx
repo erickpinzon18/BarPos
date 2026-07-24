@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useOrderById, useOrderByTableId } from "../../hooks/useOrders";
-import type { Order } from "../../utils/types";
+import type { Order, CardType } from "../../utils/types";
 import { closeTable, closeTableAsCourtesy, getConfig, checkOperationNumberUnique } from "../../services/firestoreService";
 import { verifyUserPin } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
@@ -69,9 +69,26 @@ const AdminCheckout: React.FC = () => {
     "efectivo" | "tarjeta" | "transferencia" | "mixto"
   >("efectivo");
   const [mixedEfectivo, setMixedEfectivo] = useState<string>("");
-  const [mixedTarjeta, setMixedTarjeta] = useState<string>("");
   const [mixedTransferencia, setMixedTransferencia] = useState<string>("");
-  const [cardOperationNumber, setCardOperationNumber] = useState<string>("");
+  // Cargos de tarjeta: soporta varios pagos con tarjeta (distintos tipos/terminales)
+  type CardCharge = { id: string; amount: string; cardType: CardType; cardDetail: string; cardOperationNumber: string };
+  const makeEmptyCharge = (): CardCharge => ({
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    amount: "",
+    cardType: "Visa",
+    cardDetail: "",
+    cardOperationNumber: "",
+  });
+  const [cardCharges, setCardCharges] = useState<CardCharge[]>([makeEmptyCharge()]);
+  const cardChargesTotal = useMemo(
+    () => cardCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0),
+    [cardCharges]
+  );
+  const addCardCharge = () => setCardCharges(prev => [...prev, makeEmptyCharge()]);
+  const removeCardCharge = (id: string) =>
+    setCardCharges(prev => (prev.length > 1 ? prev.filter(c => c.id !== id) : prev));
+  const updateCardCharge = (id: string, field: keyof Omit<CardCharge, "id">, value: string) =>
+    setCardCharges(prev => prev.map(c => (c.id === id ? { ...c, [field]: value } : c)));
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
   const [config, setConfig] = useState<any | null>(null);
   const [pinMode, setPinMode] = useState<"payment" | "courtesy">("payment");
@@ -205,9 +222,8 @@ const AdminCheckout: React.FC = () => {
     if (!order) return;
     if (paymentMethod === "mixto") {
       const efe = Number(mixedEfectivo || 0);
-      const tar = Number(mixedTarjeta || 0);
       const tra = Number(mixedTransferencia || 0);
-      const sum = efe + tar + tra;
+      const sum = efe + cardChargesTotal + tra;
       if (Math.abs(sum - total) > 0.01) {
         alert(
           `En el pago mixto, la suma de los montos ($${sum.toFixed(
@@ -218,15 +234,34 @@ const AdminCheckout: React.FC = () => {
       }
     }
 
-    if (paymentMethod === "tarjeta" || (paymentMethod === "mixto" && Number(mixedTarjeta || 0) > 0)) {
-      if (!cardOperationNumber.trim()) {
-        alert("Debes ingresar los dígitos de la operación (Verifone).");
-        return;
-      }
-      const isUnique = await checkOperationNumberUnique(cardOperationNumber);
-      if (!isUnique) {
-        alert("Este número de operación ya fue utilizado en otra cuenta.");
-        return;
+    if (paymentMethod === "tarjeta" && Math.abs(cardChargesTotal - total) > 0.01) {
+      alert(
+        `La suma de los cargos de tarjeta ($${cardChargesTotal.toFixed(
+          2
+        )}) debe ser igual al total ($${total.toFixed(2)}).`
+      );
+      return;
+    }
+
+    const activeCharges = cardCharges.filter((c) => (Number(c.amount) || 0) > 0);
+    if ((paymentMethod === "tarjeta" || (paymentMethod === "mixto" && cardChargesTotal > 0)) && activeCharges.length > 0) {
+      const seen = new Set<string>();
+      for (const charge of activeCharges) {
+        const op = charge.cardOperationNumber.trim();
+        if (!op) {
+          alert("Debes ingresar los dígitos de la operación (Verifone) para cada cargo con tarjeta.");
+          return;
+        }
+        if (seen.has(op)) {
+          alert(`El número de operación "${op}" está repetido entre los cargos.`);
+          return;
+        }
+        seen.add(op);
+        const isUnique = await checkOperationNumberUnique(op);
+        if (!isUnique) {
+          alert(`El número de operación "${op}" ya fue utilizado en otra cuenta.`);
+          return;
+        }
       }
     }
 
@@ -242,6 +277,15 @@ const AdminCheckout: React.FC = () => {
       const tableId = order.tableId;
       const orderId = order.id;
 
+      const activeCharges = cardCharges.filter((c) => (Number(c.amount) || 0) > 0);
+      const cardSplits = activeCharges.map((c) => ({
+        method: "tarjeta" as const,
+        amount: Number(c.amount) || 0,
+        cardOperationNumber: c.cardOperationNumber.trim(),
+        cardType: c.cardType,
+        cardDetail: c.cardDetail.trim() || undefined,
+      }));
+
       // Prepare payment details when paying with cash
       let paymentDetails: any;
       if (paymentMethod === "efectivo") {
@@ -256,9 +300,8 @@ const AdminCheckout: React.FC = () => {
         };
       } else if (paymentMethod === "mixto") {
         const efe = Number(mixedEfectivo || 0);
-        const tar = Number(mixedTarjeta || 0);
         const tra = Number(mixedTransferencia || 0);
-        const splitPayments = [];
+        const splitPayments: any[] = [];
         if (efe > 0)
           splitPayments.push({
             method: "efectivo",
@@ -266,7 +309,7 @@ const AdminCheckout: React.FC = () => {
             receivedAmount: efe,
             change: 0,
           });
-        if (tar > 0) splitPayments.push({ method: "tarjeta", amount: tar, cardOperationNumber: cardOperationNumber });
+        splitPayments.push(...cardSplits);
         if (tra > 0)
           splitPayments.push({ method: "transferencia", amount: tra });
         paymentDetails = {
@@ -277,6 +320,15 @@ const AdminCheckout: React.FC = () => {
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
           splitPayments,
         };
+      } else if (paymentMethod === "tarjeta") {
+        paymentDetails = {
+          tipAmount: tipAmount,
+          tipPercent: tipPercent,
+          discountAmount: discountAmount,
+          cashierId: authorizedUser?.id,
+          cashierName: authorizedUser?.displayName || authorizedUser?.email,
+          splitPayments: cardSplits,
+        };
       } else {
         paymentDetails = {
           tipAmount: tipAmount,
@@ -284,7 +336,6 @@ const AdminCheckout: React.FC = () => {
           discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
-          cardOperationNumber: paymentMethod === 'tarjeta' ? cardOperationNumber : undefined
         };
       }
 
@@ -299,7 +350,7 @@ const AdminCheckout: React.FC = () => {
       // Mark UI as read-only so the user can view/print the ticket but not change anything
       setIsReadOnly(true);
 
-      const finalPayments = paymentMethod === 'mixto'
+      const finalPayments = (paymentMethod === 'mixto' || paymentMethod === 'tarjeta')
         ? paymentDetails.splitPayments
         : [{
             method: paymentMethod,
@@ -399,6 +450,93 @@ const AdminCheckout: React.FC = () => {
       setIsReadOnly(true);
     }
   }, [order]);
+
+  // Renderiza la lista editable de cargos de tarjeta (usada por pago 100% tarjeta y por el
+  // componente "tarjeta" del pago mixto), permitiendo varios cargos con distinto tipo/detalle.
+  const renderCardCharges = () => (
+    <div className="space-y-3">
+      {cardCharges.map((charge, idx) => (
+        <div key={charge.id} className="p-3 bg-gray-800 rounded-lg border border-gray-700 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400 font-semibold">Cargo {idx + 1}</span>
+            {cardCharges.length > 1 && (
+              <button
+                type="button"
+                disabled={isReadOnly}
+                onClick={() => removeCardCharge(charge.id)}
+                className="text-red-400 hover:text-red-300 text-xs disabled:opacity-50"
+              >
+                Quitar
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Monto</label>
+              <input
+                disabled={isReadOnly}
+                type="number"
+                min="0"
+                step="0.01"
+                value={charge.amount}
+                onChange={(e) => updateCardCharge(charge.id, "amount", e.target.value)}
+                placeholder="0.00"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Tipo</label>
+              <select
+                disabled={isReadOnly}
+                value={charge.cardType}
+                onChange={(e) => updateCardCharge(charge.id, "cardType", e.target.value)}
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+              >
+                <option value="Visa">Visa</option>
+                <option value="Mastercard">Mastercard</option>
+                <option value="Amex">Amex</option>
+                <option value="Otra">Otra</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">Operación (Verifone)</label>
+            <input
+              disabled={isReadOnly}
+              type="text"
+              value={charge.cardOperationNumber}
+              onChange={(e) => updateCardCharge(charge.id, "cardOperationNumber", e.target.value)}
+              placeholder="Ej. 123456"
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">Detalle (opcional)</label>
+            <input
+              disabled={isReadOnly}
+              type="text"
+              value={charge.cardDetail}
+              onChange={(e) => updateCardCharge(charge.id, "cardDetail", e.target.value)}
+              placeholder="Notas, últimos 4 dígitos, etc."
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+            />
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        disabled={isReadOnly}
+        onClick={addCardCharge}
+        className="w-full py-2 rounded-lg border border-dashed border-blue-700 text-blue-300 hover:bg-blue-700/10 text-sm font-semibold disabled:opacity-50"
+      >
+        ＋ Agregar cargo de tarjeta
+      </button>
+      <div className="flex justify-between text-sm pt-1">
+        <span className="text-gray-400">Suma de cargos:</span>
+        <span className="text-white font-semibold">${cardChargesTotal.toFixed(2)}</span>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -776,20 +914,20 @@ const AdminCheckout: React.FC = () => {
                 </div>
               </div>
             )}
-            {/* Tarjeta helper: show when tarjeta selected */}
+            {/* Tarjeta helper: show when tarjeta selected — soporta varios cargos */}
             {paymentMethod === "tarjeta" && (
               <div className="mt-4">
-                <label className="text-sm text-gray-400 block mb-2">
-                  Dígitos de operación (Verifone)
-                </label>
-                <input
-                  disabled={isReadOnly}
-                  type="text"
-                  value={cardOperationNumber}
-                  onChange={(e) => setCardOperationNumber(e.target.value)}
-                  placeholder="Ej. 123456"
-                  className="w-full bg-gray-900 border border-gray-800 text-left rounded-lg focus:ring-red-500 focus:border-red-600 py-3 px-3 text-white"
-                />
+                <h4 className="text-sm text-white font-semibold mb-2">
+                  Cargos de Tarjeta
+                </h4>
+                {renderCardCharges()}
+                {Math.abs(cardChargesTotal - total) > 0.01 && (
+                  <div className="mt-2 text-sm text-red-400">
+                    {cardChargesTotal < total
+                      ? `Faltan $${(total - cardChargesTotal).toFixed(2)}`
+                      : `Excede $${(cardChargesTotal - total).toFixed(2)}`}
+                  </div>
+                )}
               </div>
             )}
             {/* Transfer helper: show when transferencia selected */}
@@ -879,36 +1017,12 @@ const AdminCheckout: React.FC = () => {
                       className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-400 w-24">
+                  <div>
+                    <label className="text-sm text-gray-400 block mb-2">
                       Tarjeta:
                     </label>
-                      <input
-                        disabled={isReadOnly}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={mixedTarjeta}
-                        onChange={(e) => setMixedTarjeta(e.target.value)}
-                        placeholder="0.00"
-                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
-                      />
+                    {renderCardCharges()}
                   </div>
-                  {Number(mixedTarjeta) > 0 && (
-                    <div className="flex items-center gap-2 pl-26">
-                      <label className="text-xs text-gray-500 w-24">
-                        Operación:
-                      </label>
-                      <input
-                        disabled={isReadOnly}
-                        type="text"
-                        value={cardOperationNumber}
-                        onChange={(e) => setCardOperationNumber(e.target.value)}
-                        placeholder="Dígitos Verifone"
-                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-white disabled:bg-gray-800 text-sm"
-                      />
-                    </div>
-                  )}
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-400 w-24">
                       Transf.:
@@ -939,7 +1053,7 @@ const AdminCheckout: React.FC = () => {
                       className={`font-bold ${
                         Math.abs(
                           Number(mixedEfectivo || 0) +
-                            Number(mixedTarjeta || 0) +
+                            cardChargesTotal +
                             Number(mixedTransferencia || 0) -
                             total
                         ) < 0.01
@@ -950,16 +1064,16 @@ const AdminCheckout: React.FC = () => {
                       $
                       {(
                         Number(mixedEfectivo || 0) +
-                        Number(mixedTarjeta || 0) +
+                        cardChargesTotal +
                         Number(mixedTransferencia || 0)
                       ).toFixed(2)}
                     </span>
                   </div>
-                  {total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0)) > 0.001 && (
+                  {total - (Number(mixedEfectivo || 0) + cardChargesTotal + Number(mixedTransferencia || 0)) > 0.001 && (
                     <div className="flex justify-between text-sm mt-1 text-red-400">
                       <span>Faltante:</span>
                       <span className="font-bold">
-                        ${(total - (Number(mixedEfectivo || 0) + Number(mixedTarjeta || 0) + Number(mixedTransferencia || 0))).toFixed(2)}
+                        ${(total - (Number(mixedEfectivo || 0) + cardChargesTotal + Number(mixedTransferencia || 0))).toFixed(2)}
                       </span>
                     </div>
                   )}

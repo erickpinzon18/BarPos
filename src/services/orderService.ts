@@ -1,5 +1,5 @@
 // src/services/orderService.ts
-import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Order, OrderItem, User, OrderItemStatus, CreateData, Table } from '../utils/types';
 
@@ -502,6 +502,108 @@ export const updateBottleMixers = async (
 
   } catch (error) {
     console.error('Error al actualizar servicios:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mueve una orden activa completa (con todos sus items) a otra mesa que esté libre.
+ * Libera la mesa origen y ocupa la mesa destino, conservando el mesero asignado
+ * salvo que se reasigne explícitamente con `reassignOrderWaiter`.
+ */
+export const moveOrderToTable = async (
+  orderId: string,
+  targetTableId: string
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    if (!orderDoc.exists()) throw new Error('Orden no encontrada');
+    const orderData = orderDoc.data() as Order;
+
+    if (orderData.tableId === targetTableId) {
+      throw new Error('La orden ya está en esa mesa');
+    }
+
+    const targetTableRef = doc(db, 'tables', targetTableId);
+    const targetTableDoc = await getDoc(targetTableRef);
+    if (!targetTableDoc.exists()) throw new Error('Mesa destino no encontrada');
+    const targetTableData = targetTableDoc.data() as Table;
+
+    if (targetTableData.status !== 'libre') {
+      throw new Error('La mesa destino no está libre');
+    }
+
+    const sourceTableRef = doc(db, 'tables', orderData.tableId);
+
+    const batch = writeBatch(db);
+
+    batch.update(orderRef, {
+      tableId: targetTableId,
+      tableNumber: targetTableData.number,
+      updatedAt: Timestamp.now()
+    });
+
+    batch.update(sourceTableRef, {
+      status: 'libre',
+      currentOrderId: null,
+      waiterId: null,
+      waiterName: null,
+      updatedAt: Timestamp.now()
+    });
+
+    batch.update(targetTableRef, {
+      status: 'ocupada',
+      currentOrderId: orderId,
+      waiterId: orderData.waiterId,
+      waiterName: orderData.waiterName,
+      updatedAt: Timestamp.now()
+    });
+
+    await batch.commit();
+    console.log('✅ Orden movida a nueva mesa:', { orderId, targetTableId });
+  } catch (error) {
+    console.error('❌ Error moviendo orden a otra mesa:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reasigna el mesero responsable de una orden activa, actualizando tanto la orden
+ * como la mesa vinculada (para que aparezca correctamente en los paneles de mesero).
+ */
+export const reassignOrderWaiter = async (
+  orderId: string,
+  waiterId: string,
+  waiterName: string
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    if (!orderDoc.exists()) throw new Error('Orden no encontrada');
+    const orderData = orderDoc.data() as Order;
+
+    const batch = writeBatch(db);
+
+    batch.update(orderRef, {
+      waiterId,
+      waiterName,
+      updatedAt: Timestamp.now()
+    });
+
+    if (orderData.tableId) {
+      const tableRef = doc(db, 'tables', orderData.tableId);
+      batch.update(tableRef, {
+        waiterId,
+        waiterName,
+        updatedAt: Timestamp.now()
+      });
+    }
+
+    await batch.commit();
+    console.log('✅ Mesero reasignado:', { orderId, waiterId, waiterName });
+  } catch (error) {
+    console.error('❌ Error reasignando mesero:', error);
     throw error;
   }
 };

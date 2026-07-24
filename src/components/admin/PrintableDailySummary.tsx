@@ -9,14 +9,26 @@ interface PrintableDailySummaryProps {
     variety: number;
     extra: number;
     extraDesc: string;
+    nominas?: { person: string; amount: number; date: string }[];
   };
+  cardTypeBreakdown?: Record<string, number>;
+  ticketDetails?: {
+    folio?: number;
+    id: string;
+    table: string;
+    waiter: string;
+    method?: string;
+    total: number;
+  }[];
 }
 
 export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySummaryProps>(
-  ({ summary, shiftStart, shiftEnd, expenses }, ref) => {
+  ({ summary, shiftStart, shiftEnd, expenses, cardTypeBreakdown, ticketDetails }, ref) => {
     if (!summary) return null;
 
     const formatCurrency = (n: number) => `$${n.toFixed(2)}`;
+    const nominasTotal = (expenses?.nominas ?? []).reduce((s, n) => s + n.amount, 0);
+    const hasExpenses = expenses && (expenses.dj > 0 || expenses.variety > 0 || expenses.extra > 0 || nominasTotal > 0);
 
     return (
       <div ref={ref} className="bg-white text-black p-10 min-h-screen" style={{ width: '100%', maxWidth: '800px', margin: '0 auto' }}>
@@ -59,8 +71,37 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
           </div>
         </div>
 
+        {/* Detalle de Tickets (folios consecutivos) */}
+        {ticketDetails && ticketDetails.length > 0 && (
+          <div className="mb-8 break-inside-avoid">
+            <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Detalle de Tickets</h3>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 text-xs uppercase">
+                  <th className="py-1">Folio</th>
+                  <th className="py-1">Mesa</th>
+                  <th className="py-1">Mesero</th>
+                  <th className="py-1">Método</th>
+                  <th className="py-1 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ticketDetails.map((t) => (
+                  <tr key={t.id} className="border-b border-gray-100">
+                    <td className="py-1 font-mono">{typeof t.folio === 'number' ? `#${t.folio}` : t.id.slice(0, 6).toUpperCase()}</td>
+                    <td className="py-1">{t.table}</td>
+                    <td className="py-1">{t.waiter}</td>
+                    <td className="py-1 capitalize">{t.method}</td>
+                    <td className="py-1 text-right font-medium">{formatCurrency(t.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {/* Detalles, Gastos y Métodos de Pago */}
-        <div className={`grid gap-8 mb-8 break-inside-avoid ${expenses && (expenses.dj > 0 || expenses.variety > 0 || expenses.extra > 0) ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <div className={`grid gap-8 mb-8 break-inside-avoid ${hasExpenses ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <div>
             <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Métodos de Pago</h3>
             <table className="w-full text-sm">
@@ -81,12 +122,18 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                   <td className="py-1">Tarjeta</td>
                   <td className="text-right font-medium">{formatCurrency(summary.paymentMethods.tarjeta)}</td>
                 </tr>
+                {cardTypeBreakdown && Object.entries(cardTypeBreakdown).map(([type, amount]) => (
+                  <tr key={type}>
+                    <td className="py-0.5 text-gray-500 pl-4 text-xs">— {type}</td>
+                    <td className="text-right text-gray-500 text-xs">{formatCurrency(amount as number)}</td>
+                  </tr>
+                ))}
                 <tr>
                   <td className="py-1 border-b border-gray-200 pb-2">Transferencia</td>
                   <td className="text-right font-medium border-b border-gray-200 pb-2">{formatCurrency(summary.paymentMethods.transferencia)}</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">Total</td>
+                  <td className="py-2 font-bold">Gran Total</td>
                   <td className="text-right font-bold">{formatCurrency(summary.paymentMethods.efectivo + summary.paymentMethods.tarjeta + summary.paymentMethods.transferencia)}</td>
                 </tr>
               </tbody>
@@ -112,35 +159,41 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
             </table>
           </div>
 
-          {expenses && (expenses.dj > 0 || expenses.variety > 0 || expenses.extra > 0) && (
+          {hasExpenses && (
             <div>
               <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Gastos del Turno</h3>
               <table className="w-full text-sm">
                 <tbody>
-                  {expenses.dj > 0 && (
+                  {expenses!.dj > 0 && (
                     <tr>
                       <td className="py-1">Pago DJ</td>
-                      <td className="text-right font-medium text-red-600">-{formatCurrency(expenses.dj)}</td>
+                      <td className="text-right font-medium text-red-600">-{formatCurrency(expenses!.dj)}</td>
                     </tr>
                   )}
-                  {expenses.variety > 0 && (
+                  {expenses!.variety > 0 && (
                     <tr>
                       <td className="py-1">Pago Variedad</td>
-                      <td className="text-right font-medium text-red-600">-{formatCurrency(expenses.variety)}</td>
+                      <td className="text-right font-medium text-red-600">-{formatCurrency(expenses!.variety)}</td>
                     </tr>
                   )}
-                  {expenses.extra > 0 && (
+                  {expenses!.extra > 0 && (
                     <tr>
-                      <td className="py-1 border-b border-gray-200 pb-2">Extra ({expenses.extraDesc || 'N/A'})</td>
-                      <td className="text-right font-medium text-red-600 border-b border-gray-200 pb-2">-{formatCurrency(expenses.extra)}</td>
+                      <td className="py-1">Extra ({expenses!.extraDesc || 'N/A'})</td>
+                      <td className="text-right font-medium text-red-600">-{formatCurrency(expenses!.extra)}</td>
+                    </tr>
+                  )}
+                  {nominasTotal > 0 && (
+                    <tr>
+                      <td className="py-1 border-b border-gray-200 pb-2">Nómina</td>
+                      <td className="text-right font-medium text-red-600 border-b border-gray-200 pb-2">-{formatCurrency(nominasTotal)}</td>
                     </tr>
                   )}
                   <tr>
                     <td className="py-2 font-bold text-green-700">Efectivo Final en Caja</td>
                     <td className="text-right font-bold text-green-700">
                       {formatCurrency(
-                        (summary.paymentMethods.efectivo - summary.totalTipsNet) - 
-                        (expenses.dj + expenses.variety + expenses.extra)
+                        (summary.paymentMethods.efectivo - summary.totalTipsNet) -
+                        (expenses!.dj + expenses!.variety + expenses!.extra + nominasTotal)
                       )}
                     </td>
                   </tr>

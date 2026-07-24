@@ -162,6 +162,7 @@ const AdminTickets: React.FC = () => {
             if (!q) return true;
             if (o.id && o.id.toLowerCase().includes(q)) return true;
             if (o.id && o.id.slice(0, 6).toLowerCase().includes(q)) return true;
+            if (typeof o.folio === 'number' && String(o.folio).includes(q)) return true;
             if (o.tableNumber && String(o.tableNumber).includes(q)) return true;
             if (o.waiterName && o.waiterName.toLowerCase().includes(q)) return true;
             if (Array.isArray(o.payments) && o.payments.some(p => p.id && p.id.toLowerCase().includes(q))) return true;
@@ -215,7 +216,9 @@ const AdminTickets: React.FC = () => {
                         <div key={order.id} className="bg-gray-800 rounded-2xl border border-gray-800 p-5 flex flex-col justify-between">
                           <div>
                             <div className="flex justify-between items-center mb-2">
-                              <h3 className="text-lg font-bold text-white">Ticket #{order.id?.slice(0, 6).toUpperCase()}</h3>
+                              <h3 className="text-lg font-bold text-white">
+                                {typeof order.folio === 'number' ? `Folio #${order.folio}` : `Ticket #${order.id?.slice(0, 6).toUpperCase()}`}
+                              </h3>
                                 {/* <div className="text-xs text-gray-400">ID: { (order.payments && order.payments.length > 0 && order.payments[0].id) ? order.payments[0].id : order.id }</div> */}
                               <div className="text-sm text-gray-400 text-right">
                                 <div>{new Date(order.completedAt || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
@@ -259,9 +262,21 @@ const AdminTickets: React.FC = () => {
                 <h2 className="text-2xl font-bold text-red-500 tracking-widest">PASE DE SALIDA</h2>
                 <p className="text-lg font-semibold text-white mt-1">{config?.name ?? 'Wikka Despecho'} — Ticket de salida</p>
                 <p className="text-sm text-gray-400">Fecha: {new Date(selected.createdAt || Date.now()).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date(selected.createdAt || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                {typeof selected.folio === 'number' && (
+                  <p className="text-lg font-bold text-white mt-1">Folio #{selected.folio}</p>
+                )}
                 <p className="text-xs text-gray-400 mt-1">ID ticket: {selected.id}</p>
                 {selected.payments && selected.payments.length > 0 && (
-                  <div className="text-xs text-gray-400 mt-1">Pago: {selected.payments[0].id} — {selected.payments[0].method} ${selected.payments[0].receivedAmount ?? selected.payments[0].change ?? ''}</div>
+                  <div className="text-xs text-gray-400 mt-1">Pago: {selected.payments[0].id} — {selected.payments[0].method}{selected.payments[0].cardType ? ` (${selected.payments[0].cardType})` : ''} ${selected.payments[0].receivedAmount ?? selected.payments[0].change ?? ''}</div>
+                )}
+                {selected.payments && selected.payments.length > 1 && (
+                  <div className="text-xs text-gray-400 mt-1 space-y-0.5">
+                    {selected.payments.map((p, i) => (
+                      <div key={p.id ?? i}>
+                        {p.method}{p.cardType ? ` (${p.cardType})` : ''}{p.cardDetail ? ` — ${p.cardDetail}` : ''}: ${(p.amount ?? 0).toFixed(2)}
+                      </div>
+                    ))}
+                  </div>
                 )}
                 {(() => {
                   const pmt = selected.payments?.[0];

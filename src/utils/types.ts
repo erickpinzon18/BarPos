@@ -105,6 +105,7 @@ export interface Order {
   tax?: number;
   total?: number;
   adminComments?: string; // Comentarios administrativos (no visibles en ticket de cliente)
+  cashNotes?: string; // Notas del cajero al cobrar (ej. faltantes, notas finales). No sale en ticket de cliente, sí en el corte de caja.
   folio?: string; // Folio consecutivo alfanumérico (A1..A10000, B1..., AA1...), asignado al cerrar la cuenta
   folioSeq?: number; // Secuencia numérica interna (1-based) usada para ordenar/rangos de folio
   // Campos de cortesía (cuando la mesa se cierra sin cobro)

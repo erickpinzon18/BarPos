@@ -40,35 +40,55 @@ export const exportShiftReportToExcel = (
   shiftStart: Date,
   shiftEnd: Date
 ): void => {
-  // ── Hoja 1: Tickets (folio, mesa, mesero, método, tipo/detalle de tarjeta) ──
-  const ticketRows: Record<string, string | number>[] = [];
-
   const sortedOrders = orders.slice().sort((a, b) => (a.folioSeq ?? 0) - (b.folioSeq ?? 0));
 
-  sortedOrders.forEach((order) => {
-      const payments: Payment[] =
-        order.payments && order.payments.length > 0
-          ? order.payments
-          : [{ method: order.paymentMethod ?? "efectivo", createdAt: order.completedAt as any } as Payment];
+  // ── Hoja 1: Tickets — un renglón por cuenta, con cada cargo de tarjeta en su
+  // propia columna (sin sumarlos), igual que la hoja de referencia de la contadora.
+  const perOrderCardPayments = sortedOrders.map((order) =>
+    (order.payments ?? []).filter((p) => p.method === "tarjeta")
+  );
+  const maxCards = Math.max(0, ...perOrderCardPayments.map((c) => c.length));
 
-      payments.forEach((p, idx) => {
-        const completedAt = order.completedAt ? new Date(order.completedAt) : null;
-        ticketRows.push({
-          Folio: order.folio ?? "",
-          "Ticket ID": order.id,
-          Fecha: completedAt ? completedAt.toLocaleDateString("es-MX") : "",
-          Hora: completedAt ? completedAt.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "",
-          Mesa: order.tableNumber === 0 ? "Barra" : `Mesa ${order.tableNumber}`,
-          Mesero: order.waiterName ?? "",
-          "Método": p.method ?? "",
-          "Tipo Tarjeta": p.cardType ?? "",
-          "Detalle Tarjeta": p.cardDetail ?? "",
-          Monto: getPaymentAmount(order, p),
-          Subtotal: idx === 0 ? order.subtotal ?? 0 : "",
-          Total: idx === 0 ? order.total ?? 0 : "",
-        });
-      });
-    });
+  const ticketRows: Record<string, string | number>[] = sortedOrders.map((order, orderIdx) => {
+    const payments: Payment[] = order.payments ?? [];
+    const efectivoAmt = payments
+      .filter((p) => p.method === "efectivo")
+      .reduce((s, p) => s + getPaymentAmount(order, p), 0);
+    const transferenciaAmt = payments
+      .filter((p) => p.method === "transferencia")
+      .reduce((s, p) => s + getPaymentAmount(order, p), 0);
+    const cardPayments = perOrderCardPayments[orderIdx];
+
+    const completedAt = order.completedAt ? new Date(order.completedAt) : null;
+    const subtotal = order.subtotal ?? 0;
+    const total = order.total ?? 0;
+    const propina = total - subtotal;
+
+    const row: Record<string, string | number> = {
+      Folio: order.folio ?? order.id.slice(0, 6).toUpperCase(),
+      Fecha: completedAt ? completedAt.toLocaleDateString("es-MX") : "",
+      Hora: completedAt ? completedAt.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "",
+      Mesa: order.tableNumber === 0 ? "Barra" : `Mesa ${order.tableNumber}`,
+      Mesero: order.waiterName ?? "",
+      Importe: subtotal,
+      Propina: propina,
+      Pagado: total,
+    };
+
+    for (let i = 0; i < maxCards; i++) {
+      const p = cardPayments[i];
+      row[`Tarjeta ${i + 1}`] = p ? getPaymentAmount(order, p) : "";
+      row[`Tipo ${i + 1}`] = p?.cardType ?? "";
+      row[`Operación ${i + 1}`] = p?.cardOperationNumber ?? "";
+    }
+
+    row["Efectivo"] = efectivoAmt || "";
+    row["Transferencia"] = transferenciaAmt || "";
+    row["Total"] = total;
+    if (order.cashNotes) row["Notas"] = order.cashNotes;
+
+    return row;
+  });
 
   const ticketsSheet = XLSX.utils.json_to_sheet(ticketRows);
 

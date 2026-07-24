@@ -3,7 +3,9 @@
     "allow": [
       "Bash(echo \"exit:$?\")",
       "Bash(firebase hosting:sites:list)",
-      "Bash(grep -n \"export const closeTable\\\\|const folio = await getNextFolio\\\\|orderUpdate.folio\\\\|folio,$\\\\|return { success: true }\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/services/firestoreService.ts)"
+      "Bash(grep -n \"export const closeTable\\\\|const folio = await getNextFolio\\\\|orderUpdate.folio\\\\|folio,$\\\\|return { success: true }\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/services/firestoreService.ts)",
+      "Bash(grep -n \"const { folio, seq: folioSeq } = await getNextFolio\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/services/firestoreService.ts)",
+      "Bash(grep -n \"ordersData.push\\\\|orderData\\\\.\\\\|const order.*=.*{$\\\\|id: doc.id\\\\|id: docSnap.id\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/hooks/useOrders.ts)"
     ]
   }
 }

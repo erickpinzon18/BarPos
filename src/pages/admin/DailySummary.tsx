@@ -268,6 +268,7 @@ const DailySummary: React.FC = () => {
         waiter: o.waiterName,
         method: o.paymentMethod,
         total: o.total ?? 0,
+        cashNotes: o.cashNotes,
       }));
   }, [shiftOrders]);
 
@@ -876,10 +877,25 @@ const DailySummary: React.FC = () => {
         const folioLabel = t.folio ? `Folio ${t.folio}` : t.id.slice(0, 6).toUpperCase();
         lines.push(fmtLine(`${folioLabel} — ${t.table}`, fmtM(t.total)));
         lines.push(`  ${t.waiter ?? "-"} · ${t.method ?? "-"}`);
+        if (t.cashNotes) {
+          lines.push(`  Nota: ${t.cashNotes}`);
+        }
       });
       lines.push(sep());
       lines.push("");
     }
+
+    // ── Firma de recepción de efectivo ────────────────────────────────────────
+    lines.push(sep("="));
+    lines.push(center("RECIBI EFECTIVO"));
+    lines.push(sep("="));
+    lines.push("");
+    lines.push("Nombre: _____________________________");
+    lines.push("");
+    lines.push("Firma:  _____________________________");
+    lines.push("");
+    lines.push(center("(Este es el original)"));
+    lines.push("");
 
     lines.push(sep("="));
     lines.push(center("FIN DE CIERRE"));

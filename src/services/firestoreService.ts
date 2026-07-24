@@ -361,6 +361,72 @@ export const getNextFolio = async (): Promise<{ folio: string; seq: number }> =>
   return { folio: seqToFolio(nextSeq), seq: nextSeq };
 };
 
+/**
+ * Regenera el folio de TODAS las órdenes ya cerradas (pagado/cortesía) desde cero, en orden
+ * cronológico (la orden más antigua recibe A1, la siguiente A2, etc.), sin importar si ya
+ * tenían folio o no. Al final deja el contador global (`counters/orderFolio`) apuntando justo
+ * después del último folio asignado, para que las órdenes nuevas continúen la secuencia sin
+ * huecos ni duplicados. Pensado para correrse UNA sola vez (script de limpieza inicial) —
+ * volver a correrlo reasigna todos los folios de nuevo.
+ */
+export const regenerateAllFolios = async (
+  onProgress?: (done: number, total: number) => void
+): Promise<FirestoreResponse<{ updated: number }>> => {
+  try {
+    const allOrders: { id: string; completedAt: Date }[] = [];
+
+    for (const status of ['pagado', 'cortesia'] as const) {
+      const q = query(collection(db, 'orders'), where('status', '==', status));
+      const snap = await getDocs(q);
+      snap.forEach((d) => {
+        const data = d.data();
+        const raw = data.completedAt ?? data.createdAt;
+        const completedAt = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : new Date(0));
+        allOrders.push({ id: d.id, completedAt });
+      });
+    }
+
+    // Orden cronológico: el ticket más antiguo recibe el folio más chico (A1)
+    allOrders.sort((a, b) => a.completedAt.getTime() - b.completedAt.getTime());
+
+    let updated = 0;
+    let batch = writeBatch(db);
+    let opsInBatch = 0;
+
+    for (let i = 0; i < allOrders.length; i++) {
+      const seq = i + 1;
+      const folio = seqToFolio(seq);
+      batch.update(doc(db, 'orders', allOrders[i].id), {
+        folio,
+        folioSeq: seq,
+        updatedAt: Timestamp.now(),
+      });
+      opsInBatch++;
+      updated++;
+
+      // Firestore permite máx. 500 escrituras por batch; dejamos margen de seguridad
+      if (opsInBatch >= 450) {
+        await batch.commit();
+        batch = writeBatch(db);
+        opsInBatch = 0;
+      }
+      onProgress?.(updated, allOrders.length);
+    }
+
+    if (opsInBatch > 0) {
+      await batch.commit();
+    }
+
+    // Deja el contador global listo para que los próximos cierres continúen la secuencia
+    await setDoc(doc(db, 'counters', 'orderFolio'), { value: allOrders.length });
+
+    return { success: true, data: { updated } };
+  } catch (error: any) {
+    console.error('Error regenerando folios:', error);
+    return { success: false, error: error?.message || 'Error al regenerar folios' };
+  }
+};
+
 export const closeTable = async (
   tableId: string,
   orderId: string,
@@ -381,7 +447,7 @@ export const closeTable = async (
      * como para pago 100% tarjeta con varios cargos (distintos tipos de tarjeta). */
     splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string, cardType?: string, cardDetail?: string }[]
   }
-): Promise<FirestoreResponse<{ folio: string; folioSeq: number }>> => {
+): Promise<FirestoreResponse<{ folio?: string; folioSeq?: number }>> => {
   try {
     const batch = writeBatch(db);
 
@@ -406,8 +472,18 @@ export const closeTable = async (
     // Calculate total (subtotal + tip - discount, NO TAX)
     const total = subtotal + tipAmount - discountAmount;
 
-    // Assign the next consecutive folio (global, never resets)
-    const { folio, seq: folioSeq } = await getNextFolio();
+    // Assign the next consecutive folio (global, never resets). Nunca debe bloquear el cierre
+    // de la mesa: si falla (permisos, red, etc.) seguimos cerrando sin folio y se puede
+    // completar después con backfillMissingFolios().
+    let folio: string | undefined;
+    let folioSeq: number | undefined;
+    try {
+      const next = await getNextFolio();
+      folio = next.folio;
+      folioSeq = next.seq;
+    } catch (folioError) {
+      console.error('No se pudo asignar folio (se cierra la mesa sin folio):', folioError);
+    }
 
     // Update table status
     const tableRef = doc(db, 'tables', tableId);
@@ -429,11 +505,15 @@ export const closeTable = async (
       tipAmount,
       discount: discountAmount > 0 ? discountAmount : null,
       tax: null, // Explicitly set to null to remove any old tax values
-      folio,
-      folioSeq,
       completedAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
+
+    // Firestore rechaza valores `undefined`; solo incluimos folio si sí se pudo asignar.
+    if (folio !== undefined) {
+      orderUpdate.folio = folio;
+      orderUpdate.folioSeq = folioSeq;
+    }
 
     if (typeof peopleCount === 'number') {
       orderUpdate.peopleCount = peopleCount;
@@ -730,6 +810,22 @@ export const updateOrderAdminComments = async (orderId: string, comments: string
   } catch (error) {
     console.error('Error updating admin comments:', error);
     return { success: false, error: 'Error al actualizar comentarios' };
+  }
+};
+
+// Update cashier notes captured during checkout (e.g. faltantes, notas finales).
+// Not shown on the customer ticket, only in the shift cash-cut report.
+export const updateOrderCashNotes = async (orderId: string, notes: string): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      cashNotes: notes.trim() || null,
+      updatedAt: Timestamp.now()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating cash notes:', error);
+    return { success: false, error: 'Error al actualizar notas' };
   }
 };
 
@@ -1072,23 +1168,36 @@ export const closeTableAsCourtesy = async (
   orderId: string,
   courtesyById: string,
   courtesyByName: string
-): Promise<FirestoreResponse<{ folio: string; folioSeq: number }>> => {
+): Promise<FirestoreResponse<{ folio?: string; folioSeq?: number }>> => {
   try {
     const batch = writeBatch(db);
-    const { folio, seq: folioSeq } = await getNextFolio();
 
-    batch.update(doc(db, 'orders', orderId), {
+    let folio: string | undefined;
+    let folioSeq: number | undefined;
+    try {
+      const next = await getNextFolio();
+      folio = next.folio;
+      folioSeq = next.seq;
+    } catch (folioError) {
+      console.error('No se pudo asignar folio (se cierra la cortesía sin folio):', folioError);
+    }
+
+    const courtesyUpdate: any = {
       status: 'cortesia',
       courtesyBy: courtesyById,
       courtesyByName: courtesyByName,
       courtesyAt: Timestamp.now(),
       subtotal: 0,
       total: 0,
-      folio,
-      folioSeq,
       updatedAt: Timestamp.now(),
       completedAt: Timestamp.now(),
-    });
+    };
+    if (folio !== undefined) {
+      courtesyUpdate.folio = folio;
+      courtesyUpdate.folioSeq = folioSeq;
+    }
+
+    batch.update(doc(db, 'orders', orderId), courtesyUpdate);
 
     batch.update(doc(db, 'tables', tableId), {
       status: 'libre',

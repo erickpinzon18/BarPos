@@ -158,7 +158,13 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   if (order.folio) {
     pushLabeledValue(lines, 'Folio:', order.folio, W);
   }
-  pushLabeledValue(lines, 'Fecha:', new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }), W);
+  if (order.createdAt) {
+    pushLabeledValue(lines, 'Apertura:', new Date(order.createdAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }), W);
+  }
+  // "Fecha" es la fecha real del ticket: cuando se cerró la cuenta (completedAt) si ya
+  // está pagada; si aún se está cobrando, usamos el momento actual de impresión.
+  const ticketDate = order.completedAt ? new Date(order.completedAt) : new Date();
+  pushLabeledValue(lines, 'Fecha:', ticketDate.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }), W);
 
   const statusLabel = order.status === 'pagado' ? 'PAGADO' : order.status === 'cancelado' ? 'CANCELADO' : 'PENDIENTE';
   pushLabeledValue(lines, 'Estado:', statusLabel, W);

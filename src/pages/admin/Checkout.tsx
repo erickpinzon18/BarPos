@@ -3,7 +3,7 @@ import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useOrderById, useOrderByTableId } from "../../hooks/useOrders";
 import type { Order, CardType } from "../../utils/types";
-import { closeTable, closeTableAsCourtesy, getConfig, checkOperationNumberUnique } from "../../services/firestoreService";
+import { closeTable, closeTableAsCourtesy, getConfig, checkOperationNumberUnique, updateOrderCashNotes } from "../../services/firestoreService";
 import { verifyUserPin } from "../../services/orderService";
 import PinModal from "../../components/common/PinModal";
 import { printTicket } from "../../utils/printTicket";
@@ -92,6 +92,15 @@ const AdminCheckout: React.FC = () => {
   const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
   const [config, setConfig] = useState<any | null>(null);
   const [pinMode, setPinMode] = useState<"payment" | "courtesy">("payment");
+
+  // Notas de cajero (faltantes, notas finales) — no salen en el ticket del cliente,
+  // sólo en el corte de caja. Se guardan automáticamente al dejar de escribir.
+  const [cashNotes, setCashNotes] = useState<string>("");
+  const [savingCashNotes, setSavingCashNotes] = useState(false);
+  const cashNotesLoadedRef = React.useRef<string | null>(null);
+
+  // Ajuste de propina por diferencia de pago recibido (aplica a cualquier método)
+  const [receivedAmountInput, setReceivedAmountInput] = useState<string>("");
 
   // Fetch active promotions
   const { promotions: activePromotions } = useActivePromotions();
@@ -366,6 +375,7 @@ const AdminCheckout: React.FC = () => {
         payments: finalPayments,
         folio: res.data?.folio,
         folioSeq: res.data?.folioSeq,
+        completedAt: new Date(),
       } as Order;
 
       // Auto-print the exit pass immediately after closing
@@ -403,6 +413,7 @@ const AdminCheckout: React.FC = () => {
         courtesyByName: authorizedUser.displayName ?? authorizedUser.email,
         folio: res.data?.folio,
         folioSeq: res.data?.folioSeq,
+        completedAt: new Date(),
       } as Order);
     } catch (err: any) {
       console.error("Error registering courtesy:", err);
@@ -454,6 +465,31 @@ const AdminCheckout: React.FC = () => {
       setIsReadOnly(true);
     }
   }, [order]);
+
+  // Cargar cashNotes una sola vez por orden (evita pisar lo que el cajero está escribiendo
+  // cuando llegan actualizaciones en tiempo real del mismo documento).
+  React.useEffect(() => {
+    if (!order) return;
+    if (cashNotesLoadedRef.current !== order.id) {
+      cashNotesLoadedRef.current = order.id;
+      setCashNotes(order.cashNotes ?? "");
+    }
+  }, [order]);
+
+  // Autosave de notas: se guarda solo 800ms después de dejar de escribir, sin botón.
+  React.useEffect(() => {
+    if (!order) return;
+    if (cashNotesLoadedRef.current !== order.id) return; // aún no cargó el valor inicial
+    if ((order.cashNotes ?? "") === cashNotes) return; // sin cambios reales
+    const timeout = setTimeout(() => {
+      setSavingCashNotes(true);
+      updateOrderCashNotes(order.id, cashNotes)
+        .catch((err) => console.error("Error guardando notas:", err))
+        .finally(() => setSavingCashNotes(false));
+    }, 800);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cashNotes, order?.id]);
 
   // Renderiza la lista editable de cargos de tarjeta (usada por pago 100% tarjeta y por el
   // componente "tarjeta" del pago mixto), permitiendo varios cargos con distinto tipo/detalle.
@@ -639,8 +675,13 @@ const AdminCheckout: React.FC = () => {
               <p className="text-sm text-gray-400">
                 {config?.name ?? "Wikka Despecho"} — Ticket de salida
               </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Fecha: {new Date().toLocaleString()}
+              {order.createdAt && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Apertura: {new Date(order.createdAt).toLocaleString()}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Fecha: {(order.completedAt ? new Date(order.completedAt) : new Date()).toLocaleString()}
               </p>
               <p className="text-xs text-gray-500 mt-1">Id: {order.id}</p>
             </div>
@@ -825,6 +866,77 @@ const AdminCheckout: React.FC = () => {
                 )}
               </>
             )}
+          </div>
+
+          {/* Ajuste de propina por diferencia (aplica a cualquier método de pago) */}
+          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
+            <h3 className="font-semibold text-white mb-3">💰 Pago Recibido</h3>
+            <p className="text-xs text-gray-500 mb-3">
+              Si el cliente paga más del total, la diferencia se agrega automáticamente como propina extra.
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="text-gray-400 text-sm font-semibold">$</span>
+              <input
+                disabled={isReadOnly}
+                type="number"
+                min="0"
+                step="1"
+                value={receivedAmountInput}
+                onChange={(e) => setReceivedAmountInput(e.target.value)}
+                placeholder={`Monto recibido (total: $${total.toFixed(2)})`}
+                className="flex-1 bg-gray-900 border border-gray-700 text-white text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3 px-3 disabled:cursor-not-allowed"
+              />
+            </div>
+            {(() => {
+              const received = Number(receivedAmountInput) || 0;
+              const overpaymentTip = Math.max(0, received - total);
+              if (received <= 0) return null;
+              if (overpaymentTip <= 0) {
+                return (
+                  <div className="mt-2 text-sm text-yellow-400">
+                    Ese monto no cubre el total (${total.toFixed(2)}).
+                  </div>
+                );
+              }
+              return (
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="text-sm text-green-400">
+                    Propina extra: <span className="font-bold">${overpaymentTip.toFixed(2)}</span>
+                  </div>
+                  <button
+                    disabled={isReadOnly}
+                    onClick={() => {
+                      const newTipAmount = tipAmount + overpaymentTip;
+                      setTipMode("amount");
+                      setCustomTipAmount(newTipAmount.toFixed(2));
+                      setTipPercent(subtotal > 0 ? newTipAmount / subtotal : 0);
+                      setReceivedAmountInput("");
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    Aplicar como propina
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Notas del cajero — se guardan automáticamente, no aparecen en el ticket del cliente */}
+          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-white">📝 Notas del Cajero</h3>
+              {savingCashNotes && <span className="text-xs text-gray-500">Guardando...</span>}
+            </div>
+            <textarea
+              value={cashNotes}
+              onChange={(e) => setCashNotes(e.target.value)}
+              placeholder="Ej. faltó dinero, nota final, incidencias del cobro..."
+              rows={3}
+              className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              No se imprime en el ticket del cliente. Solo aparece en el corte de caja.
+            </p>
           </div>
 
           {/* Promociones auto-aplicadas */}

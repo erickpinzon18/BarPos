@@ -16,6 +16,7 @@ interface PrintableDailySummaryProps {
     waiter: string;
     method?: string;
     total: number;
+    cashNotes?: string;
   }[];
 }
 
@@ -89,6 +90,7 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                   <th className="py-1">Mesero</th>
                   <th className="py-1">Método</th>
                   <th className="py-1 text-right">Total</th>
+                  <th className="py-1">Notas</th>
                 </tr>
               </thead>
               <tbody>
@@ -99,6 +101,7 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                     <td className="py-1">{t.waiter}</td>
                     <td className="py-1 capitalize">{t.method}</td>
                     <td className="py-1 text-right font-medium">{formatCurrency(t.total)}</td>
+                    <td className="py-1 text-xs text-gray-500 italic">{t.cashNotes ?? ''}</td>
                   </tr>
                 ))}
               </tbody>
@@ -276,6 +279,22 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
               <p className="font-bold text-lg">{formatCurrency(summary.totalCashierShare)}</p>
             </div>
           </div>
+        </div>
+
+        {/* Firma de recepción de efectivo — documento original */}
+        <div className="mb-8 border-2 border-black rounded-lg p-6 break-inside-avoid">
+          <p className="text-center font-bold uppercase mb-6">Recibí Efectivo</p>
+          <div className="grid grid-cols-2 gap-8 text-sm">
+            <div>
+              <div className="border-b border-black h-12"></div>
+              <p className="text-center text-xs text-gray-500 mt-1">Nombre</p>
+            </div>
+            <div>
+              <div className="border-b border-black h-12"></div>
+              <p className="text-center text-xs text-gray-500 mt-1">Firma</p>
+            </div>
+          </div>
+          <p className="text-center text-xs text-gray-400 mt-4">Este documento es el original.</p>
         </div>
 
         <div className="text-center text-xs text-gray-400 mt-12 pt-4 border-t border-gray-200">

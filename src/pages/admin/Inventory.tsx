@@ -671,6 +671,55 @@ const Inventory: React.FC = () => {
   const confirmAllSystem = () =>
     setCheckEntries((prev) => prev.map((e) => ({ ...e, confirmedQty: e.systemQty ?? e.confirmedQty })));
 
+  // ─── Navegación por teclado en filas de "Nuevo Período" (flechas, Enter, Tab) ──
+  const npQtyInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+
+  const focusNpQtyInput = (index: number) => {
+    const el = npQtyInputRefs.current[index];
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  };
+
+  const handleNpQtyKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, idx: number) => {
+    if (e.key === "ArrowDown" || e.key === "Enter") {
+      e.preventDefault();
+      focusNpQtyInput(idx + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      focusNpQtyInput(idx - 1);
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      focusNpQtyInput(e.shiftKey ? idx - 1 : idx + 1);
+    }
+  };
+
+  // ─── Navegación por teclado en el conteo (flechas, Enter, Tab) ─────────────────
+  const checkInputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+
+  const focusCheckInput = (index: number) => {
+    const el = checkInputRefs.current[index];
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  };
+
+  const handleCheckInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, idx: number) => {
+    if (e.key === "ArrowDown" || e.key === "Enter") {
+      e.preventDefault();
+      focusCheckInput(idx + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      focusCheckInput(idx - 1);
+    } else if (e.key === "Tab") {
+      // Salta directo al siguiente/anterior input de cantidad, sin detenerse en los botones +/-
+      e.preventDefault();
+      focusCheckInput(e.shiftKey ? idx - 1 : idx + 1);
+    }
+  };
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   const allowedCategories = SUBSECTION_CATALOG_CATEGORIES[subsectionKey] ?? null;
@@ -913,6 +962,7 @@ const Inventory: React.FC = () => {
                           className="bg-gray-800 text-white rounded-lg px-2 py-1.5 border border-gray-700 focus:border-red-500 focus:outline-none w-16 text-sm text-center"
                         />
                         <input
+                          ref={(el) => { npQtyInputRefs.current[i] = el; }}
                           type="number"
                           min={0}
                           step={0.5}
@@ -921,6 +971,8 @@ const Inventory: React.FC = () => {
                           onChange={(e) =>
                             setNpRows((prev) => prev.map((r, idx) => idx === i ? { ...r, initialQty: parseFloat(e.target.value) || 0 } : r))
                           }
+                          onKeyDown={(e) => handleNpQtyKeyDown(e, i)}
+                          onFocus={(e) => e.target.select()}
                           className="bg-gray-800 text-white rounded-lg px-2 py-1.5 border border-gray-700 focus:border-red-500 focus:outline-none w-20 text-sm text-right"
                         />
                         <div className="flex flex-col items-center justify-center gap-0.5 ml-1">
@@ -1116,12 +1168,15 @@ const Inventory: React.FC = () => {
                                 <Minus size={14} />
                               </button>
                               <input
+                                ref={(el) => { checkInputRefs.current[idx] = el; }}
                                 type="number"
                                 min={0}
                                 step={0.5}
                                 value={entry.confirmedQty ?? ""}
                                 placeholder={entry.systemQty !== null ? fmtNum(entry.systemQty) : "0"}
                                 onChange={(e) => updateCheckEntry(entry.productName, e.target.value)}
+                                onKeyDown={(e) => handleCheckInputKeyDown(e, idx)}
+                                onFocus={(e) => e.target.select()}
                                 className={`w-20 text-center rounded-lg px-2 py-1.5 border text-sm font-semibold focus:outline-none ${
                                   hasDisc
                                     ? isShort

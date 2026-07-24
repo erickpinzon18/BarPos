@@ -58,6 +58,14 @@ export const useOrders = (status?: 'activo' | 'pagado' | 'cancelado') => {
             peopleCount: data.peopleCount,
             tableName: data.tableName,
             adminComments: data.adminComments,
+            cashNotes: data.cashNotes,
+            // Folio consecutivo
+            folio: data.folio,
+            folioSeq: data.folioSeq,
+            // Cortesía
+            courtesyBy: data.courtesyBy,
+            courtesyByName: data.courtesyByName,
+            courtesyAt: data.courtesyAt?.toDate ? data.courtesyAt.toDate() : undefined,
             // Financial data
             subtotal: data.subtotal,
             total: data.total,
@@ -166,6 +174,14 @@ export const useOrderByTableId = (tableId?: string) => {
           peopleCount: data.peopleCount,
           tableName: data.tableName,
           adminComments: data.adminComments,
+          cashNotes: data.cashNotes,
+          // Folio consecutivo
+          folio: data.folio,
+          folioSeq: data.folioSeq,
+          // Cortesía
+          courtesyBy: data.courtesyBy,
+          courtesyByName: data.courtesyByName,
+          courtesyAt: data.courtesyAt?.toDate ? data.courtesyAt.toDate() : undefined,
           // Financial data
           subtotal: data.subtotal,
           total: data.total,
@@ -247,6 +263,14 @@ export const useOrderById = (orderId?: string | null) => {
           peopleCount: data.peopleCount,
           tableName: data.tableName,
           adminComments: data.adminComments,
+          cashNotes: data.cashNotes,
+          // Folio consecutivo
+          folio: data.folio,
+          folioSeq: data.folioSeq,
+          // Cortesía
+          courtesyBy: data.courtesyBy,
+          courtesyByName: data.courtesyByName,
+          courtesyAt: data.courtesyAt?.toDate ? data.courtesyAt.toDate() : undefined,
           // Financial data
           subtotal: data.subtotal,
           total: data.total,

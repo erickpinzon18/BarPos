@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useOrders } from '../../hooks/useOrders';
 import { printTicket } from '../../utils/printTicket';
-import { getConfig, updateOrderPaymentMethod } from '../../services/firestoreService';
+import { getConfig, updateOrderPaymentMethod, regenerateAllFolios } from '../../services/firestoreService';
 import { verifyUserPin } from '../../services/orderService';
 import type { Order } from '../../utils/types';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePaperSize } from '../../hooks/usePaperSize';
 import PinModal from '../../components/common/PinModal';
+import toast from 'react-hot-toast';
+
+// Botón de un solo uso para regenerar folios históricos. Se deja oculto tras el uso inicial;
+// cambia a true si algún día hace falta correrlo de nuevo.
+const SHOW_REGENERATE_FOLIOS_BUTTON = false;
 
 const AdminTickets: React.FC = () => {
   // Show historical tickets: use status 'pagado'
@@ -16,6 +21,35 @@ const AdminTickets: React.FC = () => {
   const [config, setConfig] = useState<any | null>(null);
   const { currentUser } = useAuth();
   const [paperSize, setPaperSize] = usePaperSize(currentUser?.id);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const handleRegenerateFolios = async () => {
+    if (regenerating) return;
+    const confirmed = window.confirm(
+      `Esto va a REGENERAR el folio de TODOS los tickets pagados/cortesía (${orders.length} en este listado, puede haber más), en orden cronológico empezando en A1. ` +
+      `Sobrescribe cualquier folio que ya tengan. Pensado para correrse UNA sola vez. ¿Continuar?`
+    );
+    if (!confirmed) return;
+    const doubleConfirmed = window.confirm('¿Seguro? Esta acción no se puede deshacer.');
+    if (!doubleConfirmed) return;
+
+    setRegenerating(true);
+    const toastId = toast.loading('Regenerando folios...');
+    try {
+      const res = await regenerateAllFolios((done, total) => {
+        toast.loading(`Regenerando folios... ${done}/${total}`, { id: toastId });
+      });
+      if (res.success) {
+        toast.success(`Folios regenerados: ${res.data?.updated ?? 0}`, { id: toastId });
+      } else {
+        toast.error(res.error || 'Error al regenerar folios', { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al regenerar folios', { id: toastId });
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   // Payment method edit state
   const [paymentMethodFeedback, setPaymentMethodFeedback] = useState<'success' | 'error' | null>(null);
@@ -115,15 +149,31 @@ const AdminTickets: React.FC = () => {
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="text-3xl font-bold mb-2">Historial de Tickets</h1>
-      <p className="text-gray-400 mb-6">Consulta, revisa y reimprime tickets pagados.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
+        <div>
+          <h1 className="text-3xl font-bold">Historial de Tickets</h1>
+          <p className="text-gray-400">Consulta, revisa y reimprime tickets pagados.</p>
+        </div>
+        {/* Botón "Regenerar todos los folios" oculto (ya no se necesita para uso normal).
+            Para volver a mostrarlo: cambia SHOW_REGENERATE_FOLIOS_BUTTON a true. */}
+        {SHOW_REGENERATE_FOLIOS_BUTTON && currentUser?.superAdmin && (
+          <button
+            onClick={handleRegenerateFolios}
+            disabled={regenerating}
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-xl transition-colors shadow-lg text-sm"
+            title="Regenera el folio de todos los tickets pagados/cortesía desde A1, en orden cronológico. Correr solo una vez."
+          >
+            {regenerating ? 'Regenerando...' : 'Regenerar todos los folios'}
+          </button>
+        )}
+      </div>
 
       <div className="mb-4">
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar por ticket, id de pago, mesa, mesero, nombre de mesa, comentarios..."
+          placeholder="Buscar por folio, ticket, id de pago, mesa, mesero, nombre de mesa, comentarios..."
           className="w-full md:w-1/2 bg-gray-800 text-white rounded-lg p-3 border border-gray-800"
         />
       </div>

@@ -18,6 +18,7 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { seqToFolio } from '../utils/folio';
 import type {
   User,
   Product,
@@ -344,17 +345,20 @@ export const checkOperationNumberUnique = async (operationNumber: string): Promi
 /**
  * Obtiene el siguiente folio consecutivo global (nunca reinicia).
  * Usa una transacción de Firestore para garantizar unicidad ante escrituras concurrentes.
+ * El folio se expresa en formato alfanumérico tipo hoja de cálculo: A1..A10000, B1..B10000,
+ * ..., Z1..Z10000, AA1..AA10000, ... (ver src/utils/folio.ts). `seq` es la secuencia numérica
+ * interna 1-based usada para ordenar y calcular rangos.
  */
-export const getNextFolio = async (): Promise<number> => {
+export const getNextFolio = async (): Promise<{ folio: string; seq: number }> => {
   const counterRef = doc(db, 'counters', 'orderFolio');
-  const nextFolio = await runTransaction(db, async (transaction) => {
+  const nextSeq = await runTransaction(db, async (transaction) => {
     const counterDoc = await transaction.get(counterRef);
     const current = counterDoc.exists() ? (counterDoc.data().value || 0) : 0;
     const next = current + 1;
     transaction.set(counterRef, { value: next }, { merge: true });
     return next;
   });
-  return nextFolio;
+  return { folio: seqToFolio(nextSeq), seq: nextSeq };
 };
 
 export const closeTable = async (
@@ -377,7 +381,7 @@ export const closeTable = async (
      * como para pago 100% tarjeta con varios cargos (distintos tipos de tarjeta). */
     splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string, cardType?: string, cardDetail?: string }[]
   }
-): Promise<FirestoreResponse<void>> => {
+): Promise<FirestoreResponse<{ folio: string; folioSeq: number }>> => {
   try {
     const batch = writeBatch(db);
 
@@ -403,7 +407,7 @@ export const closeTable = async (
     const total = subtotal + tipAmount - discountAmount;
 
     // Assign the next consecutive folio (global, never resets)
-    const folio = await getNextFolio();
+    const { folio, seq: folioSeq } = await getNextFolio();
 
     // Update table status
     const tableRef = doc(db, 'tables', tableId);
@@ -426,6 +430,7 @@ export const closeTable = async (
       discount: discountAmount > 0 ? discountAmount : null,
       tax: null, // Explicitly set to null to remove any old tax values
       folio,
+      folioSeq,
       completedAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
@@ -493,7 +498,7 @@ export const closeTable = async (
       total,
       paymentMethod
     });
-    return { success: true };
+    return { success: true, data: { folio, folioSeq } };
   } catch (error) {
     console.error('Error closing table:', error);
     return { success: false, error: 'Error al cerrar mesa' };
@@ -1067,10 +1072,10 @@ export const closeTableAsCourtesy = async (
   orderId: string,
   courtesyById: string,
   courtesyByName: string
-): Promise<FirestoreResponse<void>> => {
+): Promise<FirestoreResponse<{ folio: string; folioSeq: number }>> => {
   try {
     const batch = writeBatch(db);
-    const folio = await getNextFolio();
+    const { folio, seq: folioSeq } = await getNextFolio();
 
     batch.update(doc(db, 'orders', orderId), {
       status: 'cortesia',
@@ -1080,6 +1085,7 @@ export const closeTableAsCourtesy = async (
       subtotal: 0,
       total: 0,
       folio,
+      folioSeq,
       updatedAt: Timestamp.now(),
       completedAt: Timestamp.now(),
     });
@@ -1093,7 +1099,7 @@ export const closeTableAsCourtesy = async (
     });
 
     await batch.commit();
-    return { success: true };
+    return { success: true, data: { folio, folioSeq } };
   } catch (error) {
     console.error('Error closing table as courtesy:', error);
     return { success: false, error: 'Error al cerrar mesa como cortesía' };

@@ -363,7 +363,9 @@ const AdminCheckout: React.FC = () => {
         ...order,
         status: "pagado",
         paymentMethod,
-        payments: finalPayments
+        payments: finalPayments,
+        folio: res.data?.folio,
+        folioSeq: res.data?.folioSeq,
       } as Order;
 
       // Auto-print the exit pass immediately after closing
@@ -399,6 +401,8 @@ const AdminCheckout: React.FC = () => {
         subtotal: 0,
         total: 0,
         courtesyByName: authorizedUser.displayName ?? authorizedUser.email,
+        folio: res.data?.folio,
+        folioSeq: res.data?.folioSeq,
       } as Order);
     } catch (err: any) {
       console.error("Error registering courtesy:", err);

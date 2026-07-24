@@ -155,8 +155,8 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   lines.push('');
 
   // ── Order info ────────────────────────────────────────────────────────────
-  if (typeof order.folio === 'number') {
-    pushLabeledValue(lines, 'Folio:', `#${order.folio}`, W);
+  if (order.folio) {
+    pushLabeledValue(lines, 'Folio:', order.folio, W);
   }
   pushLabeledValue(lines, 'Fecha:', new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }), W);
 

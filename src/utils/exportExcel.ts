@@ -5,18 +5,13 @@
 import * as XLSX from "xlsx";
 import type { Order, Payment } from "./types";
 
-export interface ExcelNomina {
-  person: string;
-  amount: number;
-  date: string;
+export interface ExcelGasto {
+  concepto: string;
+  monto: number;
 }
 
 export interface ExcelExpenses {
-  dj: number;
-  variety: number;
-  extra: number;
-  extraDesc: string;
-  nominas: ExcelNomina[];
+  gastos: ExcelGasto[];
 }
 
 export interface ExcelSummaryTotals {
@@ -48,10 +43,9 @@ export const exportShiftReportToExcel = (
   // ── Hoja 1: Tickets (folio, mesa, mesero, método, tipo/detalle de tarjeta) ──
   const ticketRows: Record<string, string | number>[] = [];
 
-  orders
-    .slice()
-    .sort((a, b) => (a.folio ?? 0) - (b.folio ?? 0))
-    .forEach((order) => {
+  const sortedOrders = orders.slice().sort((a, b) => (a.folioSeq ?? 0) - (b.folioSeq ?? 0));
+
+  sortedOrders.forEach((order) => {
       const payments: Payment[] =
         order.payments && order.payments.length > 0
           ? order.payments
@@ -79,14 +73,20 @@ export const exportShiftReportToExcel = (
   const ticketsSheet = XLSX.utils.json_to_sheet(ticketRows);
 
   // ── Hoja 2: Resumen ──────────────────────────────────────────────────────
-  const nominasTotal = expenses.nominas.reduce((s, n) => s + n.amount, 0);
-  const totalExpenses = expenses.dj + expenses.variety + expenses.extra + nominasTotal;
+  const totalExpenses = expenses.gastos.reduce((s, g) => s + g.monto, 0);
   const cashInRegister = summary.paymentMethods.efectivo - summary.totalTipsNet;
   const grandTotal =
     summary.paymentMethods.efectivo + summary.paymentMethods.tarjeta + summary.paymentMethods.transferencia;
 
+  const foliosWithValue = sortedOrders.filter((o) => o.folio);
+  const folioRangeLabel =
+    foliosWithValue.length > 0
+      ? `${foliosWithValue[0].folio} - ${foliosWithValue[foliosWithValue.length - 1].folio}`
+      : "N/A";
+
   const resumenRows: { Concepto: string; Valor: string | number }[] = [
     { Concepto: "Turno", Valor: `${shiftStart.toLocaleString("es-MX")} -> ${shiftEnd.toLocaleString("es-MX")}` },
+    { Concepto: "Rango de Folios", Valor: folioRangeLabel },
     { Concepto: "Total cuentas", Valor: summary.totalOrders },
     { Concepto: "Total personas", Valor: summary.totalPeople },
     { Concepto: "", Valor: "" },
@@ -102,21 +102,13 @@ export const exportShiftReportToExcel = (
     { Concepto: "Propinas a repartir (netas)", Valor: summary.totalTipsNet },
     { Concepto: "", Valor: "" },
     { Concepto: "Efectivo en caja (antes de gastos)", Valor: cashInRegister },
-    { Concepto: "Pago DJ", Valor: -expenses.dj },
-    { Concepto: "Pago Variedad", Valor: -expenses.variety },
-    { Concepto: `Extra (${expenses.extraDesc || "N/A"})`, Valor: -expenses.extra },
-    { Concepto: "Nómina", Valor: -nominasTotal },
+    { Concepto: "", Valor: "" },
+    { Concepto: "Gastos del Turno", Valor: "" },
+    ...expenses.gastos.map((g) => ({ Concepto: `  ${g.concepto}`, Valor: -g.monto })),
     { Concepto: "Total Gastos", Valor: -totalExpenses },
+    { Concepto: "", Valor: "" },
     { Concepto: "EFECTIVO FINAL EN CAJA", Valor: cashInRegister - totalExpenses },
   ];
-
-  if (expenses.nominas.length > 0) {
-    resumenRows.push({ Concepto: "", Valor: "" });
-    resumenRows.push({ Concepto: "Detalle de Nómina", Valor: "" });
-    expenses.nominas.forEach((n) => {
-      resumenRows.push({ Concepto: `  ${n.person} (${n.date})`, Valor: n.amount });
-    });
-  }
 
   const resumenSheet = XLSX.utils.json_to_sheet(resumenRows);
 

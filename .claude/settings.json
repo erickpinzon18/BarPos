@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(echo \"exit:$?\")",
-      "Bash(firebase hosting:sites:list)"
+      "Bash(firebase hosting:sites:list)",
+      "Bash(grep -n \"export const closeTable\\\\|const folio = await getNextFolio\\\\|orderUpdate.folio\\\\|folio,$\\\\|return { success: true }\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/services/firestoreService.ts)"
     ]
   }
 }

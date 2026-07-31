@@ -36,7 +36,7 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
         productPrice: 120,
         quantity: 2,
         status: 'entregado',
-        category: 'Comida'
+        category: 'Hamburguesas'
       },
       {
         productId: 'NFKZGbDuRR8FYuF0kBJ9',
@@ -44,7 +44,7 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
         productPrice: 75,
         quantity: 1,
         status: 'entregado',
-        category: 'Entrada'
+        category: 'Especiales'
       },
       {
         productId: 'prod_flan_napolitano',
@@ -52,7 +52,7 @@ export const createSampleOrder = async (tableId: string, tableNumber: number) =>
         productPrice: 45,
         quantity: 2,
         status: 'entregado',
-        category: 'Postre'
+        category: 'Postres'
       }
     ];
 

@@ -114,6 +114,7 @@ type PrintOptions = {
   tipAmount: number;
   tipPercent?: number; // Decimal e.g. 0.15 for 15%
   discountAmount?: number;
+  deliveryFee?: number;
   /** Per-item discount: { [itemId]: { amount, promoName } } */
   itemDiscounts?: Record<string, { amount: number; promoName: string }>;
   total: number;
@@ -134,6 +135,7 @@ export const generateTicketContent = (opts: PrintOptions): string => {
     subtotal,
     total,
     discountAmount,
+    deliveryFee,
     itemDiscounts,
     perPerson,
     paperSize = '80mm',
@@ -243,6 +245,10 @@ export const generateTicketContent = (opts: PrintOptions): string => {
 
   if (typeof discountAmount === 'number' && discountAmount > 0) {
     pushLabeledValue(lines, 'Descuento:', `-${formatMoney(discountAmount)}`, W);
+  }
+
+  if (typeof deliveryFee === 'number' && deliveryFee > 0) {
+    pushLabeledValue(lines, 'Envío a domicilio:', formatMoney(deliveryFee), W);
   }
 
   lines.push(s('='));

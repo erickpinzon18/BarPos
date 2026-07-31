@@ -53,28 +53,28 @@ export const createSampleProducts = async () => {
         name: 'Hamburguesa Clásica',
         description: 'Carne, lechuga, tomate, queso',
         price: 120,
-        category: 'Comida',
+        category: 'Hamburguesas',
         available: true
       },
       {
         name: 'Tacos de Arrachera',
         description: 'Orden de 3 tacos con guacamole',
         price: 150,
-        category: 'Comida',
+        category: 'Parrilla',
         available: true
       },
       {
         name: 'Quesadillas',
         description: 'Tortilla con queso y pollo',
         price: 85,
-        category: 'Comida',
+        category: 'Especiales',
         available: true
       },
       {
         name: 'Alitas BBQ',
         description: '8 piezas con salsa BBQ',
         price: 95,
-        category: 'Comida',
+        category: 'Alitas y Más',
         available: true
       },
 
@@ -83,21 +83,21 @@ export const createSampleProducts = async () => {
         name: 'Nachos con Queso',
         description: 'Totopos con queso derretido',
         price: 75,
-        category: 'Entrada',
+        category: 'Especiales',
         available: true
       },
       {
         name: 'Guacamole Especial',
         description: 'Con totopos y pico de gallo',
         price: 65,
-        category: 'Entrada',
+        category: 'Especiales',
         available: true
       },
       {
         name: 'Dedos de Queso',
         description: '6 piezas con salsa ranch',
         price: 70,
-        category: 'Entrada',
+        category: 'Especiales',
         available: true
       },
 
@@ -106,21 +106,21 @@ export const createSampleProducts = async () => {
         name: 'Flan Napolitano',
         description: 'Flan casero con caramelo',
         price: 45,
-        category: 'Postre',
+        category: 'Postres',
         available: true
       },
       {
         name: 'Helado de Vainilla',
         description: '2 bolas con topping',
         price: 40,
-        category: 'Postre',
+        category: 'Postres',
         available: true
       },
       {
         name: 'Brownie con Helado',
         description: 'Brownie caliente con helado',
         price: 55,
-        category: 'Postre',
+        category: 'Postres',
         available: true
       }
     ];

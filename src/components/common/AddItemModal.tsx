@@ -5,7 +5,7 @@ import QuantityModal from './QuantityModal';
 import BottleQuantityModal from './BottleQuantityModal';
 import DrinkMixerModal from './DrinkMixerModal';
 import type { Product, Promotion } from '../../utils/types';
-import { FILTER_CATEGORIES, getCategoryInfo } from '../../utils/categories';
+import { FILTER_CATEGORIES } from '../../utils/categories';
 import { isPromotionWithinSchedule } from '../../hooks/usePromotions';
 
 interface AddItemModalProps {
@@ -329,7 +329,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
           onConfirm={handleConfirmQuantity}
           product={selectedProduct}
           loading={loading}
-          showNotes={getCategoryInfo(selectedProduct?.category as any)?.workstation === 'barra'}
+          showNotes
         />
 
         {/* Bottle Modal: quantity + services in one step */}

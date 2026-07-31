@@ -255,6 +255,16 @@ const DailySummary: React.FC = () => {
     return map;
   }, [shiftOrders]);
 
+  // Envíos a domicilio cobrados en el turno (cargo aparte, no es propina)
+  const totalDeliveryFees = React.useMemo(
+    () => shiftOrders.reduce((s, o) => s + (o.deliveryFee ?? 0), 0),
+    [shiftOrders]
+  );
+  const deliveryOrders = React.useMemo(
+    () => shiftOrders.filter((o) => (o.deliveryFee ?? 0) > 0),
+    [shiftOrders]
+  );
+
   // Detalle de tickets del turno, ordenado por secuencia de folio (consecutivo)
   const ticketDetails = React.useMemo(() => {
     return shiftOrders
@@ -740,6 +750,9 @@ const DailySummary: React.FC = () => {
     lines.push(fmtLine("Total vendido:", fmtM(dTotalSales)));
     lines.push(fmtLine("Subtotal (sin propina):", fmtM(dTotalSubtotal)));
     lines.push(fmtLine("Propinas brutas:", fmtM(summary.totalTips)));
+    if (totalDeliveryFees > 0) {
+      lines.push(fmtLine("Envíos a domicilio:", fmtM(totalDeliveryFees)));
+    }
     lines.push("");
 
     // ── Métodos de Pago ─────────────────────────────────────────────────────
@@ -1220,6 +1233,37 @@ const DailySummary: React.FC = () => {
               </div>
             </div>
             </div>
+
+            {/* ── Envíos a Domicilio (cargo aparte, no es propina) ─────────────── */}
+            {totalDeliveryFees > 0 && (
+              <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    🛵 Envíos a Domicilio
+                  </h3>
+                  <span className="text-2xl font-bold text-cyan-400">
+                    {formatCurrency(totalDeliveryFees)}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {deliveryOrders.map((o) => (
+                    <div
+                      key={o.id}
+                      className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg text-sm"
+                    >
+                      <span className="text-gray-300">
+                        {o.folio ? `Folio ${o.folio}` : o.id.slice(0, 6).toUpperCase()} —{" "}
+                        {o.tableNumber === 0 ? "Barra" : `Mesa ${o.tableNumber}`}
+                        <span className="text-gray-500"> · {o.waiterName ?? "-"}</span>
+                      </span>
+                      <span className="text-cyan-400 font-semibold">
+                        {formatCurrency(o.deliveryFee ?? 0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* ── Gastos y Por Cobrar ───────────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

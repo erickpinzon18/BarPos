@@ -19,12 +19,7 @@ export interface SectionDef {
 }
 
 export const SECTIONS: SectionDef[] = [
-  { title: 'Barra',           filter: n => n === '0' || /^B\d+$/i.test(n),     cols: 'grid-cols-2 sm:grid-cols-5', wide: true },
-  { title: 'VIP',             filter: n => n.startsWith('V'),                  cols: 'grid-cols-2 sm:grid-cols-4' },
-  { title: 'Extras',          filter: n => n.startsWith('Extra'),              cols: 'grid-cols-2 sm:grid-cols-4' },
-  { title: 'Pista Principal', filter: n => /^\d+$/.test(n) && Number(n) >= 1,  cols: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' },
-  { title: 'Spots',           filter: n => n.startsWith('P'),                  cols: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-7' },
-  { title: 'Salas',           filter: n => n.startsWith('Sala'),               cols: 'grid-cols-1 sm:grid-cols-2' },
+  { title: 'Mesas', filter: () => true, cols: 'grid-cols-2 sm:grid-cols-4' },
 ];
 
 export function sortTables(a: Table, b: Table): number {

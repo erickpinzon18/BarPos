@@ -24,7 +24,23 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
 }) => {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
+  const [removedIngredients, setRemovedIngredients] = useState<string[]>([]);
   const [error, setError] = useState("");
+
+  const ingredients = product?.defaultIngredients ?? [];
+
+  const toggleIngredient = (ingredient: string) => {
+    setRemovedIngredients((prev) =>
+      prev.includes(ingredient) ? prev.filter((i) => i !== ingredient) : [...prev, ingredient]
+    );
+  };
+
+  const buildNotes = (): string | undefined => {
+    const parts: string[] = [];
+    if (removedIngredients.length > 0) parts.push(`Sin: ${removedIngredients.join(', ')}`);
+    if (notes.trim()) parts.push(notes.trim());
+    return parts.length > 0 ? parts.join(' · ') : undefined;
+  };
 
   const handleQuantityChange = (change: number) => {
     const newQuantity = Math.max(1, quantity + change);
@@ -39,7 +55,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
 
     try {
       setError("");
-      await onConfirm(quantity, notes.trim() || undefined);
+      await onConfirm(quantity, buildNotes());
       handleClose();
     } catch (error: any) {
       setError(error.message || "Error al agregar el producto");
@@ -49,6 +65,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
   const handleClose = () => {
     setQuantity(1);
     setNotes("");
+    setRemovedIngredients([]);
     setError("");
     onClose();
   };
@@ -75,6 +92,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
     if (isOpen) {
       setQuantity(1);
       setNotes("");
+      setRemovedIngredients([]);
       setError("");
     }
   }, [isOpen]);
@@ -160,7 +178,33 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
           </div>
         </div>
 
-        {/* Notes (barra drinks) */}
+        {/* Ingredientes que se pueden quitar */}
+        {ingredients.length > 0 && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Ingredientes <span className="text-gray-500 font-normal">(desmarca lo que no lleve)</span>
+            </label>
+            <div className="space-y-2">
+              {ingredients.map((ingredient) => (
+                <label
+                  key={ingredient}
+                  className="flex items-center justify-between rounded-lg px-3 py-2.5 bg-gray-700 cursor-pointer"
+                >
+                  <span className="text-sm text-white">{ingredient}</span>
+                  <input
+                    type="checkbox"
+                    checked={!removedIngredients.includes(ingredient)}
+                    onChange={() => toggleIngredient(ingredient)}
+                    disabled={loading}
+                    className="h-4 w-4 rounded bg-gray-600 border-gray-500 text-red-500 focus:ring-red-500"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notes (barra drinks / platillos con preparación especial) */}
         {showNotes && (
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -169,7 +213,7 @@ const QuantityModal: React.FC<QuantityModalProps> = ({
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ej: divorciado, campechano, agua mineral, pura coca..."
+              placeholder="Ej: divorciado, campechano, agua mineral, pura coca, término de la carne, etc."
               rows={2}
               disabled={loading}
               className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none disabled:opacity-50"

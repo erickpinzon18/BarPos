@@ -4,7 +4,19 @@
  * Modifica este archivo para agregar/remover categorías y se reflejará en todo el sistema
  */
 
-export type CategoryKey = 'Bebida' | 'Botella' | 'Shot' | 'Servicio' | 'Entrada' | 'Comida' | 'Postre';
+export type CategoryKey =
+  | 'Bebida'
+  | 'Botella'
+  | 'Shot'
+  | 'Servicio'
+  | 'Desayunos'
+  | 'Guisados'
+  | 'Parrilla'
+  | 'Mariscos'
+  | 'Especiales'
+  | 'Hamburguesas'
+  | 'Alitas y Más'
+  | 'Postres';
 
 export interface Category {
   key: CategoryKey;
@@ -47,22 +59,57 @@ export const CATEGORIES: Category[] = [
     workstation: 'barra'
   },
   {
-    key: 'Entrada',
-    label: 'Entrada',
-    icon: '🥗',
-    color: 'bg-green-500',
+    key: 'Desayunos',
+    label: 'Desayunos',
+    icon: '🍳',
+    color: 'bg-yellow-500',
     workstation: 'cocina'
   },
   {
-    key: 'Comida',
-    label: 'Comida',
-    icon: '🍽️',
+    key: 'Guisados',
+    label: 'Guisados',
+    icon: '🍲',
+    color: 'bg-amber-600',
+    workstation: 'cocina'
+  },
+  {
+    key: 'Parrilla',
+    label: 'Parrilla',
+    icon: '🥩',
+    color: 'bg-orange-600',
+    workstation: 'cocina'
+  },
+  {
+    key: 'Mariscos',
+    label: 'Mariscos',
+    icon: '🦐',
+    color: 'bg-cyan-600',
+    workstation: 'cocina'
+  },
+  {
+    key: 'Especiales',
+    label: 'Especiales',
+    icon: '⭐',
+    color: 'bg-indigo-500',
+    workstation: 'cocina'
+  },
+  {
+    key: 'Hamburguesas',
+    label: 'Hamburguesas',
+    icon: '🍔',
     color: 'bg-orange-500',
     workstation: 'cocina'
   },
   {
-    key: 'Postre',
-    label: 'Postre',
+    key: 'Alitas y Más',
+    label: 'Alitas y Más',
+    icon: '🍗',
+    color: 'bg-red-600',
+    workstation: 'cocina'
+  },
+  {
+    key: 'Postres',
+    label: 'Postres',
     icon: '🍰',
     color: 'bg-pink-500',
     workstation: 'cocina'

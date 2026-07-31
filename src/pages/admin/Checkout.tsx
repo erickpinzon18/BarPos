@@ -58,10 +58,11 @@ const AdminCheckout: React.FC = () => {
     if (order) console.debug("Checkout loaded order:", order);
   }, [order]);
 
-  // Tip and payment state (percentage)
-  const [tipMode, setTipMode] = useState<"percent" | "amount">("percent");
-  const [tipPercent, setTipPercent] = useState<number>(0.15);
-  const [customTipAmount, setCustomTipAmount] = useState<string>("");
+  // No manejamos propinas: el negocio no las cobra.
+  const tipAmount = 0;
+  const tipPercent = 0;
+  // Envío a domicilio — cargo aparte que se suma al total al cobrar.
+  const [deliveryFee, setDeliveryFee] = useState<string>("");
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);
@@ -99,9 +100,6 @@ const AdminCheckout: React.FC = () => {
   const [savingCashNotes, setSavingCashNotes] = useState(false);
   const cashNotesLoadedRef = React.useRef<string | null>(null);
 
-  // Ajuste de propina por diferencia de pago recibido (aplica a cualquier método)
-  const [receivedAmountInput, setReceivedAmountInput] = useState<string>("");
-
   // Fetch active promotions
   const { promotions: activePromotions } = useActivePromotions();
   // Load business config (name, address, phone) from Firestore to show on tickets
@@ -129,11 +127,7 @@ const AdminCheckout: React.FC = () => {
     [activeItems]
   );
 
-  // tipPercent is stored as decimal (0.15). tipAmount is computed from subtotal.
-  const tipAmount = useMemo(
-    () => subtotal * tipPercent,
-    [subtotal, tipPercent]
-  );
+  const deliveryFeeAmount = useMemo(() => Number(deliveryFee) || 0, [deliveryFee]);
 
   // Map each item to its applicable promo (checked against item's createdAt, supports multiple simultaneous promos)
   const itemPromoMap = useMemo(() => {
@@ -182,8 +176,8 @@ const AdminCheckout: React.FC = () => {
   );
 
   const total = useMemo(
-    () => subtotal - discountAmount + tipAmount,
-    [subtotal, discountAmount, tipAmount]
+    () => subtotal - discountAmount + deliveryFeeAmount,
+    [subtotal, discountAmount, deliveryFeeAmount]
   );
 
   // Unique promos active on this order (for display in UI)
@@ -216,6 +210,7 @@ const AdminCheckout: React.FC = () => {
       tipAmount,
       tipPercent,
       discountAmount,
+      deliveryFee: orderToPrint?.deliveryFee ?? deliveryFeeAmount,
       itemDiscounts,
       total,
       perPerson,
@@ -304,6 +299,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
+          deliveryFee: deliveryFeeAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
         };
@@ -325,6 +321,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
+          deliveryFee: deliveryFeeAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
           splitPayments,
@@ -334,6 +331,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
+          deliveryFee: deliveryFeeAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
           splitPayments: cardSplits,
@@ -343,6 +341,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
+          deliveryFee: deliveryFeeAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
         };
@@ -755,13 +754,12 @@ const AdminCheckout: React.FC = () => {
                 <span>Subtotal:</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              {/* <div className="flex justify-between"><span>Propina ({(tipPercent * 100).toFixed(0)}%):</span><span>${tipAmount.toFixed(2)}</span></div> */}
-              <div className="flex justify-between">
-                <span className="font-bold">
-                  Propina ({(tipPercent * 100).toFixed(0)}%):
-                </span>
-                <span id="tip-amount">${tipAmount.toFixed(2)}</span>
-              </div>
+              {deliveryFeeAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="font-bold">Envío a domicilio:</span>
+                  <span id="delivery-fee-amount">${deliveryFeeAmount.toFixed(2)}</span>
+                </div>
+              )}
               {activePromos.map(promo => {
                 const promoDiscount = activeItems
                   .filter(i => itemPromoMap[i.id]?.id === promo.id)
@@ -810,69 +808,11 @@ const AdminCheckout: React.FC = () => {
         </div>
 
         <div className="space-y-6">
+          {/* Envío a domicilio — cargo aparte que se suma al total al cobrar */}
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-white">Propina</h3>
-              <div className="flex bg-gray-900 rounded-lg overflow-hidden border border-gray-700 text-sm">
-                <button
-                  disabled={isReadOnly}
-                  onClick={() => { setTipMode("percent"); setTipPercent(0.15); setCustomTipAmount(""); }}
-                  className={`px-3 py-1.5 font-semibold transition-colors ${tipMode === "percent" ? "bg-red-600 text-white" : "text-gray-400 hover:text-white disabled:cursor-not-allowed"}`}
-                >
-                  15%
-                </button>
-                <button
-                  disabled={isReadOnly}
-                  onClick={() => { setTipMode("amount"); setTipPercent(0); setCustomTipAmount(""); }}
-                  className={`px-3 py-1.5 font-semibold transition-colors ${tipMode === "amount" ? "bg-red-600 text-white" : "text-gray-400 hover:text-white disabled:cursor-not-allowed"}`}
-                >
-                  $ Monto
-                </button>
-              </div>
-            </div>
-
-            {tipMode === "percent" ? (
-              <div className="flex justify-between items-center text-sm text-gray-400">
-                <span>15% del subtotal</span>
-                <span className="text-white font-bold text-lg">${tipAmount.toFixed(2)}</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-400 text-sm font-semibold">$</span>
-                  <input
-                    disabled={isReadOnly}
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={customTipAmount}
-                    onChange={(e) => {
-                      setCustomTipAmount(e.target.value);
-                      const parsed = parseFloat(e.target.value);
-                      if (!isNaN(parsed) && parsed >= 0 && subtotal > 0) {
-                        setTipPercent(parsed / subtotal);
-                      } else {
-                        setTipPercent(0);
-                      }
-                    }}
-                    placeholder="Monto de propina"
-                    className="flex-1 bg-gray-900 border border-gray-700 text-white text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3 px-3 disabled:cursor-not-allowed"
-                  />
-                </div>
-                {subtotal > 0 && tipAmount > 0 && (
-                  <div className="mt-2 text-sm text-gray-400">
-                    Equivale al <span className="text-white font-semibold">{(tipPercent * 100).toFixed(1)}%</span> del subtotal
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Ajuste de propina por diferencia (aplica a cualquier método de pago) */}
-          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
-            <h3 className="font-semibold text-white mb-3">💰 Pago Recibido</h3>
+            <h3 className="font-semibold text-white mb-3">🛵 Envío a Domicilio</h3>
             <p className="text-xs text-gray-500 mb-3">
-              Si el cliente paga más del total, la diferencia se agrega automáticamente como propina extra.
+              Si esta cuenta incluye entrega a domicilio, registra aquí el cobro del envío. Se suma al total y queda registrado para el corte de caja.
             </p>
             <div className="flex items-center gap-3">
               <span className="text-gray-400 text-sm font-semibold">$</span>
@@ -881,44 +821,12 @@ const AdminCheckout: React.FC = () => {
                 type="number"
                 min="0"
                 step="1"
-                value={receivedAmountInput}
-                onChange={(e) => setReceivedAmountInput(e.target.value)}
-                placeholder={`Monto recibido (total: $${total.toFixed(2)})`}
+                value={deliveryFee}
+                onChange={(e) => setDeliveryFee(e.target.value)}
+                placeholder="Monto del envío (opcional)"
                 className="flex-1 bg-gray-900 border border-gray-700 text-white text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3 px-3 disabled:cursor-not-allowed"
               />
             </div>
-            {(() => {
-              const received = Number(receivedAmountInput) || 0;
-              const overpaymentTip = Math.max(0, received - total);
-              if (received <= 0) return null;
-              if (overpaymentTip <= 0) {
-                return (
-                  <div className="mt-2 text-sm text-yellow-400">
-                    Ese monto no cubre el total (${total.toFixed(2)}).
-                  </div>
-                );
-              }
-              return (
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div className="text-sm text-green-400">
-                    Propina extra: <span className="font-bold">${overpaymentTip.toFixed(2)}</span>
-                  </div>
-                  <button
-                    disabled={isReadOnly}
-                    onClick={() => {
-                      const newTipAmount = tipAmount + overpaymentTip;
-                      setTipMode("amount");
-                      setCustomTipAmount(newTipAmount.toFixed(2));
-                      setTipPercent(subtotal > 0 ? newTipAmount / subtotal : 0);
-                      setReceivedAmountInput("");
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    Aplicar como propina
-                  </button>
-                </div>
-              );
-            })()}
           </div>
 
           {/* Notas del cajero — se guardan automáticamente, no aparecen en el ticket del cliente */}

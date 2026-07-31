@@ -6,7 +6,16 @@
       "Bash(grep -n \"export const closeTable\\\\|const folio = await getNextFolio\\\\|orderUpdate.folio\\\\|folio,$\\\\|return { success: true }\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/services/firestoreService.ts)",
       "Bash(grep -n \"const { folio, seq: folioSeq } = await getNextFolio\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/services/firestoreService.ts)",
       "Bash(grep -n \"ordersData.push\\\\|orderData\\\\.\\\\|const order.*=.*{$\\\\|id: doc.id\\\\|id: docSnap.id\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/hooks/useOrders.ts)",
-      "Bash(node test_export.mjs)"
+      "Bash(node test_export.mjs)",
+      "Bash(firebase login *)",
+      "Bash(firebase login:ci)",
+      "Bash(node -e ' *)",
+      "Bash(firebase firestore:indexes --project ejemplo-crud-bbf2c)",
+      "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' 'https://firestore.googleapis.com/v1/projects/ejemplo-crud-bbf2c/databases/\\(default\\)/documents/tables?pageSize=300' -o /private/tmp/claude-501/-Users-erickpinzon-Documents-PersonalProjects-BarPos/97b46908-b4ba-48a1-9abc-c763e391031b/scratchpad/tables.json)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('client_id'\\), d.get\\('type'\\)\\)\")",
+      "Bash(lsof -i :5173 -sTCP:LISTEN)",
+      "Bash(grep -n \"Desglose de Propinas\\\\|</div>\\\\s*$\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/pages/admin/DailySummary.tsx)"
     ]
   }
 }

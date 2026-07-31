@@ -23,6 +23,8 @@ export interface Product {
   category: CategoryKey;
   imageUrl?: string;
   available: boolean;
+  /** Ingredientes por defecto (ej: ["Jitomate", "Cebolla"]) que el mesero puede desmarcar al pedir. */
+  defaultIngredients?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -104,6 +106,7 @@ export interface Order {
   subtotal?: number;
   tax?: number;
   total?: number;
+  deliveryFee?: number; // Cobro de envío a domicilio (cargo aparte, no es propina)
   adminComments?: string; // Comentarios administrativos (no visibles en ticket de cliente)
   cashNotes?: string; // Notas del cajero al cobrar (ej. faltantes, notas finales). No sale en ticket de cliente, sí en el corte de caja.
   folio?: string; // Folio consecutivo alfanumérico (A1..A10000, B1..., AA1...), asignado al cerrar la cuenta
@@ -184,6 +187,7 @@ export interface ProductFormData {
   price: number;
   category: Product['category'];
   available: boolean;
+  defaultIngredients?: string[];
 }
 
 export interface TableFormData {

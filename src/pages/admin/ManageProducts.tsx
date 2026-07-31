@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useProducts } from '../../hooks/useProducts';
 import { addProduct, updateProduct, deleteProduct } from '../../services/firestoreService';
 import type { ProductFormData, Product } from '../../utils/types';
-import { FILTER_CATEGORIES, getCategoryLabels } from '../../utils/categories';
+import { FILTER_CATEGORIES, getCategoryLabels, getCategoryInfo } from '../../utils/categories';
 
 const designCategories = FILTER_CATEGORIES;
 
@@ -12,13 +12,15 @@ const ManageProducts: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState('Agregar Nuevo Producto');
-  const [form, setForm] = useState<ProductFormData>({ name: '', description: '', price: 0, category: 'Comida', available: true });
+  const [form, setForm] = useState<ProductFormData>({ name: '', description: '', price: 0, category: 'Especiales', available: true, defaultIngredients: [] });
+  const [ingredientsInput, setIngredientsInput] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     // Reset form when modal closes
     if (!showModal) {
-      setForm({ name: '', description: '', price: 0, category: 'Comida', available: true });
+      setForm({ name: '', description: '', price: 0, category: 'Especiales', available: true, defaultIngredients: [] });
+      setIngredientsInput('');
       setEditingId(null);
       setModalTitle('Agregar Nuevo Producto');
     }
@@ -51,7 +53,8 @@ const ManageProducts: React.FC = () => {
   const openEditModal = (p: Product) => {
     setModalTitle('Editar Producto');
     setEditingId(p.id);
-    setForm({ name: p.name, description: p.description || '', price: p.price, category: p.category, available: p.available });
+    setForm({ name: p.name, description: p.description || '', price: p.price, category: p.category, available: p.available, defaultIngredients: p.defaultIngredients || [] });
+    setIngredientsInput((p.defaultIngredients || []).join(', '));
     // mount modal and trigger animation
     setShowModal(true);
   };
@@ -60,11 +63,17 @@ const ManageProducts: React.FC = () => {
     e?.preventDefault();
     if (!form.name || !form.price) return alert('Nombre y precio requeridos');
 
+    const defaultIngredients = ingredientsInput
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    const payload = { name: form.name, description: form.description, price: form.price, category: form.category, available: form.available, defaultIngredients };
+
     if (editingId) {
-      const res = await updateProduct(editingId, { name: form.name, description: form.description, price: form.price, category: form.category, available: form.available });
+      const res = await updateProduct(editingId, payload);
       if (!res.success) alert(res.error || 'Error al actualizar');
     } else {
-      const res = await addProduct(form as any);
+      const res = await addProduct({ ...form, defaultIngredients } as any);
       if (!res.success) alert(res.error || 'Error al crear producto');
     }
     setShowModal(false);
@@ -224,6 +233,24 @@ const ManageProducts: React.FC = () => {
                       <label className="flex items-center space-x-2 cursor-pointer"><input id="product-available" type="checkbox" checked={form.available} onChange={(e) => setForm(prev => ({ ...prev, available: e.target.checked }))} className="h-4 w-4 rounded bg-gray-600 border-gray-500 text-red-500 focus:ring-red-500" /> <span className="text-sm text-gray-300">Disponible</span></label>
                     </div>
                   </div>
+                  {getCategoryInfo(form.category)?.workstation === 'cocina' && (
+                    <div>
+                      <label htmlFor="product-ingredients" className="block mb-2 text-sm font-medium text-gray-300">
+                        Ingredientes que se pueden quitar <span className="text-gray-500 font-normal">(opcional, separados por coma)</span>
+                      </label>
+                      <input
+                        id="product-ingredients"
+                        type="text"
+                        value={ingredientsInput}
+                        onChange={(e) => setIngredientsInput(e.target.value)}
+                        className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-60 block w-full p-2.5"
+                        placeholder="Ej: Jitomate, Cebolla, Lechuga"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        El mesero podrá desmarcarlos al agregar este producto a una cuenta.
+                      </p>
+                    </div>
+                  )}
                   <div className="flex justify-end pt-4 gap-3">
                     <button type="button" id="cancel-product-modal-btn" onClick={() => setShowModal(false)} className="text-gray-300 bg-gray-700 hover:bg-gray-600 font-medium rounded-lg text-sm px-5 py-2.5">Cancelar</button>
                     <button type="submit" id="product-modal-action-btn" className="text-gray-900 bg-red-600 hover:bg-red-700 font-bold rounded-lg text-sm px-5 py-2.5 shadow-md transform hover:-translate-y-px transition">{editingId ? 'Guardar Cambios' : 'Guardar Producto'}</button>

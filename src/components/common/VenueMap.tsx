@@ -178,7 +178,7 @@ const Popup: React.FC<PopupProps> = ({
 
 // ─── VenueMap ─────────────────────────────────────────────────────────────────
 
-const MAP_MIN_W = 680; // px — keeps tables readable on mobile (≈59px per table)
+const MAP_MIN_W = 300; // px — con solo 8 mesas, cabe en pantallas de celular sin scroll horizontal
 
 export const VenueMap: React.FC<VenueMapProps> = ({
   tables, orders, reservations = [], onTableClick, onCheckout, accentColor, currentUserId,
@@ -200,8 +200,8 @@ export const VenueMap: React.FC<VenueMapProps> = ({
         className="relative select-none"
         style={{
           minWidth: `${MAP_MIN_W}px`,
-          // AR=1.89 is derived so content fills ~96% of both axes with no dead space
-          aspectRatio: '1.55',
+          // Ratio más cuadrado que el original: da más alto por fila para las 3 filas de mesas
+          aspectRatio: '1.1',
           background: 'linear-gradient(145deg, #0d1117 0%, #111827 55%, #0d1117 100%)',
           border: '1px solid rgba(255,255,255,0.05)',
           borderRadius: '16px',

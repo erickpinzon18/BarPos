@@ -15,7 +15,8 @@
       "Bash(python3 -c ' *)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('client_id'\\), d.get\\('type'\\)\\)\")",
       "Bash(lsof -i :5173 -sTCP:LISTEN)",
-      "Bash(grep -n \"Desglose de Propinas\\\\|</div>\\\\s*$\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/pages/admin/DailySummary.tsx)"
+      "Bash(grep -n \"Desglose de Propinas\\\\|</div>\\\\s*$\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/pages/admin/DailySummary.tsx)",
+      "Bash(grep -n \"Cargos de Tarjeta\\\\|Faltan \\\\$\\\\|Excede \\\\$\\\\|Total a cubrir\" /Users/erickpinzon/Documents/PersonalProjects/BarPos/src/pages/admin/Checkout.tsx)"
     ]
   }
 }

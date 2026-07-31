@@ -444,6 +444,7 @@ export const closeTable = async (
     cardDetail?: string;
     discountAmount?: number;
     deliveryFee?: number;
+    cardCommission?: number;
     /** Cargos individuales (efectivo/tarjeta/transferencia). Se usa tanto para pago mixto
      * como para pago 100% tarjeta con varios cargos (distintos tipos de tarjeta). */
     splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string, cardType?: string, cardDetail?: string }[]
@@ -470,9 +471,10 @@ export const closeTable = async (
     const tipAmount = paymentDetails?.tipAmount ?? 0;
     const discountAmount = paymentDetails?.discountAmount ?? 0;
     const deliveryFee = paymentDetails?.deliveryFee ?? 0;
+    const cardCommission = paymentDetails?.cardCommission ?? 0;
 
-    // Calculate total (subtotal + tip - discount + envío, NO TAX)
-    const total = subtotal + tipAmount - discountAmount + deliveryFee;
+    // Calculate total (subtotal + tip - discount + envío + comisión tarjeta, NO TAX)
+    const total = subtotal + tipAmount - discountAmount + deliveryFee + cardCommission;
 
     // Assign the next consecutive folio (global, never resets). Nunca debe bloquear el cierre
     // de la mesa: si falla (permisos, red, etc.) seguimos cerrando sin folio y se puede
@@ -506,6 +508,7 @@ export const closeTable = async (
       total,
       tipAmount,
       deliveryFee: deliveryFee > 0 ? deliveryFee : null,
+      cardCommission: cardCommission > 0 ? cardCommission : null,
       discount: discountAmount > 0 ? discountAmount : null,
       tax: null, // Explicitly set to null to remove any old tax values
       completedAt: Timestamp.now(),

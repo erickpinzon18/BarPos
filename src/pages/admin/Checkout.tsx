@@ -16,6 +16,9 @@ import {
 import { Tag, Clock, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 
+// Comisión que se traslada al cliente cuando paga (total o parcialmente) con tarjeta.
+const CARD_COMMISSION_RATE = 0.04;
+
 const AdminCheckout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -61,8 +64,6 @@ const AdminCheckout: React.FC = () => {
   // No manejamos propinas: el negocio no las cobra.
   const tipAmount = 0;
   const tipPercent = 0;
-  // Envío a domicilio — cargo aparte que se suma al total al cobrar.
-  const [deliveryFee, setDeliveryFee] = useState<string>("");
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);
@@ -127,8 +128,6 @@ const AdminCheckout: React.FC = () => {
     [activeItems]
   );
 
-  const deliveryFeeAmount = useMemo(() => Number(deliveryFee) || 0, [deliveryFee]);
-
   // Map each item to its applicable promo (checked against item's createdAt, supports multiple simultaneous promos)
   const itemPromoMap = useMemo(() => {
     const map: Record<string, (typeof activePromotions)[0] | null> = {};
@@ -176,8 +175,20 @@ const AdminCheckout: React.FC = () => {
   );
 
   const total = useMemo(
-    () => subtotal - discountAmount + deliveryFeeAmount,
-    [subtotal, discountAmount, deliveryFeeAmount]
+    () => subtotal - discountAmount,
+    [subtotal, discountAmount]
+  );
+
+  // Comisión del 4% sobre lo que se cobra con tarjeta (pago completo o parcial en mixto).
+  const cardCommissionAmount = useMemo(
+    () => cardChargesTotal * CARD_COMMISSION_RATE,
+    [cardChargesTotal]
+  );
+
+  // Total final que paga el cliente, incluyendo la comisión de tarjeta.
+  const finalTotal = useMemo(
+    () => total + cardCommissionAmount,
+    [total, cardCommissionAmount]
   );
 
   // Unique promos active on this order (for display in UI)
@@ -197,7 +208,7 @@ const AdminCheckout: React.FC = () => {
   const handlePrint = (customOrder?: Order) => {
     if (!order && !customOrder) return;
     const orderToPrint = customOrder || order;
-    const perPerson = total / Math.max(1, orderToPrint!.peopleCount ?? 1);
+    const perPerson = finalTotal / Math.max(1, orderToPrint!.peopleCount ?? 1);
     const itemDiscounts: Record<string, { amount: number; promoName: string }> = {};
     for (const item of activeItems) {
       const disc = itemDiscountMap[item.id];
@@ -210,9 +221,9 @@ const AdminCheckout: React.FC = () => {
       tipAmount,
       tipPercent,
       discountAmount,
-      deliveryFee: orderToPrint?.deliveryFee ?? deliveryFeeAmount,
+      cardCommission: orderToPrint?.cardCommission ?? cardCommissionAmount,
       itemDiscounts,
-      total,
+      total: finalTotal,
       perPerson,
       paperSize,
       businessName: config?.name,
@@ -282,9 +293,10 @@ const AdminCheckout: React.FC = () => {
       const orderId = order.id;
 
       const activeCharges = cardCharges.filter((c) => (Number(c.amount) || 0) > 0);
+      // El monto registrado por cargo incluye la comisión del 4% (lo que realmente se cobra en la terminal).
       const cardSplits = activeCharges.map((c) => ({
         method: "tarjeta" as const,
-        amount: Number(c.amount) || 0,
+        amount: (Number(c.amount) || 0) * (1 + CARD_COMMISSION_RATE),
         cardOperationNumber: c.cardOperationNumber.trim(),
         cardType: c.cardType,
         cardDetail: c.cardDetail.trim() || undefined,
@@ -299,7 +311,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
-          deliveryFee: deliveryFeeAmount,
+          cardCommission: cardCommissionAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
         };
@@ -321,7 +333,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
-          deliveryFee: deliveryFeeAmount,
+          cardCommission: cardCommissionAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
           splitPayments,
@@ -331,7 +343,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
-          deliveryFee: deliveryFeeAmount,
+          cardCommission: cardCommissionAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
           splitPayments: cardSplits,
@@ -341,7 +353,7 @@ const AdminCheckout: React.FC = () => {
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
-          deliveryFee: deliveryFeeAmount,
+          cardCommission: cardCommissionAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
         };
@@ -754,12 +766,6 @@ const AdminCheckout: React.FC = () => {
                 <span>Subtotal:</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              {deliveryFeeAmount > 0 && (
-                <div className="flex justify-between">
-                  <span className="font-bold">Envío a domicilio:</span>
-                  <span id="delivery-fee-amount">${deliveryFeeAmount.toFixed(2)}</span>
-                </div>
-              )}
               {activePromos.map(promo => {
                 const promoDiscount = activeItems
                   .filter(i => itemPromoMap[i.id]?.id === promo.id)
@@ -771,9 +777,15 @@ const AdminCheckout: React.FC = () => {
                   </div>
                 ) : null;
               })}
+              {cardCommissionAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="font-bold">Comisión tarjeta (4%):</span>
+                  <span id="card-commission-amount">${cardCommissionAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-xl mt-2 text-red-500">
                 <span className="font-bold">TOTAL:</span>
-                <span id="total-amount">${total.toFixed(2)}</span>
+                <span id="total-amount">${finalTotal.toFixed(2)}</span>
               </div>
 
               {/* Per-person total */}
@@ -782,7 +794,7 @@ const AdminCheckout: React.FC = () => {
                   Total por persona ({order.peopleCount ?? 1})
                 </span>
                 <span className="text-sm font-semibold text-white">
-                  ${(total / Math.max(1, order.peopleCount ?? 1)).toFixed(2)}
+                  ${(finalTotal / Math.max(1, order.peopleCount ?? 1)).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -808,27 +820,6 @@ const AdminCheckout: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-          {/* Envío a domicilio — cargo aparte que se suma al total al cobrar */}
-          <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
-            <h3 className="font-semibold text-white mb-3">🛵 Envío a Domicilio</h3>
-            <p className="text-xs text-gray-500 mb-3">
-              Si esta cuenta incluye entrega a domicilio, registra aquí el cobro del envío. Se suma al total y queda registrado para el corte de caja.
-            </p>
-            <div className="flex items-center gap-3">
-              <span className="text-gray-400 text-sm font-semibold">$</span>
-              <input
-                disabled={isReadOnly}
-                type="number"
-                min="0"
-                step="1"
-                value={deliveryFee}
-                onChange={(e) => setDeliveryFee(e.target.value)}
-                placeholder="Monto del envío (opcional)"
-                className="flex-1 bg-gray-900 border border-gray-700 text-white text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3 px-3 disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
-
           {/* Notas del cajero — se guardan automáticamente, no aparecen en el ticket del cliente */}
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <div className="flex items-center justify-between mb-2">
@@ -952,6 +943,11 @@ const AdminCheckout: React.FC = () => {
                       : `Excede $${(cardChargesTotal - total).toFixed(2)}`}
                   </div>
                 )}
+                {cardCommissionAmount > 0 && (
+                  <div className="mt-2 text-sm text-amber-400">
+                    + Comisión tarjeta (4%): ${cardCommissionAmount.toFixed(2)} — cobrar ${(cardChargesTotal * (1 + CARD_COMMISSION_RATE)).toFixed(2)} en la terminal
+                  </div>
+                )}
               </div>
             )}
             {/* Transfer helper: show when transferencia selected */}
@@ -982,7 +978,7 @@ const AdminCheckout: React.FC = () => {
                       <div className="text-xs text-gray-400">
                         Cuenta / CLABE
                       </div>
-                      <div className="font-mono">5428 7801 3323 8824</div>
+                      <div className="font-mono">722969010236059755</div>
                     </div>
                     <button
                       type="button"
@@ -998,7 +994,7 @@ const AdminCheckout: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs text-gray-400">Titular</div>
-                      <div className="font-semibold">Oswaldo Reyes Olivera</div>
+                      <div className="font-semibold">Pedro Ulises Garcia Valle</div>
                     </div>
                     <button
                       type="button"
@@ -1101,6 +1097,16 @@ const AdminCheckout: React.FC = () => {
                       </span>
                     </div>
                   )}
+                  {cardCommissionAmount > 0 && (
+                    <div className="flex justify-between text-sm mt-1 text-amber-400">
+                      <span>+ Comisión tarjeta (4%):</span>
+                      <span className="font-bold">${cardCommissionAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm mt-2 pt-2 border-t border-gray-700">
+                    <span className="text-gray-300 font-semibold">Total final a cobrar:</span>
+                    <span className="text-white font-bold">${finalTotal.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
             )}

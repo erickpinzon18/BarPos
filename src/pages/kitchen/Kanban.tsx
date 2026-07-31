@@ -4,19 +4,25 @@ import { useLocation } from 'react-router-dom';
 import { useKitchenOrders } from '../../hooks/useKitchenOrders';
 import KanbanColumn from '../../components/common/KanbanColumn';
 import type { Order } from '../../utils/types';
-import { getCategoriesByWorkstation } from '../../utils/categories';
+import { getCategoriesByWorkstation, getCategoryInfo } from '../../utils/categories';
 import { playNotificationSound } from '../../utils/notificationSound';
 import { printStationTicket } from '../../utils/printStationTicket';
 import { usePrintQueue } from '../../hooks/usePrintQueue';
 import type { PaperSize } from '../../utils/printTicket';
+import { useAuth } from '../../contexts/AuthContext';
 
 const KitchenKanban: React.FC = () => {
   const { orders, loading } = useKitchenOrders();
   const location = useLocation();
+  const { currentUser } = useAuth();
+
+  // El rol "kitchen" ve un tablero único con Cocina + Barra (cada item etiquetado con su estación).
+  // El rol "barra" sigue viendo solo su propio tablero.
+  const unified = currentUser?.role === 'kitchen';
 
   const path = location.pathname.toLowerCase();
-  const station = path.includes('/barra') ? 'barra' : 'cocina';
-  const stationLabel = station === 'barra' ? 'Barra' : 'Cocina';
+  const station = unified ? 'cocina' : (path.includes('/barra') ? 'barra' : 'cocina');
+  const stationLabel = unified ? 'Cocina y Barra' : (station === 'barra' ? 'Barra' : 'Cocina');
 
   // Escuchar la cola de impresión de Firestore y auto-imprimir en este dispositivo
   usePrintQueue(station);
@@ -68,7 +74,9 @@ const KitchenKanban: React.FC = () => {
     return da.getTime() - db.getTime();
   };
 
-  const categories = getCategoriesByWorkstation(station).map(c => c.key);
+  const categories = unified
+    ? [...getCategoriesByWorkstation('cocina'), ...getCategoriesByWorkstation('barra')].map(c => c.key)
+    : getCategoriesByWorkstation(station).map(c => c.key);
 
   // Barra only cares about pendiente items (informative — no status changes here)
   const pending = allItems
@@ -112,6 +120,7 @@ const KitchenKanban: React.FC = () => {
     const { item, tableNumber, waiterName } = entry;
     const dt = parseDate(item.createdAt);
     const timeLabel = dt ? dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+    const itemStation = getCategoryInfo(item.category)?.workstation;
 
     return (
       <div
@@ -126,6 +135,17 @@ const KitchenKanban: React.FC = () => {
           <span className="text-lg font-bold text-white">
             {tableNumber === 0 ? '🍹 Barra' : `Mesa ${tableNumber ?? '?'}`}
           </span>
+          {unified && itemStation && (
+            <span
+              className={`text-xs font-bold px-2 py-1 rounded-full ${
+                itemStation === 'barra'
+                  ? 'bg-purple-500/20 text-purple-300'
+                  : 'bg-orange-500/20 text-orange-300'
+              }`}
+            >
+              {itemStation === 'barra' ? '🍹 Barra' : '👨‍🍳 Cocina'}
+            </span>
+          )}
           {item.quantity > 1 && (
             <span className="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-1 rounded-full">
               x{item.quantity}
@@ -155,7 +175,7 @@ const KitchenKanban: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-3xl font-bold flex items-center gap-3">
-          <span>{station === 'barra' ? '🍹' : '👨‍🍳'}</span>
+          <span>{unified ? '👨‍🍳🍹' : station === 'barra' ? '🍹' : '👨‍🍳'}</span>
           <span>Tablero de {stationLabel}</span>
         </h1>
         <div className="flex flex-wrap items-center gap-3">
@@ -187,8 +207,8 @@ const KitchenKanban: React.FC = () => {
             </div>
           )}
 
-          {/* Test print button — barra only */}
-          {station === 'barra' && (
+          {/* Test print button — barra tickets */}
+          {(station === 'barra' || unified) && (
             <div className="flex gap-2">
               {(['58mm', '80mm'] as PaperSize[]).map(size => (
                 <button
@@ -214,7 +234,9 @@ const KitchenKanban: React.FC = () => {
 
           {/* Info badge — read-only reminder */}
           <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm ${
-            station === 'barra'
+            unified
+              ? 'bg-gray-700/30 border-gray-600/50 text-gray-300'
+              : station === 'barra'
               ? 'bg-purple-900/20 border-purple-700/50 text-purple-300'
               : 'bg-orange-900/20 border-orange-700/50 text-orange-300'
           }`}>
@@ -255,7 +277,10 @@ const KitchenKanban: React.FC = () => {
 
         {/* Category legend */}
         <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-300">
-          {getCategoriesByWorkstation(station).map(cat => (
+          {(unified
+            ? [...getCategoriesByWorkstation('cocina'), ...getCategoriesByWorkstation('barra')]
+            : getCategoriesByWorkstation(station)
+          ).map(cat => (
             <div key={cat.key} className="flex items-center gap-2">
               <span className={`w-3 h-3 rounded-full ${cat.color}`}></span>
               <span>{cat.icon} {cat.label}</span>

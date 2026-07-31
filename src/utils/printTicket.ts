@@ -183,11 +183,17 @@ export const generateTicketContent = (opts: PrintOptions): string => {
       const cardSuffix = p.method === 'tarjeta' && p.cardType ? ` (${p.cardType})` : '';
       const paymentInfo = `${p.method}${cardSuffix}${p.receivedAmount ? ' $' + Number(p.receivedAmount).toFixed(2) : ''}`;
       pushLabeledValue(lines, 'Pago:', paymentInfo, W);
+      if (p.method === 'efectivo' && typeof p.change === 'number' && p.change > 0) {
+        pushLabeledValue(lines, 'Cambio:', formatMoney(p.change), W);
+      }
     } else {
       pushLabeledValue(lines, 'Pago:', order.paymentMethod === 'tarjeta' ? 'Tarjeta (varios cargos)' : 'Mixto', W);
       order.payments.forEach(p => {
         const cardSuffix = p.method === 'tarjeta' && p.cardType ? ` ${p.cardType}` : '';
         lines.push(`  ${p.method}${cardSuffix}: ${p.amount ? '$' + p.amount.toFixed(2) : ''}`);
+        if (p.method === 'efectivo' && typeof p.change === 'number' && p.change > 0) {
+          lines.push(`    Cambio: ${formatMoney(p.change)}`);
+        }
       });
     }
   }

@@ -67,6 +67,9 @@ const KitchenCheckout: React.FC = () => {
   >("efectivo");
   const [mixedEfectivo, setMixedEfectivo] = useState<string>("");
   const [mixedTransferencia, setMixedTransferencia] = useState<string>("");
+  // Efectivo recibido del cliente (para calcular el cambio a devolver).
+  const [cashReceived, setCashReceived] = useState<string>("");
+  const [mixedEfectivoReceived, setMixedEfectivoReceived] = useState<string>("");
   // Cargos de tarjeta: soporta varios pagos con tarjeta (distintos tipos/terminales)
   type CardCharge = { id: string; amount: string; cardType: CardType; cardDetail: string; cardOperationNumber: string };
   const makeEmptyCharge = (): CardCharge => ({
@@ -174,10 +177,13 @@ const KitchenCheckout: React.FC = () => {
     [subtotal, discountAmount]
   );
 
-  // Comisión del 4% sobre lo que se cobra con tarjeta (pago completo o parcial en mixto).
+  // Comisión del 4% sobre el total de la cuenta cuando se paga (total o parcialmente) con tarjeta.
   const cardCommissionAmount = useMemo(
-    () => cardChargesTotal * CARD_COMMISSION_RATE,
-    [cardChargesTotal]
+    () =>
+      paymentMethod === "tarjeta" || (paymentMethod === "mixto" && cardChargesTotal > 0)
+        ? total * CARD_COMMISSION_RATE
+        : 0,
+    [paymentMethod, cardChargesTotal, total]
   );
 
   // Total final que paga el cliente, incluyendo la comisión de tarjeta.
@@ -288,21 +294,28 @@ const KitchenCheckout: React.FC = () => {
       const orderId = order.id;
 
       const activeCharges = cardCharges.filter((c) => (Number(c.amount) || 0) > 0);
-      // El monto registrado por cargo incluye la comisión del 4% (lo que realmente se cobra en la terminal).
-      const cardSplits = activeCharges.map((c) => ({
-        method: "tarjeta" as const,
-        amount: (Number(c.amount) || 0) * (1 + CARD_COMMISSION_RATE),
-        cardOperationNumber: c.cardOperationNumber.trim(),
-        cardType: c.cardType,
-        cardDetail: c.cardDetail.trim() || undefined,
-      }));
+      // La comisión del 4% se calcula sobre el total de la cuenta y se distribuye
+      // proporcionalmente entre los cargos de tarjeta (lo que realmente se cobra en la terminal).
+      const cardSplits = activeCharges.map((c) => {
+        const amount = Number(c.amount) || 0;
+        const commissionShare =
+          cardChargesTotal > 0 ? (amount / cardChargesTotal) * cardCommissionAmount : 0;
+        return {
+          method: "tarjeta" as const,
+          amount: amount + commissionShare,
+          cardOperationNumber: c.cardOperationNumber.trim(),
+          cardType: c.cardType,
+          cardDetail: c.cardDetail.trim() || undefined,
+        };
+      });
 
       // Prepare payment details when paying with cash
       let paymentDetails: any;
       if (paymentMethod === "efectivo") {
+        const received = Number(cashReceived) || total;
         paymentDetails = {
-          receivedAmount: total,
-          change: 0,
+          receivedAmount: received,
+          change: Math.max(0, received - total),
           tipAmount: tipAmount,
           tipPercent: tipPercent,
           discountAmount: discountAmount,
@@ -314,13 +327,15 @@ const KitchenCheckout: React.FC = () => {
         const efe = Number(mixedEfectivo || 0);
         const tra = Number(mixedTransferencia || 0);
         const splitPayments: any[] = [];
-        if (efe > 0)
+        if (efe > 0) {
+          const efeReceived = Number(mixedEfectivoReceived) || efe;
           splitPayments.push({
             method: "efectivo",
             amount: efe,
-            receivedAmount: efe,
-            change: 0,
+            receivedAmount: efeReceived,
+            change: Math.max(0, efeReceived - efe),
           });
+        }
         splitPayments.push(...cardSplits);
         if (tra > 0)
           splitPayments.push({ method: "transferencia", amount: tra });
@@ -916,9 +931,31 @@ const KitchenCheckout: React.FC = () => {
                 <label className="text-sm text-gray-400 block mb-2">
                   Pago en efectivo
                 </label>
-                <div className="mt-2 text-sm text-gray-300">
-                  <div>Monto exacto: ${total.toFixed(2)}</div>
+                <div className="mb-2 text-sm text-gray-300">
+                  <div>Monto a cobrar: ${total.toFixed(2)}</div>
                 </div>
+                <label className="text-xs text-gray-500 block mb-1">Recibido</label>
+                <input
+                  disabled={isReadOnly}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={cashReceived}
+                  onChange={(e) => setCashReceived(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+                />
+                {Number(cashReceived) > 0 && (
+                  <div
+                    className={`mt-2 text-sm font-semibold ${
+                      Number(cashReceived) < total ? "text-red-400" : "text-green-400"
+                    }`}
+                  >
+                    {Number(cashReceived) < total
+                      ? `Faltan $${(total - Number(cashReceived)).toFixed(2)}`
+                      : `Cambio: $${(Number(cashReceived) - total).toFixed(2)}`}
+                  </div>
+                )}
               </div>
             )}
             {/* Tarjeta helper: show when tarjeta selected — soporta varios cargos */}
@@ -937,7 +974,7 @@ const KitchenCheckout: React.FC = () => {
                 )}
                 {cardCommissionAmount > 0 && (
                   <div className="mt-2 text-sm text-amber-400">
-                    + Comisión tarjeta (4%): ${cardCommissionAmount.toFixed(2)} — cobrar ${(cardChargesTotal * (1 + CARD_COMMISSION_RATE)).toFixed(2)} en la terminal
+                    + Comisión tarjeta (4%): ${cardCommissionAmount.toFixed(2)} — cobrar ${(cardChargesTotal + cardCommissionAmount).toFixed(2)} en la terminal
                   </div>
                 )}
               </div>
@@ -1014,20 +1051,52 @@ const KitchenCheckout: React.FC = () => {
                   Montos por Método
                 </h4>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-400 w-24">
-                      Efectivo:
-                    </label>
-                    <input
-                      disabled={isReadOnly}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={mixedEfectivo}
-                      onChange={(e) => setMixedEfectivo(e.target.value)}
-                      placeholder="0.00"
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
-                    />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-400 w-24">
+                        Efectivo:
+                      </label>
+                      <input
+                        disabled={isReadOnly}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={mixedEfectivo}
+                        onChange={(e) => setMixedEfectivo(e.target.value)}
+                        placeholder="0.00"
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+                      />
+                    </div>
+                    {Number(mixedEfectivo) > 0 && (
+                      <div className="mt-2 pl-2 border-l-2 border-gray-700">
+                        <label className="text-xs text-gray-500 block mb-1">
+                          Recibido en efectivo
+                        </label>
+                        <input
+                          disabled={isReadOnly}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={mixedEfectivoReceived}
+                          onChange={(e) => setMixedEfectivoReceived(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white disabled:bg-gray-800"
+                        />
+                        {Number(mixedEfectivoReceived) > 0 && (
+                          <div
+                            className={`mt-1 text-xs font-semibold ${
+                              Number(mixedEfectivoReceived) < Number(mixedEfectivo)
+                                ? "text-red-400"
+                                : "text-green-400"
+                            }`}
+                          >
+                            {Number(mixedEfectivoReceived) < Number(mixedEfectivo)
+                              ? `Faltan $${(Number(mixedEfectivo) - Number(mixedEfectivoReceived)).toFixed(2)}`
+                              : `Cambio: $${(Number(mixedEfectivoReceived) - Number(mixedEfectivo)).toFixed(2)}`}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-gray-400 block mb-2">

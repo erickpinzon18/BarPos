@@ -195,9 +195,9 @@ const AdminTickets: React.FC = () => {
             return new Date(y, m - 1, day);
           };
 
-          // Orders between midnight and 5 AM belong to the previous evening's shift
+          // Orders between midnight and 8 AM belong to the previous shift
           const getShiftDateKey = (d: Date) => {
-            if (d.getHours() < 5) {
+            if (d.getHours() < 8) {
               const prev = new Date(d);
               prev.setDate(prev.getDate() - 1);
               return makeLocalDateKey(prev);
@@ -253,8 +253,8 @@ const AdminTickets: React.FC = () => {
                 const startLabel = shiftStart.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                 const endLabel = shiftEnd.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
                 const headerLabel = isCurrentShift
-                  ? `Turno actual — ${startLabel} · 5:00 PM → ${endLabel} 5:00 AM`
-                  : `Turno ${startLabel} · 5:00 PM → ${endLabel} 5:00 AM`;
+                  ? `Turno actual — ${startLabel} · 8:00 AM → ${endLabel} 1:00 AM`
+                  : `Turno ${startLabel} · 8:00 AM → ${endLabel} 1:00 AM`;
 
                 return (
                   <div key={dateKey}>

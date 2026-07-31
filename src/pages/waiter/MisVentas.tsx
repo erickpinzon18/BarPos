@@ -9,16 +9,16 @@ const CARD_COMMISSION_RATE = 0.05;
 
 const getShiftRange = (date: Date) => {
   const shiftStart = new Date(date);
-  shiftStart.setHours(17, 0, 0, 0);
+  shiftStart.setHours(8, 0, 0, 0);
   const shiftEnd = new Date(date);
   shiftEnd.setDate(shiftEnd.getDate() + 1);
-  shiftEnd.setHours(5, 0, 0, 0);
+  shiftEnd.setHours(1, 0, 0, 0);
   return { shiftStart, shiftEnd };
 };
 
 const getCurrentShiftDate = () => {
   const now = new Date();
-  if (now.getHours() >= 0 && now.getHours() < 17) {
+  if (now.getHours() >= 0 && now.getHours() < 8) {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     return yesterday;
@@ -178,9 +178,9 @@ const MisVentas: React.FC = () => {
         </div>
         <div className="flex items-center gap-1 text-xs text-gray-400 sm:ml-auto">
           <Clock size={13} />
-          {shiftStart.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })} 5:00 PM
+          {shiftStart.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })} 8:00 AM
           {" → "}
-          {shiftEnd.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })} 5:00 AM
+          {shiftEnd.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })} 1:00 AM
         </div>
       </div>
 

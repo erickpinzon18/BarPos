@@ -33,28 +33,21 @@ interface ServiceLine {
 function getDefaultShiftDate(): Date {
   const now = new Date();
   const h = now.getHours();
-  // Before 5 AM → shift started yesterday
-  if (h < 5) {
+  // Before 8 AM → previous day's shift is still the relevant one
+  if (h < 8) {
     const d = new Date(now);
     d.setDate(d.getDate() - 1);
     return d;
   }
-  // Between 5 AM and 5 PM → yesterday's shift already ended
-  if (h < 17) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 1);
-    return d;
-  }
-  // After 5 PM → current shift started today
   return now;
 }
 
 function getShiftRange(date: Date): { shiftStart: Date; shiftEnd: Date } {
   const shiftStart = new Date(date);
-  shiftStart.setHours(17, 0, 0, 0);
+  shiftStart.setHours(8, 0, 0, 0);
   const shiftEnd = new Date(date);
   shiftEnd.setDate(shiftEnd.getDate() + 1);
-  shiftEnd.setHours(5, 0, 0, 0);
+  shiftEnd.setHours(1, 0, 0, 0);
   return { shiftStart, shiftEnd };
 }
 
@@ -144,7 +137,7 @@ function printInventoryTicket(
   lines.push(sep('='));
   lines.push(center('CORTE DE VENTAS'));
   lines.push(sep('='));
-  lines.push(`Turno: ${fmt(shiftStart)} 17:00 - ${fmt(shiftEnd)} 05:00`);
+  lines.push(`Turno: ${fmt(shiftStart)} 08:00 - ${fmt(shiftEnd)} 01:00`);
   lines.push(`Impreso: ${timeStr}`);
   lines.push(sep('-'));
 
@@ -295,9 +288,9 @@ const Ventas: React.FC = () => {
           <div className="flex items-center gap-1.5 text-sm text-gray-400">
             <Clock size={14} className="flex-shrink-0" />
             <span>
-              {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} 5:00 PM
+              {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} 8:00 AM
               {' → '}
-              {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} 5:00 AM
+              {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} 1:00 AM
             </span>
           </div>
         </div>
@@ -328,9 +321,9 @@ const Ventas: React.FC = () => {
           <Package className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <p className="text-gray-400">No hay ventas en este turno</p>
           <p className="text-gray-600 text-sm mt-1">
-            {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} 5:00 PM
+            {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} 8:00 AM
             {' → '}
-            {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} 5:00 AM
+            {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} 1:00 AM
           </p>
         </div>
       )}

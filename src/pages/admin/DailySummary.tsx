@@ -131,10 +131,10 @@ const fmtM = (n: number) => `$${n.toFixed(2)}`;
 
 const getShiftRange = (date: Date) => {
   const shiftStart = new Date(date);
-  shiftStart.setHours(17, 0, 0, 0);
+  shiftStart.setHours(8, 0, 0, 0);
   const shiftEnd = new Date(date);
   shiftEnd.setDate(shiftEnd.getDate() + 1);
-  shiftEnd.setHours(5, 0, 0, 0);
+  shiftEnd.setHours(1, 0, 0, 0);
   return { shiftStart, shiftEnd };
 };
 
@@ -143,7 +143,7 @@ const DailySummary: React.FC = () => {
   const getCurrentShiftDate = () => {
     const now = new Date();
     const h = now.getHours();
-    if (h >= 0 && h < 17) {
+    if (h >= 0 && h < 8) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       return yesterday;
@@ -989,13 +989,13 @@ const DailySummary: React.FC = () => {
                 day: "numeric",
                 month: "short",
               })}{" "}
-              5:00 PM
+              8:00 AM
               {" → "}
               {shiftEnd.toLocaleDateString("es-ES", {
                 day: "numeric",
                 month: "short",
               })}{" "}
-              5:00 AM
+              1:00 AM
             </span>
           </div>
           {folioRange && (
@@ -1759,8 +1759,8 @@ const DailySummary: React.FC = () => {
                 No hay ventas registradas en este turno
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                Turno: {shiftStart.toLocaleDateString("es-ES")} 5:00 PM –{" "}
-                {shiftEnd.toLocaleDateString("es-ES")} 5:00 AM
+                Turno: {shiftStart.toLocaleDateString("es-ES")} 8:00 AM –{" "}
+                {shiftEnd.toLocaleDateString("es-ES")} 1:00 AM
               </p>
             </div>
           )}

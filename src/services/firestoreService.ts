@@ -975,10 +975,10 @@ export const getOrdersByDateRange = async (startDate: Date, endDate: Date): Prom
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
 
-    // Include the shift that spills past midnight: end of day + 5 AM next day
+    // Include the shift that spills past midnight: end of day + 1 AM next day
     const end = new Date(endDate);
     end.setDate(end.getDate() + 1);
-    end.setHours(5, 0, 0, 0);
+    end.setHours(1, 0, 0, 0);
 
     const q = query(
       collection(db, 'orders'),
@@ -998,15 +998,15 @@ export const getOrdersByDateRange = async (startDate: Date, endDate: Date): Prom
   }
 };
 
-// Get orders within a shift range (5 PM → 5 AM next day) using createdAt
+// Get orders within a shift range (8 AM → 1 AM next day) using createdAt
 export const getOrdersByShift = async (shiftDate: Date): Promise<FirestoreResponse<Order[]>> => {
   try {
     const start = new Date(shiftDate);
-    start.setHours(17, 0, 0, 0); // 5 PM
+    start.setHours(8, 0, 0, 0); // 8 AM
 
     const end = new Date(shiftDate);
     end.setDate(end.getDate() + 1);
-    end.setHours(5, 0, 0, 0); // 5 AM next day
+    end.setHours(1, 0, 0, 0); // 1 AM next day
 
     const q = query(
       collection(db, 'orders'),

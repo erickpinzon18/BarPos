@@ -492,7 +492,7 @@ const WaiterCheckout: React.FC = () => {
                   PASE DE SALIDA
                 </h2>
                 <p className="text-xs md:text-sm text-gray-400">
-                  {config?.name ?? "Wikka Despecho"} — Ticket de salida
+                  {config?.name ?? "La Fogata"} — Ticket de salida
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
                   {new Date().toLocaleString()}

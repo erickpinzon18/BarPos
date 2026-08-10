@@ -26,6 +26,8 @@ import Inventory from "./pages/admin/Inventory";
 import InventoryStats from "./pages/admin/InventoryStats";
 import AdminPrices from "./pages/admin/AdminPrices";
 import BottleSearch from "./pages/admin/BottleSearch";
+import AdminDelivery from "./pages/admin/Delivery";
+import AdminDeliveryOrderDetails from "./pages/admin/DeliveryOrderDetails";
 
 // Waiter Pages
 import WaiterHome from "./pages/waiter/Home";
@@ -33,6 +35,8 @@ import WaiterOrderDetails from "./pages/waiter/OrderDetails";
 import WaiterCheckout from "./pages/waiter/Checkout";
 import WaiterKanban from "./pages/waiter/Kanban";
 import WaiterMisVentas from "./pages/waiter/MisVentas";
+import WaiterDelivery from "./pages/waiter/Delivery";
+import WaiterDeliveryOrderDetails from "./pages/waiter/DeliveryOrderDetails";
 
 // Kitchen Pages
 import KitchenKanban from "./pages/kitchen/Kanban";
@@ -40,6 +44,8 @@ import KitchenHome from "./pages/kitchen/Home";
 import KitchenOrderDetails from "./pages/kitchen/OrderDetails";
 import KitchenCheckout from "./pages/kitchen/Checkout";
 import KitchenVentas from "./pages/kitchen/Ventas";
+import KitchenDelivery from "./pages/kitchen/Delivery";
+import KitchenDeliveryOrderDetails from "./pages/kitchen/DeliveryOrderDetails";
 import Reservations from "./pages/admin/Reservations";
 
 function App() {
@@ -75,6 +81,8 @@ function App() {
           <Route path="inventory-stats" element={<InventoryStats />} />
           <Route path="bottle-search" element={<BottleSearch />} />
           <Route path="prices" element={<AdminPrices />} />
+          <Route path="domicilios" element={<AdminDelivery />} />
+          <Route path="domicilio/:orderId" element={<AdminDeliveryOrderDetails />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Route>
@@ -88,6 +96,8 @@ function App() {
           <Route path="reservations" element={<Reservations />} />
           <Route path="order/:tableId" element={<WaiterOrderDetails />} />
           <Route path="checkout/:orderId" element={<WaiterCheckout />} />
+          <Route path="domicilios" element={<WaiterDelivery />} />
+          <Route path="domicilio/:orderId" element={<WaiterDeliveryOrderDetails />} />
         </Route>
       </Route>
 
@@ -101,6 +111,8 @@ function App() {
           <Route path="inventory" element={<Inventory />} />
           <Route path="order/:tableId" element={<KitchenOrderDetails />} />
           <Route path="checkout/:orderId" element={<KitchenCheckout />} />
+          <Route path="domicilios" element={<KitchenDelivery />} />
+          <Route path="domicilio/:orderId" element={<KitchenDeliveryOrderDetails />} />
         </Route>
       </Route>
 

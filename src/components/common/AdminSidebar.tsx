@@ -22,6 +22,7 @@ import {
   FlaskConical,
   CircleDollarSign,
   Wine,
+  Bike,
 } from "lucide-react";
 
 // Estilos para los enlaces de navegación, cambia el color si está activo
@@ -151,6 +152,10 @@ export const AdminSidebar: React.FC = () => {
           <NavLink to="/admin/bottle-search" className={navLinkClass}>
             <Wine size={20} />
             <span>Buscar Botellas</span>
+          </NavLink>
+          <NavLink to="/admin/domicilios" className={navLinkClass}>
+            <Bike size={20} />
+            <span>Domicilios</span>
           </NavLink>
           <NavLink to="/admin/manage-products" className={navLinkClass}>
             <Package size={20} />

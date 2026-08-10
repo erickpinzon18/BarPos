@@ -274,7 +274,7 @@ const DailySummary: React.FC = () => {
         folio: o.folio,
         folioSeq: o.folioSeq,
         id: o.id,
-        table: o.tableNumber === 0 ? "Barra" : `Mesa ${o.tableNumber}`,
+        table: o.tableId === "domicilio" ? (o.tableName ?? "🛵 Domicilio") : o.tableNumber === 0 ? "Barra" : `Mesa ${o.tableNumber}`,
         waiter: o.waiterName,
         method: o.paymentMethod,
         total: o.total ?? 0,
@@ -700,7 +700,7 @@ const DailySummary: React.FC = () => {
 
     lines.push(sep("="));
     lines.push(center("CIERRE DE CAJA"));
-    lines.push(center("Wikka Despecho"));
+    lines.push(center("La Fogata"));
     lines.push(sep("="));
     lines.push("");
 
@@ -1430,13 +1430,13 @@ const DailySummary: React.FC = () => {
                         .map(order => {
                           const activeItems = (order.items || []).filter(i => !i.isDeleted);
                           const orderTotal = activeItems.reduce((s, i) => s + i.productPrice * i.quantity, 0);
-                          const tableLabel = order.tableNumber === 0 ? 'Barra' : `Mesa ${order.tableNumber}`;
+                          const tableLabel = order.tableId === 'domicilio' ? (order.tableName ?? '🛵 Domicilio') : order.tableNumber === 0 ? 'Barra' : `Mesa ${order.tableNumber}`;
                           return (
                             <div key={order.id} className="bg-gray-700/40 border border-gray-600/50 rounded-lg p-3">
                               <div className="flex items-center justify-between mb-2">
                                 <div>
                                   <span className="text-white font-semibold text-sm">{tableLabel}</span>
-                                  {order.tableName && (
+                                  {order.tableId !== 'domicilio' && order.tableName && (
                                     <span className="text-gray-500 text-xs ml-1">({order.tableName})</span>
                                   )}
                                   <span className="text-gray-400 text-xs ml-2">· {order.waiterName}</span>
@@ -1649,8 +1649,7 @@ const DailySummary: React.FC = () => {
                               {orderRows.map(({ o, total, subtotal, tip, cashAmt, cardAmt, cardComm, tipNet }) => (
                                 <tr key={o.id} className="hover:bg-gray-700/30 transition-colors">
                                   <td className="px-4 py-2 text-gray-300">
-                                    {o.tableNumber === 0 ? 'Barra' : `Mesa ${o.tableNumber}`}
-                                    {o.tableName ? <span className="text-gray-500 text-xs ml-1">({o.tableName})</span> : null}
+                                    {o.tableId === 'domicilio' ? (o.tableName ?? '🛵 Domicilio') : o.tableNumber === 0 ? 'Barra' : `Mesa ${o.tableNumber}`}
                                   </td>
                                   <td className="px-4 py-2 text-gray-400">
                                     {o.completedAt?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) ?? '—'}

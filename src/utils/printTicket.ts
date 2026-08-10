@@ -17,22 +17,22 @@ export type PaperSize = '58mm' | '80mm';
 // ─── Text formatting helpers ────────────────────────────────────────────────
 
 /** Center text within the given character width */
-const centerText = (text: string, width: number): string => {
+export const centerText = (text: string, width: number): string => {
   const padding = Math.floor((width - text.length) / 2);
   return ' '.repeat(Math.max(0, padding)) + text;
 };
 
 /** Create a horizontal separator line */
-const separator = (char = '-', width: number): string => char.repeat(width);
+export const separator = (char = '-', width: number): string => char.repeat(width);
 
 /** Format a line with left-aligned and right-aligned text */
-const formatLine = (left: string, right: string, width: number): string => {
+export const formatLine = (left: string, right: string, width: number): string => {
   const spaces = width - left.length - right.length;
   return left + ' '.repeat(Math.max(1, spaces)) + right;
 };
 
 /** Word-wrap text to avoid breaking mid-word on narrow tickets */
-const wrapText = (text = '', width: number): string[] => {
+export const wrapText = (text = '', width: number): string[] => {
   const normalized = String(text || '').trim();
   if (!normalized) return [];
 
@@ -78,7 +78,7 @@ const wrapText = (text = '', width: number): string[] => {
 };
 
 /** Push a label + value pair; if value fits inline use formatLine, otherwise wrap below */
-const pushLabeledValue = (lines: string[], label: string, value: string, width: number): void => {
+export const pushLabeledValue = (lines: string[], label: string, value: string, width: number): void => {
   const safeLabel = `${label}`;
   const safeValue = `${value ?? ''}`.trim();
 
@@ -95,7 +95,7 @@ const pushLabeledValue = (lines: string[], label: string, value: string, width: 
 };
 
 /** Format a money amount */
-const formatMoney = (amount: number): string => `$${amount.toFixed(2)}`;
+export const formatMoney = (amount: number): string => `$${amount.toFixed(2)}`;
 
 /** Escape HTML entities for safe injection into print document */
 const escapeHtml = (text = ''): string =>
@@ -154,7 +154,7 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   // ── Header ────────────────────────────────────────────────────────────────
   lines.push(s('='));
   lines.push(c('PASE DE SALIDA'));
-  lines.push(c((businessName || 'Wikka Despecho').toUpperCase()));
+  lines.push(c((businessName || 'La Fogata').toUpperCase()));
   lines.push(s('='));
   lines.push('');
 

@@ -36,7 +36,7 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
       <div ref={ref} className="bg-white text-black p-10 min-h-screen" style={{ width: '100%', maxWidth: '800px', margin: '0 auto' }}>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold uppercase">Cierre de Caja</h1>
-          <h2 className="text-xl font-semibold text-gray-700">Wikka Despecho</h2>
+          <h2 className="text-xl font-semibold text-gray-700">La Fogata</h2>
           <div className="mt-4 text-sm text-gray-600">
             <p>
               <strong>Turno:</strong> {shiftStart.toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}
@@ -298,7 +298,7 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
         </div>
 
         <div className="text-center text-xs text-gray-400 mt-12 pt-4 border-t border-gray-200">
-          Wikka Despecho Punto de Venta • Documento generado automáticamente
+          La Fogata Punto de Venta • Documento generado automáticamente
         </div>
       </div>
     );

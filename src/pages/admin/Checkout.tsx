@@ -699,7 +699,7 @@ const AdminCheckout: React.FC = () => {
                 PASE DE SALIDA
               </h2>
               <p className="text-sm text-gray-400">
-                {config?.name ?? "Wikka Despecho"} — Ticket de salida
+                {config?.name ?? "La Fogata"} — Ticket de salida
               </p>
               {order.createdAt && (
                 <p className="text-xs text-gray-500 mt-2">

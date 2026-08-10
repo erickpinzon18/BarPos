@@ -123,6 +123,38 @@ export interface Order {
 
 export type CardType = 'Visa' | 'Mastercard' | 'Amex' | 'Otra';
 
+export type DeliveryOrderStatus = 'activo' | 'cerrado' | 'entregado' | 'cancelado';
+
+export interface DeliveryOrder {
+  id: string;
+  customerName: string;
+  deliveryTime: string; // "14:00" — input type="time", texto simple
+  address: string;
+  contactPhone?: string;
+  waiterId: string;
+  waiterName: string;
+  items: OrderItem[];
+  status: DeliveryOrderStatus;
+  subtotal?: number;
+  total?: number;
+  cardCommission?: number; // Comisión del 4% cobrada al cliente si se paga con tarjeta
+  paymentMethod?: 'efectivo' | 'tarjeta' | 'transferencia';
+  payments?: Payment[];
+  folio?: string; // Asignado al cerrar (enviar a cocina), se comparte con la secuencia de mesas
+  folioSeq?: number;
+  createdAt: Date;
+  updatedAt: Date;
+  closedAt?: Date; // Cuando se imprimió/envió a cocina
+  deliveredAt?: Date; // Cuando se marcó como entregado y cobrado
+}
+
+export interface DeliveryOrderFormData {
+  customerName: string;
+  deliveryTime: string;
+  address: string;
+  contactPhone?: string;
+}
+
 export interface Payment {
   id?: string;
   method: 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto';

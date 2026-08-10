@@ -254,8 +254,7 @@ const MisVentas: React.FC = () => {
                   {rows.map(({ o, subtotal, tip, cardComm, tipNet, cashAmt, cardAmt }) => (
                     <tr key={o.id} className="hover:bg-gray-700/20 transition-colors">
                       <td className="px-4 py-2 text-gray-300">
-                        {o.tableNumber === 0 ? "Barra" : `Mesa ${o.tableNumber}`}
-                        {o.tableName ? <span className="text-gray-500 text-xs ml-1">({o.tableName})</span> : null}
+                        {o.tableId === 'domicilio' ? (o.tableName ?? '🛵 Domicilio') : o.tableNumber === 0 ? "Barra" : `Mesa ${o.tableNumber}`}
                       </td>
                       <td className="px-4 py-2 text-gray-400">
                         {o.completedAt?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false }) ?? "—"}

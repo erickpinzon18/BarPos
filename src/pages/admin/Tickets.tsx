@@ -275,8 +275,12 @@ const AdminTickets: React.FC = () => {
                                 <div className="text-xs">{new Date(order.completedAt || Date.now()).toLocaleDateString('es-ES')}</div>
                               </div>
                             </div>
-                            <p className="text-sm text-gray-300"><span className="font-semibold">{order.tableNumber === 0 ? 'Barra:' : 'Mesa:'}</span> {order.tableNumber === 0 ? 'Principal' : (order.tableNumber ?? '-')}</p>
-                            {order.tableName && (
+                            {order.tableId === 'domicilio' ? (
+                              <p className="text-sm text-gray-300"><span className="font-semibold">🛵 Domicilio:</span> {order.tableName ?? '-'}</p>
+                            ) : (
+                              <p className="text-sm text-gray-300"><span className="font-semibold">{order.tableNumber === 0 ? 'Barra:' : 'Mesa:'}</span> {order.tableNumber === 0 ? 'Principal' : (order.tableNumber ?? '-')}</p>
+                            )}
+                            {order.tableId !== 'domicilio' && order.tableName && (
                               <p className="text-sm text-red-400"><span className="font-semibold">🏷️</span> {order.tableName}</p>
                             )}
                             <p className="text-sm text-gray-300"><span className="font-semibold">Mesero:</span> {order.waiterName ?? '-'}</p>
@@ -310,7 +314,7 @@ const AdminTickets: React.FC = () => {
             <div className="p-8 overflow-y-auto flex-1">
                 <div className="text-center mb-6 border-b border-gray-600 pb-6">
                 <h2 className="text-2xl font-bold text-red-500 tracking-widest">PASE DE SALIDA</h2>
-                <p className="text-lg font-semibold text-white mt-1">{config?.name ?? 'Wikka Despecho'} — Ticket de salida</p>
+                <p className="text-lg font-semibold text-white mt-1">{config?.name ?? 'La Fogata'} — Ticket de salida</p>
                 <p className="text-sm text-gray-400">Fecha: {new Date(selected.createdAt || Date.now()).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date(selected.createdAt || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
                 {selected.folio && (
                   <p className="text-lg font-bold text-white mt-1">Folio {selected.folio}</p>
@@ -342,7 +346,7 @@ const AdminTickets: React.FC = () => {
                 })()}
               </div>
               <div className="grid grid-cols-3 gap-4 mb-6 text-center">
-                <div><p className="text-sm text-gray-400">{selected.tableNumber === 0 ? 'Barra' : 'Mesa'}</p><p className="font-bold text-white text-lg">{selected.tableNumber === 0 ? 'Principal' : (selected.tableNumber ?? '-')}</p></div>
+                <div><p className="text-sm text-gray-400">{selected.tableId === 'domicilio' ? '🛵 Domicilio' : selected.tableNumber === 0 ? 'Barra' : 'Mesa'}</p><p className="font-bold text-white text-lg">{selected.tableId === 'domicilio' ? (selected.tableName ?? '-') : selected.tableNumber === 0 ? 'Principal' : (selected.tableNumber ?? '-')}</p></div>
                 <div><p className="text-sm text-gray-400">Mesero</p><p className="font-bold text-white text-lg">{selected.waiterName ?? '-'}</p></div>
                 <div><p className="text-sm text-gray-400">Personas</p><p className="font-bold text-white text-lg">{selected.peopleCount ?? 1}</p></div>
               </div>

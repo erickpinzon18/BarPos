@@ -19,6 +19,7 @@ const KitchenHome: React.FC = () => {
   const { reservations } = useTodayReservations();
   const [openingTableId, setOpeningTableId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
+  const [tableToConfirm, setTableToConfirm] = useState<Table | null>(null);
 
   const loading = tablesLoading || ordersLoading;
   const error = tablesError || ordersError;
@@ -51,6 +52,14 @@ const KitchenHome: React.FC = () => {
 
     if (!currentUser) { toast.error('No hay usuario autenticado'); return; }
     if (openingTableId) return;
+
+    setTableToConfirm(table);
+  };
+
+  const handleConfirmOpenTable = async () => {
+    if (!currentUser || !tableToConfirm) return;
+    const table = tableToConfirm;
+    setTableToConfirm(null);
 
     setOpeningTableId(table.id);
     const label = table.number === 0 ? 'Barra' : `Mesa ${table.number}`;
@@ -114,6 +123,36 @@ const KitchenHome: React.FC = () => {
           onCheckout={orderId => navigate(`/kitchen/checkout/${orderId}`)}
           accentColor="orange"
         />
+      )}
+
+      {/* Modal de confirmación para abrir mesa */}
+      {tableToConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-white mb-2">
+              ¿Abrir {tableToConfirm.number === 0 || /^B\d+$/i.test(String(tableToConfirm.number))
+                ? `la barra ${tableToConfirm.number === 0 ? '' : tableToConfirm.number}`.trim()
+                : `la mesa ${tableToConfirm.number}`}?
+            </h2>
+            <p className="text-gray-400 text-sm mb-6">
+              Esta acción marcará la mesa como ocupada.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTableToConfirm(null)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmOpenTable}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Sí, abrir
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

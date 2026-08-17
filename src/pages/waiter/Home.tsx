@@ -20,6 +20,7 @@ const WaiterHome: React.FC = () => {
   const [openingTableId, setOpeningTableId] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [tableToConfirm, setTableToConfirm] = useState<Table | null>(null);
 
   const loading = tablesLoading || ordersLoading;
   const error = tablesError || ordersError;
@@ -62,23 +63,10 @@ const WaiterHome: React.FC = () => {
   const handleTableClick = async (table: Table) => {
     if (!currentUser) return;
 
-    // Si es una mesa libre, abrirla y asignarla al mesero
+    // Si es una mesa libre, pedir confirmación antes de abrirla
     if (table.status === 'libre') {
       if (openingTableId) return;
-      setOpeningTableId(table.id);
-      try {
-        await createEmptyOrder(
-          table.id,
-          table.number,
-          currentUser.id,
-          currentUser.displayName || currentUser.email
-        );
-        navigate(`/waiter/order/${table.id}`);
-      } catch (error) {
-        console.error('Error al abrir mesa:', error);
-      } finally {
-        setOpeningTableId(null);
-      }
+      setTableToConfirm(table);
       return;
     }
 
@@ -93,6 +81,26 @@ const WaiterHome: React.FC = () => {
       if (currentOrder) {
         navigate(`/waiter/order/${table.id}`);
       }
+    }
+  };
+
+  const handleConfirmOpenTable = async () => {
+    if (!currentUser || !tableToConfirm) return;
+    const table = tableToConfirm;
+    setTableToConfirm(null);
+    setOpeningTableId(table.id);
+    try {
+      await createEmptyOrder(
+        table.id,
+        table.number,
+        currentUser.id,
+        currentUser.displayName || currentUser.email
+      );
+      navigate(`/waiter/order/${table.id}`);
+    } catch (error) {
+      console.error('Error al abrir mesa:', error);
+    } finally {
+      setOpeningTableId(null);
     }
   };
 
@@ -398,6 +406,36 @@ const WaiterHome: React.FC = () => {
           </span>
         </button>
       </div>
+
+      {/* Modal de confirmación para abrir mesa */}
+      {tableToConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-gray-800 rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-xl font-bold text-white mb-2">
+              ¿Abrir {tableToConfirm.number === 0 || /^B\d+$/i.test(String(tableToConfirm.number))
+                ? `la barra ${tableToConfirm.number === 0 ? '' : tableToConfirm.number}`.trim()
+                : `la mesa ${tableToConfirm.number}`}?
+            </h2>
+            <p className="text-gray-400 text-sm mb-6">
+              Esta acción marcará la mesa como ocupada y quedará asignada a ti.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTableToConfirm(null)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmOpenTable}
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              >
+                Sí, abrir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

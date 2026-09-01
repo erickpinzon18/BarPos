@@ -4,6 +4,7 @@
  * Supports 58mm and 80mm paper widths.
  */
 import type { Order } from './types';
+import { seqToFolio } from './folio';
 
 // ─── Character widths per paper size ────────────────────────────────────────
 // Calculated for bold Courier New at print resolution:
@@ -151,13 +152,14 @@ export const generateTicketContent = (opts: PrintOptions): string => {
   lines.push(s('='));
   lines.push(c('PASE DE SALIDA'));
   lines.push(c((businessName || 'Wikka Despecho').toUpperCase()));
+  // El folio va en el encabezado, centrado, para que se vea igual en la impresión
+  // original y en las reimpresiones desde el historial de tickets.
+  const folioLabel = order.folio || (order.folioSeq ? seqToFolio(order.folioSeq) : '');
+  lines.push(c(folioLabel ? `FOLIO ${folioLabel}` : 'SIN FOLIO'));
   lines.push(s('='));
   lines.push('');
 
   // ── Order info ────────────────────────────────────────────────────────────
-  if (order.folio) {
-    pushLabeledValue(lines, 'Folio:', order.folio, W);
-  }
   if (order.createdAt) {
     pushLabeledValue(lines, 'Apertura:', new Date(order.createdAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }), W);
   }

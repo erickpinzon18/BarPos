@@ -45,6 +45,8 @@ export const verifyUserPin = async (pin: string): Promise<User> => {
       displayName: userData.displayName,
       role: userData.role,
       pin: userData.pin,
+      superAdmin: userData.superAdmin === true,
+      active: userData.active,
       createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date(userData.createdAt || Date.now()),
       updatedAt: userData.updatedAt?.toDate ? userData.updatedAt.toDate() : new Date(userData.updatedAt || Date.now())
     };

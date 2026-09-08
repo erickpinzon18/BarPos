@@ -121,10 +121,10 @@ const WaiterOrderDetails: React.FC = () => {
             // Verificar PIN
             const authorizedUser = await verifyUserPin(pin);
 
-            // Only admins can delete items
-            if (authorizedUser.role !== 'admin') {
-                console.warn('Usuario no autorizado para eliminar item:', authorizedUser);
-                throw new Error('PIN válido, pero el usuario no tiene permisos. Solo administradores pueden eliminar items.');
+            // Solo super administradores pueden cancelar productos
+            if (!authorizedUser.superAdmin) {
+                console.warn('Usuario no autorizado para cancelar item:', authorizedUser);
+                throw new Error('Solo un administrador puede cancelar productos. Pídele al administrador que lo elimine de la cuenta.');
             }
 
             // Eliminar item

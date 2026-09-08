@@ -119,9 +119,10 @@ const KitchenOrderDetails: React.FC = () => {
     setPinLoading(true);
     try {
       const authorizedUser = await verifyUserPin(pin);
-      if (authorizedUser.role !== "admin") {
+      // Solo super administradores pueden cancelar productos
+      if (!authorizedUser.superAdmin) {
         throw new Error(
-          "PIN válido, pero el usuario no tiene permisos. Solo administradores pueden eliminar items."
+          "Solo un administrador puede cancelar productos. Pídele al administrador que lo elimine de la cuenta."
         );
       }
       await deleteOrderItem(order.id, itemToDelete, authorizedUser, cancelReason);

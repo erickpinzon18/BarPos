@@ -2,8 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useKitchenOrders } from '../../hooks/useKitchenOrders';
 import { useLocation } from 'react-router-dom';
-import KanbanColumn from '../../components/common/KanbanColumn';
-import type { Order } from '../../utils/types';
+import StationBoard from '../../components/common/StationBoard';
 
 import { getCategoriesByWorkstation } from '../../utils/categories';
 import { KANBAN_DELIVERED_RETENTION_MINUTES } from '../../utils/constants';
@@ -36,57 +35,6 @@ const AdminKanban: React.FC = () => {
     setSoundEnabled(enabled);
   }, []);
 
-  // Flatten items across orders into a list of item-entries with parent order metadata
-  type ItemEntry = {
-    orderId: string;
-    tableNumber?: number | string;
-    waiterName?: string;
-    createdAt?: Date | null;
-    item: NonNullable<Order['items']>[number];
-  };
-
-  const allItems: ItemEntry[] = orders.flatMap(order => (
-    (order.items || []).map(item => ({
-      orderId: order.id as string,
-      tableNumber: order.tableNumber,
-      waiterName: order.waiterName,
-      createdAt: order.createdAt ?? null,
-      item
-    }))
-  ));
-
-  // Filter and sort by order createdAt (ascending: older first)
-  const parseDate = (d: any): Date | null => {
-    if (!d) return null;
-    if (typeof d.toDate === 'function') return d.toDate();
-    if (d instanceof Date) return d;
-    const parsed = new Date(d);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  };
-
-  // Sort by item's createdAt if present, otherwise fallback to order createdAt
-  const sortByCreatedAt = (a: ItemEntry, b: ItemEntry) => {
-    const da = parseDate(a.item.createdAt) ?? parseDate(a.createdAt) ?? new Date(0);
-    const db = parseDate(b.item.createdAt) ?? parseDate(b.createdAt) ?? new Date(0);
-    return da.getTime() - db.getTime();
-  };
-
-  // Function to verify if a delivered item is within retention time
-  const isDeliveredRecently = (item: NonNullable<Order['items']>[number]): boolean => {
-    if (item.status !== 'entregado') return true; // Don't filter if not delivered
-    
-    // If no updatedAt, assume it's recent to not hide it
-    if (!item.updatedAt) return true;
-    
-    const updatedDate = parseDate(item.updatedAt);
-    if (!updatedDate) return true;
-    
-    const now = new Date();
-    const diffMinutes = (now.getTime() - updatedDate.getTime()) / (1000 * 60);
-    
-    return diffMinutes <= KANBAN_DELIVERED_RETENTION_MINUTES;
-  };
-
   // Decide which board(s) to show based on the route param
   const showCocina = !board || board === 'cocina';
   const showBarra = !board || board === 'barra';
@@ -100,9 +48,8 @@ const AdminKanban: React.FC = () => {
     ...(showBarra ? barraCategories : [])
   ];
   
-  const currentPendingCount = allItems.filter(e => 
-    relevantCategories.includes(e.item.category) && e.item.status === 'pendiente'
-  ).length;
+  const currentPendingCount = orders.reduce((sum, order) =>
+    sum + (order.items || []).filter(i => relevantCategories.includes(i.category) && i.status === 'pendiente' && !i.isDeleted).length, 0);
 
   // Play notification sound when new pending items arrive
   useEffect(() => {
@@ -133,109 +80,15 @@ const AdminKanban: React.FC = () => {
   }
 
 
-  const renderItemCard = (entry: ItemEntry, isDelivered = false) => {
-    const { item, orderId, tableNumber, waiterName } = entry;
-    const parseDate = (d: any): Date | null => {
-      if (!d) return null;
-      if (typeof d.toDate === 'function') return d.toDate();
-      if (d instanceof Date) return d;
-      const parsed = new Date(d);
-      return isNaN(parsed.getTime()) ? null : parsed;
-    };
-
-    const dt = parseDate(item.createdAt);
-    const timeLabel = dt ? dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
-    return (
-      <div key={`${orderId}_${item.id}`} className={`border rounded-2xl p-3 mb-3 shadow-sm transition-opacity ${isDelivered ? 'bg-gray-900/40 border-gray-700 opacity-60' : 'bg-gray-900 border-gray-800'}`}>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-red-400">{tableNumber === 0 ? '🍹 Barra' : `Mesa ${tableNumber ?? '-'}`}</span>
-                <span className="text-xs text-gray-400">{waiterName}</span>
-              </div>
-              <span className="ml-auto text-xs text-gray-400">{timeLabel}</span>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between">
-              <div>
-                <div className="text-lg font-semibold text-white">{item.productName}</div>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="text-xs uppercase bg-white/5 text-gray-200 px-2 py-0.5 rounded">{item.category}</span>
-                  {item.notes ? <div className="text-sm text-gray-400">{item.notes}</div> : null}
-                </div>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="inline-block bg-red-500 text-black text-sm font-bold px-3 py-1 rounded-full">{item.quantity}x</span>
-                <span className={`mt-2 text-xs font-semibold px-2 py-0.5 rounded ${isDelivered ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {isDelivered ? '✅ Entregado' : '⏳ Pendiente'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderBoard = (label: string, workstation: 'cocina' | 'barra') => {
-    const categories = getCategoriesByWorkstation(workstation).map(c => c.key);
-
-    const pending = allItems
-      .filter(e => categories.includes(e.item.category) && e.item.status === 'pendiente' && !e.item.isDeleted)
-      .sort(sortByCreatedAt);
-
-    const delivered = allItems
-      .filter(e =>
-        categories.includes(e.item.category) &&
-        e.item.status === 'entregado' &&
-        !e.item.isDeleted &&
-        isDeliveredRecently(e.item)
-      )
-      .sort(sortByCreatedAt);
-
-    return (
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-200 flex items-center gap-2">
-          <span>{workstation === 'barra' ? '🍹' : '👨‍🍳'}</span>
-          <span>{label}</span>
-          <span className="text-sm font-normal text-gray-400 ml-2">· Solo lectura · Mesero gestiona estados</span>
-        </h2>
-        <div className="bg-gray-800 rounded-lg p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <KanbanColumn title={`Por Preparar (${pending.length})`}>
-              {pending.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No hay ítems pendientes.</p>
-              ) : (
-                pending.map(e => renderItemCard(e, false))
-              )}
-            </KanbanColumn>
-
-            <KanbanColumn title={`Recogidos por mesero (${delivered.length})`}>
-              {delivered.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">Sin entregas recientes.</p>
-              ) : (
-                delivered.map(e => renderItemCard(e, true))
-              )}
-            </KanbanColumn>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-300">
-            {getCategoriesByWorkstation(workstation).map(cat => {
-              const count = allItems.filter(e => e.item.category === cat.key && e.item.status === 'pendiente' && !e.item.isDeleted).length;
-              return (
-                <div key={cat.key} className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg">
-                  <span className={`w-3 h-3 rounded-full ${cat.color}`}></span>
-                  <span>{cat.icon} {cat.label}</span>
-                  <span className="ml-2 font-semibold text-red-400">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const renderBoard = (label: string, workstation: 'cocina' | 'barra') => (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-gray-200 flex items-center gap-2">
+        <span>{workstation === 'barra' ? '🍹' : '👨‍🍳'}</span>
+        <span>{label}</span>
+      </h2>
+      <StationBoard orders={orders} station={workstation} />
+    </div>
+  );
 
   // If only one of the boards is shown, use a single-column layout so it takes full width
   const gridColsClass = (showCocina && showBarra) ? 'lg:grid-cols-2' : 'lg:grid-cols-1';

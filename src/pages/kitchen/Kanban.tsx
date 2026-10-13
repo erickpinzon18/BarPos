@@ -2,8 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useKitchenOrders } from '../../hooks/useKitchenOrders';
-import KanbanColumn from '../../components/common/KanbanColumn';
-import type { Order } from '../../utils/types';
+import StationBoard from '../../components/common/StationBoard';
 import { getCategoriesByWorkstation } from '../../utils/categories';
 import { playNotificationSound } from '../../utils/notificationSound';
 import { printStationTicket } from '../../utils/printStationTicket';
@@ -36,53 +35,15 @@ const KitchenKanban: React.FC = () => {
     setSoundEnabled(enabled);
   }, []);
 
-  type ItemEntry = {
-    orderId: string;
-    tableNumber?: number | string;
-    waiterName?: string;
-    createdAt?: Date | null;
-    item: NonNullable<Order['items']>[number];
-  };
-
-  const allItems: ItemEntry[] = orders.flatMap(order =>
-    (order.items || []).map(item => ({
-      orderId: order.id as string,
-      tableNumber: order.tableNumber,
-      waiterName: order.waiterName,
-      createdAt: order.createdAt ?? null,
-      item
-    }))
-  );
-
-  const parseDate = (d: any): Date | null => {
-    if (!d) return null;
-    if (typeof d.toDate === 'function') return d.toDate();
-    if (d instanceof Date) return d;
-    const parsed = new Date(d);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  };
-
-  const sortByCreatedAt = (a: ItemEntry, b: ItemEntry) => {
-    const da = parseDate(a.item.createdAt) ?? parseDate(a.createdAt) ?? new Date(0);
-    const db = parseDate(b.item.createdAt) ?? parseDate(b.createdAt) ?? new Date(0);
-    return da.getTime() - db.getTime();
-  };
-
   const categories = getCategoriesByWorkstation(station).map(c => c.key);
 
-  // Barra only cares about pendiente items (informative — no status changes here)
-  const pending = allItems
-    .filter(e => categories.includes(e.item.category) && e.item.status === 'pendiente' && !e.item.isDeleted)
-    .sort(sortByCreatedAt);
-
-  const delivered = allItems
-    .filter(e => categories.includes(e.item.category) && e.item.status === 'entregado' && !e.item.isDeleted)
-    .sort(sortByCreatedAt);
+  const pendingCount = orders.reduce((sum, order) =>
+    sum + (order.items || []).filter(i => categories.includes(i.category) && i.status === 'pendiente' && !i.isDeleted).length, 0);
 
   // Sound on new pending items
   useEffect(() => {
     if (loading) return;
-    const currentPendingCount = pending.length;
+    const currentPendingCount = pendingCount;
 
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
@@ -95,7 +56,7 @@ const KitchenKanban: React.FC = () => {
     }
 
     prevPendingCountRef.current = currentPendingCount;
-  }, [pending.length, loading, soundEnabled]);
+  }, [pendingCount, loading, soundEnabled]);
 
   if (loading) {
     return (
@@ -107,48 +68,6 @@ const KitchenKanban: React.FC = () => {
       </div>
     );
   }
-
-  const renderItemCard = (entry: ItemEntry, isDelivered = false) => {
-    const { item, tableNumber, waiterName } = entry;
-    const dt = parseDate(item.createdAt);
-    const timeLabel = dt ? dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
-
-    return (
-      <div
-        key={`${entry.orderId}_${item.id}`}
-        className={`border rounded-2xl p-4 mb-3 shadow-sm transition-opacity ${
-          isDelivered
-            ? 'bg-gray-900/50 border-gray-700 opacity-50'
-            : 'bg-gray-900 border-gray-800'
-        }`}
-      >
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-lg font-bold text-white">
-            {tableNumber === 0 ? '🍹 Barra' : `Mesa ${tableNumber ?? '?'}`}
-          </span>
-          {item.quantity > 1 && (
-            <span className="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-1 rounded-full">
-              x{item.quantity}
-            </span>
-          )}
-          <span className="ml-auto text-xs text-gray-400">{timeLabel}</span>
-        </div>
-
-        <p className="text-base font-semibold text-gray-200">{item.productName}</p>
-        {item.notes && (
-          <p className="text-xs text-amber-400 mt-1 italic">📝 {item.notes}</p>
-        )}
-        <p className="text-xs text-gray-500 mt-1">Mesero: {waiterName ?? 'N/A'}</p>
-
-        {/* READ-ONLY — no action buttons. Mesero manages statuses. */}
-        {isDelivered && (
-          <div className="mt-2">
-            <span className="text-xs text-gray-500 font-medium">✅ Recogido por mesero</span>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div>
@@ -212,57 +131,10 @@ const KitchenKanban: React.FC = () => {
             </div>
           )}
 
-          {/* Info badge — read-only reminder */}
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm ${
-            station === 'barra'
-              ? 'bg-purple-900/20 border-purple-700/50 text-purple-300'
-              : 'bg-orange-900/20 border-orange-700/50 text-orange-300'
-          }`}>
-            <span>👁️ Solo lectura · Mesero gestiona los estados</span>
-          </div>
         </div>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          {/* Por preparar */}
-          <KanbanColumn title={`Por Preparar (${pending.length})`}>
-            {pending.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
-                <p className="text-3xl mb-3">✓</p>
-                <p className="font-medium">Sin pedidos pendientes</p>
-                <p className="text-xs mt-1">Todo está al día</p>
-              </div>
-            ) : (
-              pending.map(e => renderItemCard(e, false))
-            )}
-          </KanbanColumn>
-
-          {/* Entregados recientes */}
-          <KanbanColumn title={`Recogidos por mesero (${delivered.length})`}>
-            {delivered.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
-                <p className="text-3xl mb-3">📭</p>
-                <p>Sin entregas aún</p>
-              </div>
-            ) : (
-              delivered.map(e => renderItemCard(e, true))
-            )}
-          </KanbanColumn>
-
-        </div>
-
-        {/* Category legend */}
-        <div className="mt-4 flex flex-wrap gap-3 text-sm text-gray-300">
-          {getCategoriesByWorkstation(station).map(cat => (
-            <div key={cat.key} className="flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${cat.color}`}></span>
-              <span>{cat.icon} {cat.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <StationBoard orders={orders} station={station} />
     </div>
   );
 };

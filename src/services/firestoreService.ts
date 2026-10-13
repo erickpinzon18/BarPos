@@ -758,9 +758,49 @@ export const clearPendingCancelPrint = async (orderId: string, itemIds: string[]
   }
 };
 
+// Cambia el estado de uno o varios items dentro de una transacción, para que
+// dos dispositivos (mesero y barra) no se pisen al reescribir el arreglo de items.
+export const updateItemsStatus = async (
+  orderId: string,
+  itemIds: string[],
+  newStatus: OrderItem['status'],
+  by?: { id: string; name: string }
+): Promise<FirestoreResponse<void>> => {
+  try {
+    const orderRef = doc(db, 'orders', orderId);
+    await runTransaction(db, async (transaction) => {
+      const orderDoc = await transaction.get(orderRef);
+      if (!orderDoc.exists()) throw new Error('Pedido no encontrado');
+
+      const orderData = orderDoc.data() as Order;
+      const now = Timestamp.now();
+      const updatedItems = orderData.items.map(item => {
+        if (!itemIds.includes(item.id) || item.isDeleted || item.status === newStatus) return item;
+        if (newStatus === 'entregado') {
+          return {
+            ...item,
+            status: newStatus,
+            updatedAt: now,
+            deliveredAt: now,
+            ...(by ? { deliveredBy: by.id, deliveredByName: by.name } : {})
+          };
+        }
+        const { deliveredAt: _a, deliveredBy: _b, deliveredByName: _c, ...rest } = item;
+        return { ...rest, status: newStatus, updatedAt: now };
+      });
+
+      transaction.update(orderRef, { items: updatedItems, updatedAt: now });
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating items status:', error);
+    return { success: false, error: 'Error al actualizar estado' };
+  }
+};
+
 export const updateOrderStatusInKanban = async (orderId: string, itemId: string, newStatus: OrderItem['status']): Promise<FirestoreResponse<void>> => {
   try {
-    const result = await updateItemStatus(orderId, itemId, newStatus);
+    const result = await updateItemsStatus(orderId, [itemId], newStatus);
     return { success: result.success, error: result.error };
   } catch (error) {
     console.error('Error updating order status in kanban:', error);

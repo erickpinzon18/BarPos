@@ -21,34 +21,13 @@ const PinModal: React.FC<PinModalProps> = ({
 }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  // Detectar si es desktop (no móvil/tablet)
-  useEffect(() => {
-    const checkIfDesktop = () => {
-      // Verificar si es un dispositivo táctil
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      // Verificar el ancho de pantalla (desktop > 1024px)
-      const isWideScreen = window.innerWidth > 1024;
-      
-      setIsDesktop(!isTouchDevice && isWideScreen);
-    };
-
-    checkIfDesktop();
-    window.addEventListener('resize', checkIfDesktop);
-    
-    return () => window.removeEventListener('resize', checkIfDesktop);
-  }, []);
-
   const handleNumberClick = (num: string) => {
-    if (pin.length < 4) {
-      setPin(pin + num);
-      setError('');
-    }
+    setPin(prev => (prev.length < 4 ? prev + num : prev));
+    setError('');
   };
 
   const handleBackspace = () => {
-    setPin(pin.slice(0, -1));
+    setPin(prev => prev.slice(0, -1));
     setError('');
   };
 
@@ -86,33 +65,39 @@ const PinModal: React.FC<PinModalProps> = ({
     onClose();
   };
 
-  // Manejar entrada de teclado (solo desktop)
+  // Manejar entrada de teclado (cualquier dispositivo con teclado físico)
   useEffect(() => {
-    if (!isOpen || !isDesktop) return;
+    if (!isOpen) return;
 
     const handleKeyPress = (event: KeyboardEvent) => {
+      // Dígito de la fila de números o del teclado numérico (también con Bloq Num apagado)
+      const digit = /^[0-9]$/.test(event.key)
+        ? event.key
+        : (event.code.match(/^(?:Numpad|Digit)([0-9])$/)?.[1] ?? null);
+      const isEnter = event.key === 'Enter' || event.code === 'NumpadEnter';
+
       // Prevenir el comportamiento por defecto solo para números y teclas específicas
-      if (/^[0-9]$/.test(event.key) || ['Backspace', 'Delete', 'Enter'].includes(event.key)) {
+      if (digit || isEnter || ['Backspace', 'Delete'].includes(event.key)) {
         event.preventDefault();
       }
 
       // Números 0-9
-      if (/^[0-9]$/.test(event.key) && pin.length < 4 && !loading) {
-        handleNumberClick(event.key);
+      if (digit && pin.length < 4 && !loading) {
+        handleNumberClick(digit);
       }
       // Backspace o Delete
       else if ((event.key === 'Backspace' || event.key === 'Delete') && !loading) {
         handleBackspace();
       }
       // Enter para confirmar
-      else if (event.key === 'Enter' && pin.length >= 4 && !loading) {
+      else if (isEnter && pin.length >= 4 && !loading) {
         handleSubmit(event as any);
       }
     };
 
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [isOpen, isDesktop, pin, loading]);
+  }, [isOpen, pin, loading]);
 
   // Cerrar modal con tecla Escape
   useEffect(() => {
@@ -170,15 +155,13 @@ const PinModal: React.FC<PinModalProps> = ({
               PIN de Autorización
             </label>
             
-            {/* Indicador de entrada por teclado (solo desktop) */}
-            {isDesktop && (
-              <div className="flex items-center justify-center gap-2 mb-3 text-xs text-gray-400">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                <span>Puedes usar el teclado numérico</span>
-              </div>
-            )}
+            {/* Indicador de entrada por teclado */}
+            <div className="flex items-center justify-center gap-2 mb-3 text-xs text-gray-400">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span>Puedes usar el teclado numérico</span>
+            </div>
             
             {/* PIN Display */}
             <div className="w-full px-4 py-4 bg-gray-900 border-2 border-gray-600 rounded-lg mb-4">

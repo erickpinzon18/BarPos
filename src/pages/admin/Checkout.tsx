@@ -15,6 +15,7 @@ import {
 } from "../../hooks/usePromotions";
 import { Tag, Clock, Gift } from "lucide-react";
 import toast from "react-hot-toast";
+import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 
 const AdminCheckout: React.FC = () => {
   const location = useLocation();
@@ -62,6 +63,7 @@ const AdminCheckout: React.FC = () => {
   const [tipMode, setTipMode] = useState<"percent" | "amount">("percent");
   const [tipPercent, setTipPercent] = useState<number>(0.15);
   const [customTipAmount, setCustomTipAmount] = useState<string>("");
+  const [customTipPercent, setCustomTipPercent] = useState<string>("");
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);
@@ -755,10 +757,10 @@ const AdminCheckout: React.FC = () => {
                 <span>Subtotal:</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              {/* <div className="flex justify-between"><span>Propina ({(tipPercent * 100).toFixed(0)}%):</span><span>${tipAmount.toFixed(2)}</span></div> */}
+              {/* <div className="flex justify-between"><span>Propina ({formatTipPercent(tipPercent)}%):</span><span>${tipAmount.toFixed(2)}</span></div> */}
               <div className="flex justify-between">
                 <span className="font-bold">
-                  Propina ({(tipPercent * 100).toFixed(0)}%):
+                  Propina ({formatTipPercent(tipPercent)}%):
                 </span>
                 <span id="tip-amount">${tipAmount.toFixed(2)}</span>
               </div>
@@ -816,14 +818,14 @@ const AdminCheckout: React.FC = () => {
               <div className="flex bg-gray-900 rounded-lg overflow-hidden border border-gray-700 text-sm">
                 <button
                   disabled={isReadOnly}
-                  onClick={() => { setTipMode("percent"); setTipPercent(0.15); setCustomTipAmount(""); }}
+                  onClick={() => { setTipMode("percent"); setTipPercent(0.15); setCustomTipAmount(""); setCustomTipPercent(""); }}
                   className={`px-3 py-1.5 font-semibold transition-colors ${tipMode === "percent" ? "bg-red-600 text-white" : "text-gray-400 hover:text-white disabled:cursor-not-allowed"}`}
                 >
-                  15%
+                  %
                 </button>
                 <button
                   disabled={isReadOnly}
-                  onClick={() => { setTipMode("amount"); setTipPercent(0); setCustomTipAmount(""); }}
+                  onClick={() => { setTipMode("amount"); setTipPercent(0); setCustomTipAmount(""); setCustomTipPercent(""); }}
                   className={`px-3 py-1.5 font-semibold transition-colors ${tipMode === "amount" ? "bg-red-600 text-white" : "text-gray-400 hover:text-white disabled:cursor-not-allowed"}`}
                 >
                   $ Monto
@@ -832,10 +834,46 @@ const AdminCheckout: React.FC = () => {
             </div>
 
             {tipMode === "percent" ? (
-              <div className="flex justify-between items-center text-sm text-gray-400">
-                <span>15% del subtotal</span>
-                <span className="text-white font-bold text-lg">${tipAmount.toFixed(2)}</span>
-              </div>
+              <>
+                <div className="grid grid-cols-4 gap-2">
+                  {[0.1, 0.15, 0.2].map(p => (
+                    <button
+                      key={p}
+                      disabled={isReadOnly}
+                      onClick={() => { setTipPercent(prev => (prev === p && customTipPercent === "" ? 0 : p)); setCustomTipPercent(""); }}
+                      className={`font-bold py-3 px-2 rounded-lg transition-colors ${
+                        customTipPercent === "" && tipPercent === p
+                          ? "bg-red-600 text-white"
+                          : "bg-gray-700 hover:bg-gray-600 text-white disabled:bg-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                      }`}
+                    >
+                      {formatTipPercent(p)}%
+                    </button>
+                  ))}
+                  <div className="relative">
+                    <input
+                      disabled={isReadOnly}
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={customTipPercent}
+                      onChange={(e) => {
+                        setCustomTipPercent(e.target.value);
+                        setTipPercent(parseTipPercentInput(e.target.value));
+                      }}
+                      placeholder="Otro"
+                      className={`w-full h-full bg-gray-900 border text-white text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3 pr-6 disabled:cursor-not-allowed ${customTipPercent !== "" ? "border-red-600" : "border-gray-700"}`}
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">%</span>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-between items-center text-sm text-gray-400">
+                  <span>{formatTipPercent(tipPercent)}% del subtotal</span>
+                  <span className="text-white font-bold text-lg">${tipAmount.toFixed(2)}</span>
+                </div>
+              </>
             ) : (
               <>
                 <div className="flex items-center gap-3">
@@ -861,7 +899,7 @@ const AdminCheckout: React.FC = () => {
                 </div>
                 {subtotal > 0 && tipAmount > 0 && (
                   <div className="mt-2 text-sm text-gray-400">
-                    Equivale al <span className="text-white font-semibold">{(tipPercent * 100).toFixed(1)}%</span> del subtotal
+                    Equivale al <span className="text-white font-semibold">{formatTipPercent(tipPercent)}%</span> del subtotal
                   </div>
                 )}
               </>

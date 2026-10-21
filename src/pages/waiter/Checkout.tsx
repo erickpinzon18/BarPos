@@ -14,6 +14,7 @@ import {
 } from "../../hooks/usePromotions";
 import { printTicket } from "../../utils/printTicket";
 import { usePaperSize } from "../../hooks/usePaperSize";
+import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 
 const WaiterCheckout: React.FC = () => {
   const location = useLocation();
@@ -185,15 +186,7 @@ const WaiterCheckout: React.FC = () => {
 
   const handleCustomTipChange = (value: string) => {
     setCustomTipPercent(value);
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed) && parsed >= 0) {
-      // Interpret numbers >= 1 as percentage values (e.g. 15 -> 15%), numbers < 1 as decimals (e.g. 0.15)
-      const bounded = Math.min(Math.max(parsed, 0), 100); // clamp between 0 and 100
-      const percent = bounded >= 1 ? bounded / 100 : bounded; // 1 -> 0.01 (1%)
-      setTipPercent(percent);
-    } else if (value === "") {
-      setTipPercent(0);
-    }
+    setTipPercent(parseTipPercentInput(value));
   };
 
   const handlePrint = (customOrder?: Order) => {
@@ -567,7 +560,7 @@ const WaiterCheckout: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="font-bold">
-                    Propina ({(tipPercent * 100).toFixed(0)}%):
+                    Propina ({formatTipPercent(tipPercent)}%):
                   </span>
                   <span>${tipAmount.toFixed(2)}</span>
                 </div>
@@ -672,7 +665,7 @@ const WaiterCheckout: React.FC = () => {
                 />
               </div>
               <div className="mt-2 text-xs md:text-sm text-gray-400">
-                Seleccionado: {(tipPercent * 100).toFixed(0)}% = $
+                Seleccionado: {formatTipPercent(tipPercent)}% = $
                 {tipAmount.toFixed(2)}
               </div>
             </div>

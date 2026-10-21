@@ -9,6 +9,7 @@ import { usePaperSize } from '../../hooks/usePaperSize';
 import PinModal from '../../components/common/PinModal';
 import toast from 'react-hot-toast';
 import { getShiftDateFor, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
+import { formatTipPercent } from '../../utils/tip';
 
 // Botón de un solo uso para regenerar folios históricos. Se deja oculto tras el uso inicial;
 // cambia a true si algún día hace falta correrlo de nuevo.
@@ -380,7 +381,7 @@ const AdminTickets: React.FC = () => {
                 <div className="flex justify-between items-center text-md">
                   <span className="text-gray-300">Propina{(() => {
                     const tipPercent = selected.payments?.[0]?.tipPercent ?? 0;
-                    return tipPercent > 0 ? ` (${(tipPercent * 100).toFixed(0)}%)` : '';
+                    return tipPercent > 0 ? ` (${formatTipPercent(tipPercent)}%)` : '';
                   })()}:</span>
                   <span className="font-semibold text-white">${(() => {
                     const discount = (selected as any).discount ?? 0;

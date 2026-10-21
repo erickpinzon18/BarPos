@@ -11,6 +11,7 @@ import { useActivePromotions, isPromotionWithinSchedule } from '../../hooks/useP
 import { Tag, Clock } from 'lucide-react';
 import { printTicket } from '../../utils/printTicket';
 import { usePaperSize } from '../../hooks/usePaperSize';
+import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 
 const KitchenCheckout: React.FC = () => {
   const location = useLocation();
@@ -131,14 +132,7 @@ const KitchenCheckout: React.FC = () => {
 
   const handleCustomTipChange = (value: string) => {
     setCustomTipPercent(value);
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed) && parsed >= 0) {
-      const bounded = Math.min(Math.max(parsed, 0), 100);
-      const percent = bounded >= 1 ? bounded / 100 : bounded;
-      setTipPercent(percent);
-    } else if (value === '') {
-      setTipPercent(0);
-    }
+    setTipPercent(parseTipPercentInput(value));
   };
 
   const handlePrint = (customOrder?: Order) => {
@@ -380,7 +374,7 @@ const KitchenCheckout: React.FC = () => {
 
             <div className="border-t border-dashed border-gray-600 mt-4 pt-2">
               <div className="flex justify-between"><span className="font-bold">Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="font-bold">Propina ({(tipPercent * 100).toFixed(0)}%):</span><span>${tipAmount.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="font-bold">Propina ({formatTipPercent(tipPercent)}%):</span><span>${tipAmount.toFixed(2)}</span></div>
               {activePromos.map(promo => {
                 const promoDiscount = activeItems
                   .filter(i => itemPromoMap[i.id]?.id === promo.id)
@@ -416,7 +410,7 @@ const KitchenCheckout: React.FC = () => {
               <button disabled={isReadOnly} onClick={() => updateTotalWithPercent(0.20)} className={`flex-1 font-bold py-3 px-2 rounded-lg transition duration-300 ${tipPercent === 0.20 ? 'bg-orange-500 text-gray-900' : isReadOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'}`}>20%</button>
               <input disabled={isReadOnly} type="number" value={customTipPercent} onChange={e => handleCustomTipChange(e.target.value)} placeholder="Otro %" className="w-24 bg-gray-900 border border-gray-800 text-center rounded-lg focus:ring-orange-500 focus:border-orange-500 py-3" />
             </div>
-            <div className="mt-2 text-sm text-gray-400">Seleccionado: {(tipPercent * 100).toFixed(0)}%</div>
+            <div className="mt-2 text-sm text-gray-400">Seleccionado: {formatTipPercent(tipPercent)}%</div>
           </div>
 
           {activePromos.map(promo => {

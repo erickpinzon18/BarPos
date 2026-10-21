@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Table, Order, Reservation } from '../../utils/types';
+import { TABLE_LAYOUT, DECOR_LAYOUT, isLayoutTable } from '../../utils/venueLayout';
 
 interface VenueMapProps {
   tables: Table[];
@@ -11,118 +12,6 @@ interface VenueMapProps {
   /** Waiter view: tables occupied by another waiter are dimmed & non-interactive */
   currentUserId?: string;
 }
-
-interface TablePos {
-  number: number | string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  shape?: 'circle';
-}
-
-// ─── Grid constants ──────────────────────────────────────────────────────────
-const TW = 8.6;   // table width  %
-const TH = 13.1;  // table height %
-const VW = 6.3;   // VIP/extra column width %
-const VCW = 4.0;  // third extra column width %
-const CW = 5.0;   // circle width %
-const CH = 9.0;   // circle height%
-
-// Main grid columns (left edge %)
-const CA = 30, CB = 42, CC = 53, CD = 65, CE = 76;
-// Right side column
-const CR = 89;
-
-// Main grid rows (top edge %)
-const R1 = 18, R2 = 34, R3 = 50, R4 = 66;
-
-// Left side columns
-const VA = 2, VB = 10, VC = 18;
-// VIP rows
-const VR1 = 4, VR2 = 21;
-
-// P-circle column & y (vertically centered within each row)
-const PX  = 23;
-const pcy = (row: number) => row + (TH - CH) / 2;
-
-// Bottom row y
-const BOTTOM_Y = 80;
-
-// Bar tables (B1–B5) positioned in the top strip
-const BAR_Y = 2;
-const BAR_W = 10.5;
-const BAR_GAP = 0.4;
-const barX = (i: number) => CA + i * (BAR_W + BAR_GAP);
-
-const TABLE_LAYOUT: TablePos[] = [
-  // ── Barra (B1–B5) ─────────────────────────────────────
-  { number: 'B1', x: barX(0), y: BAR_Y, w: BAR_W, h: TH },
-  { number: 'B2', x: barX(1), y: BAR_Y, w: BAR_W, h: TH },
-  { number: 'B3', x: barX(2), y: BAR_Y, w: BAR_W, h: TH },
-  { number: 'B4', x: barX(3), y: BAR_Y, w: BAR_W, h: TH },
-  { number: 'B5', x: barX(4), y: BAR_Y, w: BAR_W, h: TH },
-
-  // ── Right column (1, 2, 3 + Salas) ───────────────────
-  { number: 1,         x: CR,  y: R1,      w: TW, h: TH },
-  { number: 2,         x: CR,  y: R2,      w: TW, h: TH },
-  { number: 3,         x: CR,  y: R3,      w: TW, h: TH },
-  { number: 'Sala 1',  x: CR,  y: R4,      w: TW, h: TH },
-  { number: 'Sala 2',  x: CR,  y: BOTTOM_Y, w: TW, h: TH },
-
-  // ── Row 1 (10–13) ─────────────────────────────────────
-  { number: 10,        x: CA,  y: R1,      w: TW, h: TH },
-  { number: 11,        x: CB,  y: R1,      w: TW, h: TH },
-  { number: 12,        x: CC,  y: R1,      w: TW, h: TH },
-  { number: 13,        x: CD,  y: R1,      w: TW, h: TH },
-
-  // ── Row 2 (20–24) ─────────────────────────────────────
-  { number: 20,        x: CA,  y: R2,      w: TW, h: TH },
-  { number: 21,        x: CB,  y: R2,      w: TW, h: TH },
-  { number: 22,        x: CC,  y: R2,      w: TW, h: TH },
-  { number: 23,        x: CD,  y: R2,      w: TW, h: TH },
-  { number: 24,        x: CE,  y: R2,      w: TW, h: TH },
-
-  // ── Row 3 (30–34) ─────────────────────────────────────
-  { number: 30,        x: CA,  y: R3,      w: TW, h: TH },
-  { number: 31,        x: CB,  y: R3,      w: TW, h: TH },
-  { number: 32,        x: CC,  y: R3,      w: TW, h: TH },
-  { number: 33,        x: CD,  y: R3,      w: TW, h: TH },
-  { number: 34,        x: CE,  y: R3,      w: TW, h: TH },
-
-  // ── Row 4 (40–42, offset one col) ─────────────────────
-  { number: 40,        x: CB,  y: R4,      w: TW, h: TH },
-  { number: 41,        x: CC,  y: R4,      w: TW, h: TH },
-  { number: 42,        x: CD,  y: R4,      w: TW, h: TH },
-
-  // ── VIP 2×2 block ─────────────────────────────────────
-  { number: 'V3',      x: VA,  y: VR1,     w: VW, h: TH },
-  { number: 'V4',      x: VB,  y: VR1,     w: VW, h: TH },
-  { number: 'V1',      x: VA,  y: VR2,     w: VW, h: TH },
-  { number: 'V2',      x: VB,  y: VR2,     w: VW, h: TH },
-
-  // ── Extras — 3 cols × 3 rows ──────────────────────────
-  { number: 'Extra 1', x: VA,  y: 38,      w: VW,  h: TH },
-  { number: 'Extra 2', x: VB,  y: 38,      w: VW,  h: TH },
-  { number: 'Extra 3', x: VA,  y: 55,      w: VW,  h: TH },
-  { number: 'Extra 4', x: VB,  y: 55,      w: VW,  h: TH },
-  { number: 'Extra 5', x: VA,  y: 70,      w: VW,  h: TH },
-  { number: 'Extra 6', x: VB,  y: 70,      w: VW,  h: TH },
-  { number: 'Extra 7', x: VC,  y: 38,      w: VCW, h: TH },
-  { number: 'Extra 8', x: VC,  y: 55,      w: VCW, h: TH },
-  { number: 'Extra 9', x: VC,  y: 70,      w: VCW, h: TH },
-
-  // ── P circles — vertical column, aligned with rows ────
-  { number: 'P1',      x: PX,  y: pcy(R1), w: CW, h: CH, shape: 'circle' },
-  { number: 'P2',      x: PX,  y: pcy(R2), w: CW, h: CH, shape: 'circle' },
-  { number: 'P3',      x: PX,  y: pcy(R3), w: CW, h: CH, shape: 'circle' },
-  { number: 'P4',      x: PX,  y: pcy(R4), w: CW, h: CH, shape: 'circle' },
-
-  // ── P5–P7 — horizontal row at bottom ──────────────────
-  { number: 'P5',      x: CB,  y: BOTTOM_Y + (TH - CH) / 2, w: CW, h: CH, shape: 'circle' },
-  { number: 'P6',      x: CC,  y: BOTTOM_Y + (TH - CH) / 2, w: CW, h: CH, shape: 'circle' },
-  { number: 'P7',      x: CD,  y: BOTTOM_Y + (TH - CH) / 2, w: CW, h: CH, shape: 'circle' },
-];
 
 // Detecta si una mesa es de barra (número 0 legacy o B1–B9)
 const isBarNumber = (n: number | string): boolean =>
@@ -273,14 +162,28 @@ export const VenueMap: React.FC<VenueMapProps> = ({
         className="relative select-none"
         style={{
           minWidth: `${MAP_MIN_W}px`,
-          // AR=1.89 is derived so content fills ~96% of both axes with no dead space
-          aspectRatio: '1.55',
+          aspectRatio: '1.95',
           background: 'linear-gradient(145deg, #0d1117 0%, #111827 55%, #0d1117 100%)',
           border: '1px solid rgba(255,255,255,0.05)',
           borderRadius: '16px',
         }}
         onClick={() => setSelectedId(null)}
       >
+        {DECOR_LAYOUT.map(d => (
+          <div
+            key={d.label}
+            className="absolute flex items-center justify-center pointer-events-none"
+            style={{
+              left: `${d.x}%`, top: `${d.y}%`, width: `${d.w}%`, height: `${d.h}%`,
+              borderRadius: '12px',
+              background: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 8px, rgba(255,255,255,0.06) 8px 16px)',
+              border: '1px dashed rgba(156,163,175,0.35)',
+            }}
+          >
+            <span className="text-gray-500 font-semibold tracking-widest uppercase" style={{ fontSize: '12px' }}>{d.label}</span>
+          </div>
+        ))}
+
         {TABLE_LAYOUT.map(pos => {
           const table = tables.find(t => String(t.number) === String(pos.number));
           if (!table) return null;
@@ -291,7 +194,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
           const reservation = reservations.find(r => r.tableId === table.id);
           const isReserved = !!reservation && !isActive; // Show reservation color only when not occupied
           const isSel    = selectedId === table.id;
-          const isCircle = pos.shape === 'circle';
+          const isCircle = false;
           const isBar    = isBarNumber(pos.number);
 
           const label = isBar
@@ -392,6 +295,32 @@ export const VenueMap: React.FC<VenueMapProps> = ({
           );
         })}
       </div>
+
+      {/* Mesas fuera del plano que siguen ocupadas (cuentas abiertas antes del cambio) */}
+      {(() => {
+        const others = tables.filter(t => !isLayoutTable(t.number));
+        if (others.length === 0) return null;
+        return (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-gray-400">Otras mesas abiertas:</span>
+            {others.map(t => {
+              const order = orders.find(o => o.tableId === t.id);
+              const isOtherWaiter = !!currentUserId && !!order && order.waiterId !== currentUserId;
+              return (
+                <button
+                  key={t.id}
+                  disabled={isOtherWaiter}
+                  onClick={() => onTableClick(t)}
+                  className="px-3 py-1.5 rounded-lg border text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: ac.bg, borderColor: ac.border }}
+                >
+                  {typeof t.number === 'number' ? `Mesa ${t.number}` : t.number}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
     </div>
   );
 };

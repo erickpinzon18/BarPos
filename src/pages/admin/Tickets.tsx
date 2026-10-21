@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePaperSize } from '../../hooks/usePaperSize';
 import PinModal from '../../components/common/PinModal';
 import toast from 'react-hot-toast';
+import { getShiftDateFor, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
 
 // Botón de un solo uso para regenerar folios históricos. Se deja oculto tras el uso inicial;
 // cambia a true si algún día hace falta correrlo de nuevo.
@@ -195,15 +196,8 @@ const AdminTickets: React.FC = () => {
             return new Date(y, m - 1, day);
           };
 
-          // Orders between midnight and 5 AM belong to the previous evening's shift
-          const getShiftDateKey = (d: Date) => {
-            if (d.getHours() < 5) {
-              const prev = new Date(d);
-              prev.setDate(prev.getDate() - 1);
-              return makeLocalDateKey(prev);
-            }
-            return makeLocalDateKey(d);
-          };
+          // Orders before opening time belong to the previous night's shift
+          const getShiftDateKey = (d: Date) => makeLocalDateKey(getShiftDateFor(d));
 
           const groups: Record<string, Order[]> = {};
           const q = (searchQuery || '').trim().toLowerCase();
@@ -253,8 +247,8 @@ const AdminTickets: React.FC = () => {
                 const startLabel = shiftStart.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                 const endLabel = shiftEnd.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
                 const headerLabel = isCurrentShift
-                  ? `Turno actual — ${startLabel} · 5:00 PM → ${endLabel} 5:00 AM`
-                  : `Turno ${startLabel} · 5:00 PM → ${endLabel} 5:00 AM`;
+                  ? `Turno actual — ${startLabel} · ${SHIFT_START_LABEL} → ${endLabel} ${SHIFT_END_LABEL}`
+                  : `Turno ${startLabel} · ${SHIFT_START_LABEL} → ${endLabel} ${SHIFT_END_LABEL}`;
 
                 return (
                   <div key={dateKey}>

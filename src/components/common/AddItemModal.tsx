@@ -343,8 +343,8 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
             selectedProduct 
               ? (selectedProduct.category === 'Botella' && selectedProduct.name.toLowerCase().includes('promo') 
                   ? 10 
-                  : (getProductPromo(selectedProduct) ? 3 : 5)) 
-              : 5
+                  : (getProductPromo(selectedProduct) ? 3 : 4)) 
+              : 4
           }
           loading={loading}
         />

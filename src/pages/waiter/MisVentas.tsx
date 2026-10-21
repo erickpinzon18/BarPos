@@ -4,27 +4,11 @@ import { db } from "../../services/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import type { Order } from "../../utils/types";
 import { TrendingUp, DollarSign, Users, Package, Clock, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { getShiftRange, getCurrentShiftDate, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
 
 const CARD_COMMISSION_RATE = 0.05;
 
-const getShiftRange = (date: Date) => {
-  const shiftStart = new Date(date);
-  shiftStart.setHours(17, 0, 0, 0);
-  const shiftEnd = new Date(date);
-  shiftEnd.setDate(shiftEnd.getDate() + 1);
-  shiftEnd.setHours(5, 0, 0, 0);
-  return { shiftStart, shiftEnd };
-};
 
-const getCurrentShiftDate = () => {
-  const now = new Date();
-  if (now.getHours() >= 0 && now.getHours() < 17) {
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    return yesterday;
-  }
-  return now;
-};
 
 interface OrderRow {
   o: Order;
@@ -178,9 +162,9 @@ const MisVentas: React.FC = () => {
         </div>
         <div className="flex items-center gap-1 text-xs text-gray-400 sm:ml-auto">
           <Clock size={13} />
-          {shiftStart.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })} 5:00 PM
+          {shiftStart.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })} {SHIFT_START_LABEL}
           {" → "}
-          {shiftEnd.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })} 5:00 AM
+          {shiftEnd.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })} {SHIFT_END_LABEL}
         </div>
       </div>
 

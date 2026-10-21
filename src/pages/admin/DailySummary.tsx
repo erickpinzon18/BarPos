@@ -32,6 +32,7 @@ import { sendToPrinter } from "../../utils/printTicket";
 import { PrintableDailySummary } from "../../components/admin/PrintableDailySummary";
 import { useActiveOrders } from "../../hooks/useOrders";
 import { exportShiftReportToExcel } from "../../utils/exportExcel";
+import { getShiftRange, getCurrentShiftDate, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
 
 const CARD_COMMISSION_RATE = 0.05; // 5% comisión terminal
 
@@ -129,27 +130,9 @@ const fmtLine = (left: string, right: string) => {
 };
 const fmtM = (n: number) => `$${n.toFixed(2)}`;
 
-const getShiftRange = (date: Date) => {
-  const shiftStart = new Date(date);
-  shiftStart.setHours(17, 0, 0, 0);
-  const shiftEnd = new Date(date);
-  shiftEnd.setDate(shiftEnd.getDate() + 1);
-  shiftEnd.setHours(5, 0, 0, 0);
-  return { shiftStart, shiftEnd };
-};
 
 const DailySummary: React.FC = () => {
   // Función para obtener la fecha del turno actual
-  const getCurrentShiftDate = () => {
-    const now = new Date();
-    const h = now.getHours();
-    if (h >= 0 && h < 17) {
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
-      return yesterday;
-    }
-    return now;
-  };
 
   const [summary, setSummary] = useState<ShiftSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -976,13 +959,13 @@ const DailySummary: React.FC = () => {
                 day: "numeric",
                 month: "short",
               })}{" "}
-              5:00 PM
+              {SHIFT_START_LABEL}
               {" → "}
               {shiftEnd.toLocaleDateString("es-ES", {
                 day: "numeric",
                 month: "short",
               })}{" "}
-              5:00 AM
+              {SHIFT_END_LABEL}
             </span>
           </div>
           {folioRange && (
@@ -1715,8 +1698,8 @@ const DailySummary: React.FC = () => {
                 No hay ventas registradas en este turno
               </p>
               <p className="text-gray-500 text-sm mt-2">
-                Turno: {shiftStart.toLocaleDateString("es-ES")} 5:00 PM –{" "}
-                {shiftEnd.toLocaleDateString("es-ES")} 5:00 AM
+                Turno: {shiftStart.toLocaleDateString("es-ES")} {SHIFT_START_LABEL} –{" "}
+                {shiftEnd.toLocaleDateString("es-ES")} {SHIFT_END_LABEL}
               </p>
             </div>
           )}

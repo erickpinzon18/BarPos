@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { Order } from '../../utils/types';
 import { CATEGORIES } from '../../utils/categories';
 import type { CategoryKey } from '../../utils/categories';
+import { getShiftRange, getCurrentShiftDate, SHIFT_START_LABEL, SHIFT_END_LABEL, SHIFT_START_HHMM, SHIFT_END_HHMM } from '../../utils/shift';
 
 interface ProductLine {
   name: string;
@@ -30,33 +31,7 @@ interface ServiceLine {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getDefaultShiftDate(): Date {
-  const now = new Date();
-  const h = now.getHours();
-  // Before 5 AM → shift started yesterday
-  if (h < 5) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 1);
-    return d;
-  }
-  // Between 5 AM and 5 PM → yesterday's shift already ended
-  if (h < 17) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 1);
-    return d;
-  }
-  // After 5 PM → current shift started today
-  return now;
-}
-
-function getShiftRange(date: Date): { shiftStart: Date; shiftEnd: Date } {
-  const shiftStart = new Date(date);
-  shiftStart.setHours(17, 0, 0, 0);
-  const shiftEnd = new Date(date);
-  shiftEnd.setDate(shiftEnd.getDate() + 1);
-  shiftEnd.setHours(5, 0, 0, 0);
-  return { shiftStart, shiftEnd };
-}
+const getDefaultShiftDate = getCurrentShiftDate;
 
 function buildGroups(orders: Order[]): CategoryGroup[] {
   const byCategory = new Map<CategoryKey, Map<string, number>>();
@@ -144,7 +119,7 @@ function printInventoryTicket(
   lines.push(sep('='));
   lines.push(center('CORTE DE VENTAS'));
   lines.push(sep('='));
-  lines.push(`Turno: ${fmt(shiftStart)} 17:00 - ${fmt(shiftEnd)} 05:00`);
+  lines.push(`Turno: ${fmt(shiftStart)} ${SHIFT_START_HHMM} - ${fmt(shiftEnd)} ${SHIFT_END_HHMM}`);
   lines.push(`Impreso: ${timeStr}`);
   lines.push(sep('-'));
 
@@ -295,9 +270,9 @@ const Ventas: React.FC = () => {
           <div className="flex items-center gap-1.5 text-sm text-gray-400">
             <Clock size={14} className="flex-shrink-0" />
             <span>
-              {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} 5:00 PM
+              {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} {SHIFT_START_LABEL}
               {' → '}
-              {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} 5:00 AM
+              {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit' })} {SHIFT_END_LABEL}
             </span>
           </div>
         </div>
@@ -328,9 +303,9 @@ const Ventas: React.FC = () => {
           <Package className="w-12 h-12 text-gray-600 mx-auto mb-3" />
           <p className="text-gray-400">No hay ventas en este turno</p>
           <p className="text-gray-600 text-sm mt-1">
-            {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} 5:00 PM
+            {shiftStart.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} {SHIFT_START_LABEL}
             {' → '}
-            {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} 5:00 AM
+            {shiftEnd.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })} {SHIFT_END_LABEL}
           </p>
         </div>
       )}

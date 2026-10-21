@@ -1057,7 +1057,7 @@ const KitchenOrderDetails: React.FC = () => {
             onClose={() => setShowEditBottleModal(false)}
             onConfirm={handleConfirmEditBottle}
             product={products.find(p => p.id === itemToEditBottle.productId) || null}
-            maxServicesPerBottle={5}
+            maxServicesPerBottle={4}
             loading={editBottleLoading}
             isPromoX2={itemToEditBottle.notes?.includes("2 BOTELLAS")}
             isEditMode={true}

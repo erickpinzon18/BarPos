@@ -1104,7 +1104,7 @@ const WaiterOrderDetails: React.FC = () => {
                     onClose={() => setShowEditBottleModal(false)}
                     onConfirm={handleConfirmEditBottle}
                     product={products.find(p => p.id === itemToEditBottle.productId) || null}
-                    maxServicesPerBottle={5} // Asumimos 5 por defecto o lo sacamos del promo
+                    maxServicesPerBottle={4}
                     loading={editBottleLoading}
                     isPromoX2={itemToEditBottle.notes?.includes('2 BOTELLAS')}
                     isEditMode={true}

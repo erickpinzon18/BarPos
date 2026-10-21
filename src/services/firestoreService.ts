@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { seqToFolio } from '../utils/folio';
+import { getShiftRange } from '../utils/shift';
 import type {
   User,
   Product,
@@ -1009,10 +1010,8 @@ export const getOrdersByDateRange = async (startDate: Date, endDate: Date): Prom
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
 
-    // Include the shift that spills past midnight: end of day + 5 AM next day
-    const end = new Date(endDate);
-    end.setDate(end.getDate() + 1);
-    end.setHours(5, 0, 0, 0);
+    // Include the shift that spills past midnight
+    const { shiftEnd: end } = getShiftRange(endDate);
 
     const q = query(
       collection(db, 'orders'),
@@ -1032,15 +1031,10 @@ export const getOrdersByDateRange = async (startDate: Date, endDate: Date): Prom
   }
 };
 
-// Get orders within a shift range (5 PM → 5 AM next day) using createdAt
+// Get orders within a shift range (see utils/shift) using createdAt
 export const getOrdersByShift = async (shiftDate: Date): Promise<FirestoreResponse<Order[]>> => {
   try {
-    const start = new Date(shiftDate);
-    start.setHours(17, 0, 0, 0); // 5 PM
-
-    const end = new Date(shiftDate);
-    end.setDate(end.getDate() + 1);
-    end.setHours(5, 0, 0, 0); // 5 AM next day
+    const { shiftStart: start, shiftEnd: end } = getShiftRange(shiftDate);
 
     const q = query(
       collection(db, 'orders'),

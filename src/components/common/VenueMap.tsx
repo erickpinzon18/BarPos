@@ -298,7 +298,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
 
       {/* Mesas fuera del plano que siguen ocupadas (cuentas abiertas antes del cambio) */}
       {(() => {
-        const others = tables.filter(t => !isLayoutTable(t.number));
+        const others = tables.filter(t => !isLayoutTable(t.number) && orders.some(o => o.tableId === t.id));
         if (others.length === 0) return null;
         return (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">

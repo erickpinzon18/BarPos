@@ -11,11 +11,14 @@ import { useTodayReservations } from '../../hooks/useTodayReservations';
 import '../../utils/addUserPins';
 import '../../utils/createSampleProducts';
 import type { Table } from '../../utils/types';
+import { withEffectiveStatus } from '../../utils/tableStatus';
 
 const AdminHome: React.FC = () => {
   const navigate = useNavigate();
-  const { tables, loading: tablesLoading, error: tablesError } = useTables();
+  const { tables: rawTables, loading: tablesLoading, error: tablesError } = useTables();
   const { orders, loading: ordersLoading, error: ordersError } = useActiveOrders();
+  // Mesas 'ocupadas' sin orden activa se tratan como libres (se pueden volver a abrir)
+  const tables = withEffectiveStatus(rawTables, orders);
   const { currentUser } = useAuth();
   const { reservations } = useTodayReservations();
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');

@@ -10,11 +10,14 @@ import { useTodayReservations } from '../../hooks/useTodayReservations';
 import { LogOut, User } from 'lucide-react';
 import type { Table } from '../../utils/types';
 import { SECTIONS, sortTables } from '../../components/common/TableGrid';
+import { withEffectiveStatus } from '../../utils/tableStatus';
 
 const WaiterHome: React.FC = () => {
   const navigate = useNavigate();
-  const { tables, loading: tablesLoading, error: tablesError } = useTables();
+  const { tables: rawTables, loading: tablesLoading, error: tablesError } = useTables();
   const { orders, loading: ordersLoading, error: ordersError } = useActiveOrders();
+  // Mesas 'ocupadas' sin orden activa se tratan como libres (se pueden volver a abrir)
+  const tables = withEffectiveStatus(rawTables, orders);
   const { currentUser, logout } = useAuth();
   const { reservations } = useTodayReservations();
   const [openingTableId, setOpeningTableId] = useState<string | null>(null);

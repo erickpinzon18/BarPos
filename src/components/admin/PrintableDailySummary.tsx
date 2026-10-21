@@ -64,8 +64,8 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
               <p className="font-bold text-lg">{formatCurrency(summary.totalSales)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase">Propinas a Repartir</p>
-              <p className="font-bold text-lg">{formatCurrency(summary.totalTipsNet)}</p>
+              <p className="text-xs text-gray-500 uppercase">Propinas</p>
+              <p className="font-bold text-lg">{formatCurrency(summary.totalTips)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 uppercase">Cuentas</p>
@@ -110,7 +110,7 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
         )}
 
         {/* Detalles, Gastos y Métodos de Pago */}
-        <div className={`grid gap-8 mb-8 break-inside-avoid ${hasExpenses ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <div className={`grid gap-8 mb-8 break-inside-avoid ${hasExpenses ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div>
             <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Métodos de Pago</h3>
             <table className="w-full text-sm">
@@ -148,26 +148,6 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
               </tbody>
             </table>
           </div>
-          <div>
-            <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Desglose de Propinas</h3>
-            <table className="w-full text-sm">
-              <tbody>
-                <tr>
-                  <td className="py-1">Propinas en tarjeta (neta) <span className="text-gray-400 text-xs font-normal">— 5% comisión ya descontada</span></td>
-                  <td className="text-right font-medium">{formatCurrency(summary.totalCardTipsNet)}</td>
-                </tr>
-                <tr>
-                  <td className="py-1 border-b border-gray-200 pb-2">Propinas efect/transf</td>
-                  <td className="text-right font-medium border-b border-gray-200 pb-2">{formatCurrency(summary.totalTips - summary.totalCardTips)}</td>
-                </tr>
-                <tr>
-                  <td className="py-2 font-bold">Propinas a Repartir</td>
-                  <td className="text-right font-bold">{formatCurrency(summary.totalTipsNet)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
           {hasExpenses && (
             <div>
               <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Gastos del Turno</h3>
@@ -196,7 +176,7 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
         {/* Desglose por Mesero */}
         {summary.waiterStats.length > 0 && (
           <div className="mb-8">
-            <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Desglose por Mesero</h3>
+            <h3 className="font-bold uppercase border-b-2 border-black mb-3 pb-1">Corte por Mesero</h3>
             <div className="space-y-6">
               {summary.waiterStats.map((w: any, idx: number) => (
                 <div key={idx} className="border border-gray-200 rounded-lg p-4 break-inside-avoid">
@@ -207,45 +187,18 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                     </span>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                  <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500 text-xs">Ventas (Efect/Transf)</p>
-                      <p className="font-medium">{formatCurrency(w.salesCash + w.salesTransfer)}</p>
+                      <p className="text-gray-500 text-xs">Vendido</p>
+                      <p className="font-medium">{formatCurrency(w.totalSales - w.totalTips)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Ventas (Tarjeta)</p>
-                      <p className="font-medium">{formatCurrency(w.salesCard)}</p>
+                      <p className="text-gray-500 text-xs">Propina</p>
+                      <p className="font-medium">{formatCurrency(w.totalTips)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Propina Tarjeta (neta)</p>
-                      <p className="font-medium">{formatCurrency(w.tipsCardNet)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs">Propinas a Repartir</p>
-                      <p className="font-bold">{formatCurrency(w.tipsNet)}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 p-3 rounded text-xs grid grid-cols-5 gap-2 text-center">
-                    <div>
-                      <p className="text-gray-500">Mesero</p>
-                      <p className="font-bold">{formatCurrency(w.waiterShare)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Barra</p>
-                      <p className="font-bold">{formatCurrency(w.barShare)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Garrotero</p>
-                      <p className="font-bold">{formatCurrency(w.busserShare)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Encargado</p>
-                      <p className="font-bold">{formatCurrency(w.managerShare)}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Caja</p>
-                      <p className="font-bold">{formatCurrency(w.cashierShare)}</p>
+                      <p className="text-gray-500 text-xs">Total</p>
+                      <p className="font-bold">{formatCurrency(w.totalSales)}</p>
                     </div>
                   </div>
                 </div>
@@ -253,33 +206,6 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
             </div>
           </div>
         )}
-
-        {/* Distribución Total */}
-        <div className="mb-8 border border-gray-300 rounded-lg overflow-hidden break-inside-avoid">
-          <div className="bg-gray-100 px-4 py-2 font-bold uppercase border-b border-gray-300">Distribución Total de Propinas</div>
-          <div className="p-4 grid grid-cols-5 gap-2 text-center text-sm">
-            <div>
-              <p className="text-gray-500 mb-1">Meseros (46.67%)</p>
-              <p className="font-bold text-lg">{formatCurrency(summary.totalTipsNet * 0.4667)}</p>
-            </div>
-            <div>
-              <p className="text-gray-500 mb-1">Barra (20.00%)</p>
-              <p className="font-bold text-lg">{formatCurrency(summary.totalBarShare)}</p>
-            </div>
-            <div>
-              <p className="text-gray-500 mb-1">Garrotero (13.33%)</p>
-              <p className="font-bold text-lg">{formatCurrency(summary.totalBusserShare)}</p>
-            </div>
-            <div>
-              <p className="text-gray-500 mb-1">Encargado (13.33%)</p>
-              <p className="font-bold text-lg">{formatCurrency(summary.totalManagerShare)}</p>
-            </div>
-            <div>
-              <p className="text-gray-500 mb-1">Caja (6.67%)</p>
-              <p className="font-bold text-lg">{formatCurrency(summary.totalCashierShare)}</p>
-            </div>
-          </div>
-        </div>
 
         {/* Firma de recepción de efectivo — documento original */}
         <div className="mb-8 border-2 border-black rounded-lg p-6 break-inside-avoid">

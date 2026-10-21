@@ -5,7 +5,7 @@ import { MIXERS } from './BottleQuantityModal';
 import type { Product } from '../../utils/types';
 
 const MAX_MIXERS = 2;
-const DEFAULT_MIXERS = new Array(9).fill(0);
+const DEFAULT_MIXERS = new Array(MIXERS.length).fill(0);
 
 interface DrinkMixerModalProps {
   isOpen: boolean;

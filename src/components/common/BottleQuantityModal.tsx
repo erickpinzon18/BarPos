@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Wine } from 'lucide-react';
 import type { Product } from '../../utils/types';
 
-export type MixerGroup = 'REFRESCOS' | 'BOOST' | 'JUGO';
+export type MixerGroup = 'REFRESCOS' | 'AMPER';
 
 export interface MixerDef {
   label: string;
@@ -16,14 +16,10 @@ export const MIXERS: MixerDef[] = [
   { label: 'Agua Mineral', emoji: '💧', group: 'REFRESCOS' },
   { label: 'Coca Cola',   emoji: '🥤', group: 'REFRESCOS' },
   { label: 'Squirt',      emoji: '🍋', group: 'REFRESCOS' },
-  { label: 'Manzanita',   emoji: '🍎', group: 'REFRESCOS' },
   { label: 'Sprite',      emoji: '🥤', group: 'REFRESCOS' },
   { label: 'Agua Tónica', emoji: '🫧', group: 'REFRESCOS' },
-  { label: 'Ginger Ale',  emoji: '🍺', group: 'REFRESCOS' },
-  // Boost
-  { label: 'Boost',       emoji: '⚡', group: 'BOOST' },
-  // Jugo
-  { label: 'Jarra de Jugo', emoji: '🧃', group: 'JUGO' },
+  // Energizante
+  { label: 'Amper',       emoji: '⚡', group: 'AMPER' },
 ];
 
 interface BottleQuantityModalProps {
@@ -32,7 +28,7 @@ interface BottleQuantityModalProps {
   /** onConfirm receives bottle quantity and a services notes string (may be empty) */
   onConfirm: (quantity: number, notes: string) => Promise<void>;
   product: Product | null;
-  /** 5 for regular price, 3 for promo */
+  /** 4 for regular price, 3 for promo */
   maxServicesPerBottle: number;
   loading?: boolean;
   isPromoX2?: boolean;
@@ -41,7 +37,7 @@ interface BottleQuantityModalProps {
   initialMixers?: number[];
 }
 
-const DEFAULT_MIXERS = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+const DEFAULT_MIXERS = new Array(MIXERS.length).fill(0);
 
 const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
   isOpen,
@@ -74,8 +70,7 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
     
     switch (group) {
       case 'REFRESCOS': return maxServicesPerBottle * qty;
-      case 'BOOST': return 3 * factor * qty;
-      case 'JUGO': return 1 * factor * qty;
+      case 'AMPER': return 3 * factor * qty;
       default: return maxServicesPerBottle * qty;
     }
   };
@@ -246,7 +241,7 @@ const BottleQuantityModal: React.FC<BottleQuantityModalProps> = ({
             Selecciona los servicios
           </h3>
           <p className="text-gray-400 text-sm mt-1">
-            Puedes elegir hasta {maxTotal} {currentGroup === 'BOOST' ? 'Boosts' : currentGroup === 'JUGO' ? 'Jarras' : 'servicios'} 
+            Puedes elegir hasta {maxTotal} {currentGroup === 'AMPER' ? 'Ampers' : 'servicios'} 
             (según el tipo de mezclador seleccionado)
           </p>
         </div>

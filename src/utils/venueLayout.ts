@@ -27,10 +27,10 @@ export const TABLE_LAYOUT: TablePos[] = [
 
   // ── Centro ────────────────────────────────────────────
   { number: 1,  x: 24, y: 34, w: SW, h: SH },
-  { number: 4,  x: 24, y: 58, w: SW, h: SH },
+  { number: 2,  x: 24, y: 58, w: SW, h: SH },
 
   // ── Abajo a la izquierda ──────────────────────────────
-  { number: 2,  x: 6,  y: 78, w: SW, h: SH },
+  { number: 4,  x: 6,  y: 78, w: SW, h: SH },
   { number: 3,  x: 16, y: 78, w: SW, h: SH },
 
   // ── Barra (B1–B5) ─────────────────────────────────────

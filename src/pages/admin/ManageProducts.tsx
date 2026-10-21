@@ -12,13 +12,13 @@ const ManageProducts: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState('Agregar Nuevo Producto');
-  const [form, setForm] = useState<ProductFormData>({ name: '', description: '', price: 0, category: 'Comida', available: true });
+  const [form, setForm] = useState<ProductFormData>({ name: '', description: '', price: 0, category: 'Bebida', available: true });
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     // Reset form when modal closes
     if (!showModal) {
-      setForm({ name: '', description: '', price: 0, category: 'Comida', available: true });
+      setForm({ name: '', description: '', price: 0, category: 'Bebida', available: true });
       setEditingId(null);
       setModalTitle('Agregar Nuevo Producto');
     }

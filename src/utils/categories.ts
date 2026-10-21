@@ -52,21 +52,9 @@ export const CATEGORIES: Category[] = [
     icon: '🥗',
     color: 'bg-green-500',
     workstation: 'cocina'
-  },
-  {
-    key: 'Comida',
-    label: 'Comida',
-    icon: '🍽️',
-    color: 'bg-orange-500',
-    workstation: 'cocina'
-  },
-  {
-    key: 'Postre',
-    label: 'Postre',
-    icon: '🍰',
-    color: 'bg-pink-500',
-    workstation: 'cocina'
   }
+  // 'Comida' y 'Postre' se retiraron del catálogo; siguen en CategoryKey solo
+  // para que las órdenes históricas con esas categorías sigan tipando.
 ];
 
 /**

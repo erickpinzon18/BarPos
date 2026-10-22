@@ -1584,6 +1584,14 @@ const DailySummary: React.FC = () => {
                                 <td className="px-4 py-3 text-right text-white">{formatCurrency(sold)}</td>
                                 <td className="px-4 py-3 text-right text-green-400">{formatCurrency(waiterTip)}</td>
                               </tr>
+                              <tr className="border-t border-gray-700 text-sm">
+                                <td className="px-4 py-2 text-gray-300" colSpan={3}>Propina de los clientes</td>
+                                <td className="px-4 py-2 text-right text-amber-300 font-semibold">{formatCurrency(waiter.totalTips)}</td>
+                              </tr>
+                              <tr className="border-t-2 border-gray-600 bg-green-900/20 font-bold">
+                                <td className="px-4 py-3 text-white" colSpan={3}>SE LE DA AL MESERO (comisión + propina)</td>
+                                <td className="px-4 py-3 text-right text-green-400 text-base">{formatCurrency(waiterTip + waiter.totalTips)}</td>
+                              </tr>
                             </tfoot>
                           </table>
                         </div>

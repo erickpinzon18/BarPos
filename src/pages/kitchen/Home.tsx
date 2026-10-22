@@ -138,7 +138,7 @@ const KitchenHome: React.FC = () => {
               ¿Abrir {tableToConfirm.number === 0 || /^B\d+$/i.test(String(tableToConfirm.number))
                 ? `la barra ${tableToConfirm.number === 0 ? '' : tableToConfirm.number}`.trim()
                 : isTakeoutNumber(tableToConfirm.number)
-                ? `${String(tableToConfirm.number).replace(/^Llevar/i, 'para llevar')}`
+                ? tableLabel(tableToConfirm.number)
                 : `la mesa ${tableToConfirm.number}`}?
             </h2>
             <p className="text-gray-400 text-sm mb-6">

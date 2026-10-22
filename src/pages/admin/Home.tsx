@@ -13,6 +13,7 @@ import '../../utils/createSampleProducts';
 import type { Table } from '../../utils/types';
 import { withEffectiveStatus } from '../../utils/tableStatus';
 import { isTakeoutNumber } from '../../utils/venueLayout';
+import { tableLabel } from '../../utils/tableLabel';
 
 const AdminHome: React.FC = () => {
   const navigate = useNavigate();
@@ -126,7 +127,7 @@ const AdminHome: React.FC = () => {
               ¿Abrir {tableToConfirm.number === 0 || /^B\d+$/i.test(String(tableToConfirm.number))
                 ? `la barra ${tableToConfirm.number === 0 ? '' : tableToConfirm.number}`.trim()
                 : isTakeoutNumber(tableToConfirm.number)
-                ? `${String(tableToConfirm.number).replace(/^Llevar/i, 'para llevar')}`
+                ? tableLabel(tableToConfirm.number)
                 : `la mesa ${tableToConfirm.number}`}?
             </h2>
             <p className="text-gray-400 text-sm mb-6">

@@ -46,7 +46,8 @@ export const TABLE_LAYOUT: TablePos[] = [
   { number: 'Sala 3', x: 73,   y: 77, w: 18,   h: 20 },
 
   // ── Para llevar (fila sobre la barra) ─────────────────
-  ...[1, 2, 3, 4, 5].map((n, i) => ({ number: `Llevar ${n}`, x: 33 + i * 5.75, y: 68.5, w: 5, h: SH })),
+  // En la BD se llaman 'Llevar N'; en pantalla se muestran como 'Extra N' (ver utils/tableLabel)
+  ...[1, 2, 3, 4, 5].map((n, i) => ({ number: `Llevar ${n}`, x: 27 + i * 7, y: 68.5, w: 6.5, h: SH })),
 ];
 
 /** Elementos decorativos (no son mesas). */

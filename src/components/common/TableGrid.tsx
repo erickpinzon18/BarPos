@@ -28,7 +28,7 @@ export const SECTIONS: SectionDef[] = [
   { title: 'Mesas', filter: isMesa,  cols: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' },
   { title: 'Barra', filter: isBarra, cols: 'grid-cols-2 sm:grid-cols-5', wide: true },
   { title: 'Salas', filter: isSala,  cols: 'grid-cols-1 sm:grid-cols-3' },
-  { title: 'Para llevar', filter: isLlevar, cols: 'grid-cols-2 sm:grid-cols-5' },
+  { title: 'Extras (para llevar)', filter: isLlevar, cols: 'grid-cols-2 sm:grid-cols-5' },
   { title: 'Otras', filter: n => !isMesa(n) && !isBarra(n) && !isSala(n) && !isLlevar(n), cols: 'grid-cols-2 sm:grid-cols-4' },
 ];
 
@@ -61,7 +61,7 @@ const TableCard: React.FC<CardProps> = ({
   const label = isBar
     ? (table.number === 0 ? '🍹 Barra' : `🍹 ${table.number}`)
     : isLlevar(String(table.number))
-    ? `🥡 ${tableLabel(table.number)}`
+    ? tableLabel(table.number)
     : tableLabel(table.number);
 
   const activeItems = order?.items.filter(i => !i.isDeleted) ?? [];

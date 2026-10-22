@@ -40,7 +40,7 @@ const Popup: React.FC<PopupProps> = ({
   const isBar    = isBarNumber(table.number);
   const label    = isBar
     ? (table.number === 0 ? '🍹 Barra' : `🍹 ${table.number}`)
-    : isTakeoutNumber(table.number) ? `🥡 ${String(table.number).replace(/^Llevar/i, 'Para llevar')}`
+    : isTakeoutNumber(table.number) ? tableLabel(table.number)
     : typeof table.number === 'string' ? table.number
     : tableLabel(table.number);
 
@@ -201,7 +201,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
 
           const label = isBar
             ? (pos.number === 0 ? 'Barra' : String(pos.number))
-            : isTakeoutNumber(pos.number) ? `🥡 ${String(pos.number).replace(/^Llevar\s*/i, '')}`
+            : isTakeoutNumber(pos.number) ? tableLabel(pos.number)
             : typeof pos.number === 'string' ? pos.number
             : String(pos.number);
 
@@ -254,7 +254,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
               {/* Label — px so it stays readable at min-width */}
               <span
                 className="font-bold text-white leading-none pointer-events-none drop-shadow-sm"
-                style={{ fontSize: isBar ? '14px' : isCircle ? '9px' : '12px' }}
+                style={{ fontSize: isBar ? '14px' : isCircle ? '9px' : isTakeoutNumber(pos.number) ? '11px' : '12px' }}
               >
                 {label}
               </span>

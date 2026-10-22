@@ -38,6 +38,8 @@ export const useProducts = (availableOnly: boolean = true) => {
             category: data.category,
             imageUrl: data.imageUrl,
             available: data.available,
+            tipPerUnit: typeof data.tipPerUnit === 'number' ? data.tipPerUnit : undefined,
+            activeDays: Array.isArray(data.activeDays) ? data.activeDays : undefined,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || Date.now()),
             updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt || Date.now())
           });

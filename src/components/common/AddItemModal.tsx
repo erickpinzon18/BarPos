@@ -6,6 +6,7 @@ import BottleQuantityModal from './BottleQuantityModal';
 import DrinkMixerModal from './DrinkMixerModal';
 import type { Product, Promotion } from '../../utils/types';
 import { FILTER_CATEGORIES, getCategoryInfo } from '../../utils/categories';
+import { isSellableToday } from '../../utils/promoDays';
 import { isPromotionWithinSchedule } from '../../hooks/usePromotions';
 
 interface AddItemModalProps {
@@ -37,6 +38,8 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 
   const filteredProducts = products.filter(product => {
     if (!product.available) return false;
+    // Promos: solo los días configurados
+    if (!isSellableToday(product)) return false;
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Todos' || product.category === selectedCategory;

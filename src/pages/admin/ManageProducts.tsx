@@ -3,6 +3,7 @@ import { useProducts } from '../../hooks/useProducts';
 import { addProduct, updateProduct, deleteProduct } from '../../services/firestoreService';
 import type { ProductFormData, Product } from '../../utils/types';
 import { FILTER_CATEGORIES, getCategoryLabels } from '../../utils/categories';
+import { WEEKDAY_LABELS, WEEKDAY_ORDER, isPromoProduct, formatPromoDays } from '../../utils/promoDays';
 
 const designCategories = FILTER_CATEGORIES;
 
@@ -51,7 +52,7 @@ const ManageProducts: React.FC = () => {
   const openEditModal = (p: Product) => {
     setModalTitle('Editar Producto');
     setEditingId(p.id);
-    setForm({ name: p.name, description: p.description || '', price: p.price, category: p.category, available: p.available, tipPerUnit: p.tipPerUnit });
+    setForm({ name: p.name, description: p.description || '', price: p.price, category: p.category, available: p.available, tipPerUnit: p.tipPerUnit, activeDays: p.activeDays ?? [] });
     // mount modal and trigger animation
     setShowModal(true);
   };
@@ -62,11 +63,13 @@ const ManageProducts: React.FC = () => {
 
     // Firestore no acepta undefined: sin propina definida se guarda null (= pendiente)
     const tipPerUnit = typeof form.tipPerUnit === 'number' && !isNaN(form.tipPerUnit) ? form.tipPerUnit : null;
+    // Días de venta: solo para Promos (vacío = todos los días)
+    const activeDays = isPromoProduct(form) ? [...(form.activeDays ?? [])].sort() : [];
     if (editingId) {
-      const res = await updateProduct(editingId, { name: form.name, description: form.description, price: form.price, category: form.category, available: form.available, tipPerUnit } as any);
+      const res = await updateProduct(editingId, { name: form.name, description: form.description, price: form.price, category: form.category, available: form.available, tipPerUnit, activeDays } as any);
       if (!res.success) alert(res.error || 'Error al actualizar');
     } else {
-      const res = await addProduct({ ...form, tipPerUnit } as any);
+      const res = await addProduct({ ...form, tipPerUnit, activeDays } as any);
       if (!res.success) alert(res.error || 'Error al crear producto');
     }
     setShowModal(false);
@@ -160,6 +163,9 @@ const ManageProducts: React.FC = () => {
                       <p className={`text-xs mt-0.5 ${typeof p.tipPerUnit === 'number' ? 'text-green-400' : 'text-amber-400'}`}>
                         {typeof p.tipPerUnit === 'number' ? `Comisión mesero: $${p.tipPerUnit}` : 'Comisión mesero: pendiente'}
                       </p>
+                      {isPromoProduct(p) && (
+                        <p className="text-xs mt-0.5 text-pink-400">Se vende: {formatPromoDays(p.activeDays)}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       <button onClick={() => openEditModal(p)} className="font-medium text-blue-400 hover:underline text-sm">Editar</button>
@@ -235,6 +241,34 @@ const ManageProducts: React.FC = () => {
                       <label className="flex items-center space-x-2 cursor-pointer"><input id="product-available" type="checkbox" checked={form.available} onChange={(e) => setForm(prev => ({ ...prev, available: e.target.checked }))} className="h-4 w-4 rounded bg-gray-600 border-gray-500 text-red-500 focus:ring-red-500" /> <span className="text-sm text-gray-300">Disponible</span></label>
                     </div>
                   </div>
+                  {isPromoProduct(form) && (
+                    <div>
+                      <p className="mb-2 text-sm font-medium text-gray-300">Días en que se vende</p>
+                      <div className="flex flex-wrap gap-2">
+                        {WEEKDAY_ORDER.map(d => {
+                          const on = (form.activeDays ?? []).includes(d);
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setForm(prev => {
+                                const days = prev.activeDays ?? [];
+                                return { ...prev, activeDays: on ? days.filter(x => x !== d) : [...days, d] };
+                              })}
+                              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${on ? 'bg-pink-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                            >
+                              {WEEKDAY_LABELS[d]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="mt-2 text-xs text-gray-400">
+                        {(form.activeDays ?? []).length === 0
+                          ? 'Sin días marcados se vende todos los días.'
+                          : `Solo se podrá pedir: ${formatPromoDays(form.activeDays)}.`}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex justify-end pt-4 gap-3">
                     <button type="button" id="cancel-product-modal-btn" onClick={() => setShowModal(false)} className="text-gray-300 bg-gray-700 hover:bg-gray-600 font-medium rounded-lg text-sm px-5 py-2.5">Cancelar</button>
                     <button type="submit" id="product-modal-action-btn" className="text-gray-900 bg-red-600 hover:bg-red-700 font-bold rounded-lg text-sm px-5 py-2.5 shadow-md transform hover:-translate-y-px transition">{editingId ? 'Guardar Cambios' : 'Guardar Producto'}</button>

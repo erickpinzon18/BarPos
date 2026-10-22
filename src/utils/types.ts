@@ -24,6 +24,7 @@ export interface Product {
   imageUrl?: string;
   available: boolean;
   tipPerUnit?: number; // Propina fija para el mesero por unidad vendida (sin definir = pendiente)
+  activeDays?: number[]; // Solo Promos: días en que se puede vender (0=Dom … 6=Sáb). Vacío = todos
   createdAt: Date;
   updatedAt: Date;
 }
@@ -192,6 +193,7 @@ export interface ProductFormData {
   category: Product['category'];
   available: boolean;
   tipPerUnit?: number;
+  activeDays?: number[];
 }
 
 export interface TableFormData {

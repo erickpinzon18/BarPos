@@ -1517,22 +1517,59 @@ const DailySummary: React.FC = () => {
                                 <th className="text-right px-4 py-2 text-green-400">Comisión</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-700/50">
-                              {products.length === 0 ? (
-                                <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">Sin productos</td></tr>
-                              ) : products.map(p => (
-                                <tr key={p.name} className="hover:bg-gray-700/30 transition-colors">
-                                  <td className="px-4 py-2 text-gray-200">{p.name}</td>
-                                  <td className="px-4 py-2 text-right text-gray-300">{p.quantity}</td>
-                                  <td className="px-4 py-2 text-right text-white">{formatCurrency(p.amount)}</td>
-                                  <td className="px-4 py-2 text-right">
-                                    {p.tipPending
-                                      ? <span className="text-amber-400 text-xs">{p.tip > 0 ? `${formatCurrency(p.tip)} + pendiente` : 'pendiente'}</span>
-                                      : <span className="text-green-400">{formatCurrency(p.tip)}</span>}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
+                            {waiter.orders.length === 0 && (
+                              <tbody><tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">Sin productos</td></tr></tbody>
+                            )}
+                            {/* Una sección por cuenta: encabezado con folio/mesa/hora y lo que se cobró */}
+                            {[...waiter.orders]
+                              .sort((a, b) => (a.folioSeq ?? 0) - (b.folioSeq ?? 0) || new Date(a.completedAt ?? 0).getTime() - new Date(b.completedAt ?? 0).getTime())
+                              .map(order => {
+                                const orderProducts = getSoldProducts([order], tipCatalog);
+                                const oSubtotal = order.subtotal ?? 0;
+                                const oTotal = order.total ?? 0;
+                                const oCommission = order.commission ?? 0;
+                                const oDiscount = (order as any).discount ?? 0;
+                                const oTip = typeof order.tipAmount === 'number'
+                                  ? order.tipAmount
+                                  : Math.max(0, oTotal - oSubtotal - oCommission + oDiscount);
+                                const time = order.completedAt
+                                  ? new Date(order.completedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                                  : '';
+                                const mesa = order.tableNumber === 0 ? 'Barra' : formatTableLabel(order.tableNumber);
+                                return (
+                                  <tbody key={order.id} className="divide-y divide-gray-700/50 border-t-2 border-gray-600">
+                                    <tr className="bg-gray-900/50">
+                                      <td colSpan={4} className="px-4 py-2">
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                          <span className="text-gray-200 font-semibold text-xs">
+                                            {order.folio ? `Folio ${order.folio}` : 'Sin folio'} · {mesa}
+                                            {time && ` · ${time}`}
+                                            {order.paymentMethod && <span className="text-gray-400 font-normal capitalize"> · {order.paymentMethod}</span>}
+                                          </span>
+                                          <span className="flex gap-4 text-xs">
+                                            <span className="text-gray-400">Productos <span className="text-gray-200 font-semibold">{formatCurrency(oSubtotal - oDiscount)}</span></span>
+                                            <span className="text-gray-400">Comisión <span className="text-gray-200 font-semibold">{formatCurrency(oCommission)}</span></span>
+                                            <span className="text-gray-400">Propina <span className={`font-semibold ${oTip > 0 ? 'text-amber-300' : 'text-gray-200'}`}>{formatCurrency(oTip)}</span></span>
+                                            <span className="text-gray-400">Total <span className="text-white font-bold">{formatCurrency(oTotal)}</span></span>
+                                          </span>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                    {orderProducts.map(p => (
+                                      <tr key={p.name} className="hover:bg-gray-700/30 transition-colors">
+                                        <td className="px-4 py-2 pl-8 text-gray-200">{p.name}</td>
+                                        <td className="px-4 py-2 text-right text-gray-300">{p.quantity}</td>
+                                        <td className="px-4 py-2 text-right text-white">{formatCurrency(p.amount)}</td>
+                                        <td className="px-4 py-2 text-right">
+                                          {p.tipPending
+                                            ? <span className="text-amber-400 text-xs">{p.tip > 0 ? `${formatCurrency(p.tip)} + pendiente` : 'pendiente'}</span>
+                                            : <span className="text-green-400">{formatCurrency(p.tip)}</span>}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                );
+                              })}
                             <tfoot>
                               {Math.abs(discounts) >= 0.01 && (
                                 <tr className="border-t border-gray-700 text-sm">

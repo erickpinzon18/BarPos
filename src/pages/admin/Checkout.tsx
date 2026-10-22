@@ -17,6 +17,8 @@ import { Tag, Clock, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 import { tableLabel } from '../../utils/tableLabel';
+import { useCommissionCatalog, getItemsCommission } from '../../utils/commission';
+import TipAuthGate from '../../components/common/TipAuthGate';
 
 const AdminCheckout: React.FC = () => {
   const location = useLocation();
@@ -62,7 +64,9 @@ const AdminCheckout: React.FC = () => {
 
   // Tip and payment state (percentage)
   const [tipMode, setTipMode] = useState<"percent" | "amount">("percent");
-  const [tipPercent, setTipPercent] = useState<number>(0.15);
+  const [tipPercent, setTipPercent] = useState<number>(0);
+  // La propina solo se habilita con la clave del dueño
+  const [tipUnlocked, setTipUnlocked] = useState(false);
   const [customTipAmount, setCustomTipAmount] = useState<string>("");
   const [customTipPercent, setCustomTipPercent] = useState<string>("");
   const [closing, setClosing] = useState(false);
@@ -184,9 +188,16 @@ const AdminCheckout: React.FC = () => {
     [itemDiscountMap]
   );
 
+  // Comisión del mesero (fija por producto) que se cobra encima del precio
+  const commissionCatalog = useCommissionCatalog();
+  const commission = useMemo(
+    () => getItemsCommission(activeItems, commissionCatalog),
+    [activeItems, commissionCatalog]
+  );
+
   const total = useMemo(
-    () => subtotal - discountAmount + tipAmount,
-    [subtotal, discountAmount, tipAmount]
+    () => subtotal - discountAmount + commission + tipAmount,
+    [subtotal, discountAmount, commission, tipAmount]
   );
 
   // Unique promos active on this order (for display in UI)
@@ -219,6 +230,7 @@ const AdminCheckout: React.FC = () => {
       tipAmount,
       tipPercent,
       discountAmount,
+      commission,
       itemDiscounts,
       total,
       perPerson,
@@ -351,6 +363,7 @@ const AdminCheckout: React.FC = () => {
         };
       }
 
+      paymentDetails.commissionAmount = commission;
       const res = await closeTable(
         tableId,
         orderId,
@@ -754,17 +767,20 @@ const AdminCheckout: React.FC = () => {
                 <span className="font-bold">Subtotal:</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
-              {/* <div className="flex justify-between"><span>Propina ({formatTipPercent(tipPercent)}%):</span><span>${tipAmount.toFixed(2)}</span></div> */}
-              <div className="flex justify-between">
-                <span className="font-bold">
-                  Propina ({formatTipPercent(tipPercent)}%):
-                </span>
-                <span id="tip-amount">${tipAmount.toFixed(2)}</span>
-              </div>
+              {commission > 0 && (
+                <div className="flex justify-between">
+                  <span className="font-bold">Comisión:</span>
+                  <span>${commission.toFixed(2)}</span>
+                </div>
+              )}
+              {tipAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="font-bold">
+                    Propina ({formatTipPercent(tipPercent)}%):
+                  </span>
+                  <span id="tip-amount">${tipAmount.toFixed(2)}</span>
+                </div>
+              )}
               {activePromos.map(promo => {
                 const promoDiscount = activeItems
                   .filter(i => itemPromoMap[i.id]?.id === promo.id)
@@ -813,13 +829,14 @@ const AdminCheckout: React.FC = () => {
         </div>
 
         <div className="space-y-6">
+          <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly}>
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-white">Propina</h3>
               <div className="flex bg-gray-900 rounded-lg overflow-hidden border border-gray-700 text-sm">
                 <button
                   disabled={isReadOnly}
-                  onClick={() => { setTipMode("percent"); setTipPercent(0.15); setCustomTipAmount(""); setCustomTipPercent(""); }}
+                  onClick={() => { setTipMode("percent"); setTipPercent(0); setCustomTipAmount(""); setCustomTipPercent(""); }}
                   className={`px-3 py-1.5 font-semibold transition-colors ${tipMode === "percent" ? "bg-red-600 text-white" : "text-gray-400 hover:text-white disabled:cursor-not-allowed"}`}
                 >
                   %
@@ -906,12 +923,13 @@ const AdminCheckout: React.FC = () => {
               </>
             )}
           </div>
+          </TipAuthGate>
 
           {/* Ajuste de propina por diferencia (aplica a cualquier método de pago) */}
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-3">💰 Pago Recibido</h3>
             <p className="text-xs text-gray-500 mb-3">
-              Si el cliente paga más del total, la diferencia se agrega automáticamente como propina extra.
+              Si el cliente paga más del total, se muestra el cambio. Con propina autorizada se puede aplicar como propina.
             </p>
             <div className="flex items-center gap-3">
               <span className="text-gray-400 text-sm font-semibold">$</span>
@@ -940,9 +958,9 @@ const AdminCheckout: React.FC = () => {
               return (
                 <div className="mt-3 flex items-center justify-between gap-3">
                   <div className="text-sm text-green-400">
-                    Propina extra: <span className="font-bold">${overpaymentTip.toFixed(2)}</span>
+                    {tipUnlocked ? 'Propina extra' : 'Cambio'}: <span className="font-bold">${overpaymentTip.toFixed(2)}</span>
                   </div>
-                  <button
+                  {tipUnlocked && <button
                     disabled={isReadOnly}
                     onClick={() => {
                       const newTipAmount = tipAmount + overpaymentTip;
@@ -954,7 +972,7 @@ const AdminCheckout: React.FC = () => {
                     className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                   >
                     Aplicar como propina
-                  </button>
+                  </button>}
                 </div>
               );
             })()}

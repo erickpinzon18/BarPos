@@ -16,6 +16,8 @@ import { printTicket } from "../../utils/printTicket";
 import { usePaperSize } from "../../hooks/usePaperSize";
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 import { tableLabel } from '../../utils/tableLabel';
+import { useCommissionCatalog, getItemsCommission } from '../../utils/commission';
+import TipAuthGate from '../../components/common/TipAuthGate';
 
 const WaiterCheckout: React.FC = () => {
   const location = useLocation();
@@ -60,7 +62,9 @@ const WaiterCheckout: React.FC = () => {
   }, [order]);
 
   // Tip and payment state (percentage)
-  const [tipPercent, setTipPercent] = useState<number>(0.15);
+  const [tipPercent, setTipPercent] = useState<number>(0);
+  // La propina solo se habilita con la clave del dueño
+  const [tipUnlocked, setTipUnlocked] = useState(false);
   const [customTipPercent, setCustomTipPercent] = useState<string>(""); // user's input like '15' means 15%
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -161,9 +165,16 @@ const WaiterCheckout: React.FC = () => {
     [itemDiscountMap]
   );
 
+  // Comisión del mesero (fija por producto) que se cobra encima del precio
+  const commissionCatalog = useCommissionCatalog();
+  const commission = useMemo(
+    () => getItemsCommission(activeItems, commissionCatalog),
+    [activeItems, commissionCatalog]
+  );
+
   const total = useMemo(
-    () => subtotal - discountAmount + tipAmount,
-    [subtotal, discountAmount, tipAmount]
+    () => subtotal - discountAmount + commission + tipAmount,
+    [subtotal, discountAmount, commission, tipAmount]
   );
 
   // Unique promos active on this order (for display in UI)
@@ -206,6 +217,7 @@ const WaiterCheckout: React.FC = () => {
       tipAmount,
       tipPercent,
       discountAmount,
+      commission,
       itemDiscounts,
       total,
       perPerson,
@@ -301,6 +313,7 @@ const WaiterCheckout: React.FC = () => {
         };
       }
 
+      paymentDetails.commissionAmount = commission;
       const res = await closeTable(
         tableId,
         orderId,
@@ -559,12 +572,20 @@ const WaiterCheckout: React.FC = () => {
                   <span className="font-bold">Subtotal:</span>
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="font-bold">
-                    Propina ({formatTipPercent(tipPercent)}%):
-                  </span>
-                  <span>${tipAmount.toFixed(2)}</span>
-                </div>
+                {commission > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="font-bold">Comisión:</span>
+                    <span>${commission.toFixed(2)}</span>
+                  </div>
+                )}
+                {tipAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="font-bold">
+                      Propina ({formatTipPercent(tipPercent)}%):
+                    </span>
+                    <span>${tipAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 {activePromos.map(promo => {
                   const promoDiscount = activeItems
                     .filter(i => itemPromoMap[i.id]?.id === promo.id)
@@ -612,6 +633,7 @@ const WaiterCheckout: React.FC = () => {
           {/* Controls Column */}
           <div className="space-y-4">
             {/* Propina Section */}
+            <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly}>
             <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-800">
               <h3 className="font-semibold text-white mb-3 md:mb-4">
                 💰 Propina
@@ -670,6 +692,7 @@ const WaiterCheckout: React.FC = () => {
                 {tipAmount.toFixed(2)}
               </div>
             </div>
+            </TipAuthGate>
 
             {/* Promociones auto-aplicadas */}
             {activePromos.map(promo => {
@@ -756,6 +779,12 @@ const WaiterCheckout: React.FC = () => {
                         ${(subtotal / Math.max(1, splitBetween)).toFixed(2)}
                       </span>
                     </div>
+                    {commission > 0 && (
+                      <div className="flex justify-between text-gray-300">
+                        <span>Comisión c/u:</span>
+                        <span>${(commission / Math.max(1, splitBetween)).toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-gray-300">
                       <span>Propina c/u:</span>
                       <span>

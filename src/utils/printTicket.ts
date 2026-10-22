@@ -115,6 +115,8 @@ type PrintOptions = {
   tipAmount: number;
   tipPercent?: number; // Decimal e.g. 0.15 for 15%
   discountAmount?: number;
+  /** Comisión del mesero cobrada encima del precio (default: order.commission) */
+  commission?: number;
   /** Per-item discount: { [itemId]: { amount, promoName } } */
   itemDiscounts?: Record<string, { amount: number; promoName: string }>;
   total: number;
@@ -134,6 +136,7 @@ export const generateTicketContent = (opts: PrintOptions): string => {
     order,
     subtotal,
     total,
+    tipAmount,
     discountAmount,
     itemDiscounts,
     perPerson,
@@ -143,6 +146,7 @@ export const generateTicketContent = (opts: PrintOptions): string => {
     businessPhone,
   } = opts;
 
+  const commission = opts.commission ?? order.commission ?? 0;
   const W = paperSize === '58mm' ? CHARS_58MM : CHARS_80MM;
   const lines: string[] = [];
   const s = (char = '-') => separator(char, W);
@@ -245,6 +249,14 @@ export const generateTicketContent = (opts: PrintOptions): string => {
 
   if (typeof discountAmount === 'number' && discountAmount > 0) {
     pushLabeledValue(lines, 'Descuento:', `-${formatMoney(discountAmount)}`, W);
+  }
+
+  if (commission > 0) {
+    pushLabeledValue(lines, 'Comision:', formatMoney(commission), W);
+  }
+
+  if (tipAmount > 0.005) {
+    pushLabeledValue(lines, 'Propina:', formatMoney(tipAmount), W);
   }
 
   lines.push(s('='));

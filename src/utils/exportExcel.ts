@@ -22,6 +22,8 @@ export interface ExcelSummaryTotals {
   totalSubtotal: number;
   totalTips: number;
   totalTipsNet: number;
+  totalCommission?: number; // comisión del mesero cobrada a los clientes
+  waiterCommissionTotal?: number; // comisión que se le paga a los meseros (sale del efectivo)
   paymentMethods: { efectivo: number; tarjeta: number; transferencia: number };
   totalOrders: number;
   totalPeople: number;
@@ -152,7 +154,8 @@ export const exportShiftReportToExcel = (
 
   // ── Hoja "Resumen" ───────────────────────────────────────────────────────
   const totalExpenses = expenses.gastos.reduce((s, g) => s + g.monto, 0);
-  const cashInRegister = summary.paymentMethods.efectivo - summary.totalTipsNet;
+  const cashInRegister =
+    summary.paymentMethods.efectivo - summary.totalTipsNet - (summary.waiterCommissionTotal ?? 0);
   const grandTotal =
     summary.paymentMethods.efectivo + summary.paymentMethods.tarjeta + summary.paymentMethods.transferencia;
 
@@ -176,7 +179,9 @@ export const exportShiftReportToExcel = (
     { Concepto: "Desglose de tarjeta por tipo", Valor: "" },
     ...Object.entries(cardTypeBreakdown).map(([type, amount]) => ({ Concepto: `  ${type}`, Valor: amount })),
     { Concepto: "", Valor: "" },
+    { Concepto: "Comisiones cobradas", Valor: summary.totalCommission ?? 0 },
     { Concepto: "Propinas", Valor: summary.totalTips },
+    { Concepto: "Comisiones pagadas a meseros", Valor: -(summary.waiterCommissionTotal ?? 0) },
     { Concepto: "", Valor: "" },
     { Concepto: "Efectivo en caja (antes de gastos)", Valor: cashInRegister },
     { Concepto: "", Valor: "" },

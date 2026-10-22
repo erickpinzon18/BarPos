@@ -13,6 +13,8 @@ import { printTicket } from '../../utils/printTicket';
 import { usePaperSize } from '../../hooks/usePaperSize';
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 import { tableLabel } from '../../utils/tableLabel';
+import { useCommissionCatalog, getItemsCommission } from '../../utils/commission';
+import TipAuthGate from '../../components/common/TipAuthGate';
 
 const KitchenCheckout: React.FC = () => {
   const location = useLocation();
@@ -34,7 +36,9 @@ const KitchenCheckout: React.FC = () => {
 
   const order: Order | null = useMemo(() => orderById ?? orderByTable ?? null, [orderById, orderByTable]);
 
-  const [tipPercent, setTipPercent] = useState<number>(0.15);
+  const [tipPercent, setTipPercent] = useState<number>(0);
+  // La propina solo se habilita con la clave del dueño
+  const [tipUnlocked, setTipUnlocked] = useState(false);
   const [customTipPercent, setCustomTipPercent] = useState<string>('');
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -111,7 +115,11 @@ const KitchenCheckout: React.FC = () => {
     [itemDiscountMap]
   );
 
-  const total = useMemo(() => subtotal - discountAmount + tipAmount, [subtotal, discountAmount, tipAmount]);
+  // Comisión del mesero (fija por producto) que se cobra encima del precio
+  const commissionCatalog = useCommissionCatalog();
+  const commission = useMemo(() => getItemsCommission(activeItems, commissionCatalog), [activeItems, commissionCatalog]);
+
+  const total = useMemo(() => subtotal - discountAmount + commission + tipAmount, [subtotal, discountAmount, commission, tipAmount]);
 
   const activePromos = useMemo(() => {
     const seen = new Set<string>();
@@ -152,6 +160,7 @@ const KitchenCheckout: React.FC = () => {
       tipAmount,
       tipPercent,
       discountAmount,
+      commission,
       itemDiscounts,
       total,
       perPerson,
@@ -210,6 +219,7 @@ const KitchenCheckout: React.FC = () => {
       } else {
         paymentDetails = { tipAmount, tipPercent, discountAmount, cashierId: authorizedUser?.id, cardOperationNumber: paymentMethod === 'tarjeta' ? cardOperationNumber : undefined };
       }
+      paymentDetails.commissionAmount = commission;
       const res = await closeTable(tableId, orderId, paymentMethod, peopleCount, paymentDetails);
       if (!res.success) throw new Error(res.error || 'Error al cerrar mesa');
       setIsReadOnly(true);
@@ -375,7 +385,8 @@ const KitchenCheckout: React.FC = () => {
 
             <div className="border-t border-dashed border-gray-600 mt-4 pt-2">
               <div className="flex justify-between"><span className="font-bold">Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="font-bold">Propina ({formatTipPercent(tipPercent)}%):</span><span>${tipAmount.toFixed(2)}</span></div>
+              {commission > 0 && <div className="flex justify-between"><span className="font-bold">Comisión:</span><span>${commission.toFixed(2)}</span></div>}
+              {tipAmount > 0 && <div className="flex justify-between"><span className="font-bold">Propina ({formatTipPercent(tipPercent)}%):</span><span>${tipAmount.toFixed(2)}</span></div>}
               {activePromos.map(promo => {
                 const promoDiscount = activeItems
                   .filter(i => itemPromoMap[i.id]?.id === promo.id)
@@ -403,6 +414,7 @@ const KitchenCheckout: React.FC = () => {
         </div>
 
         <div className="space-y-6">
+          <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly}>
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Propina</h3>
             <div className="flex space-x-2 items-center">
@@ -413,6 +425,7 @@ const KitchenCheckout: React.FC = () => {
             </div>
             <div className="mt-2 text-sm text-gray-400">Seleccionado: {formatTipPercent(tipPercent)}%</div>
           </div>
+          </TipAuthGate>
 
           {activePromos.map(promo => {
             const promoDiscount = activeItems

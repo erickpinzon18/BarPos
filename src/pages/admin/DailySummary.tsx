@@ -56,6 +56,7 @@ interface WaiterStats {
   totalSales: number; // ventas totales (con propina)
   totalOrders: number;
   totalTips: number; // propinas brutas (todas)
+  totalCommission: number; // comisión del mesero cobrada a los clientes
   totalPeople: number; // personas totales atendidas por mesero
 
   // Ventas por método
@@ -91,6 +92,7 @@ interface ShiftSummary {
   totalOrders: number;
   totalItems: number;
   totalTips: number; // propinas brutas
+  totalCommission: number; // comisión del mesero cobrada a los clientes
   totalSubtotal: number;
   totalPeople: number; // total personas atendidas en el turno
 
@@ -370,6 +372,7 @@ const DailySummary: React.FC = () => {
         totalTransferTips: 0,
         totalCardTipsNet: 0,
         totalTipsNet: 0,
+        totalCommission: 0,
         averageOrderValue: 0,
         averageTipPercent: 0,
         averagePeoplePerOrder: 0,
@@ -390,12 +393,15 @@ const DailySummary: React.FC = () => {
       ordersData.forEach((order) => {
         const subtotal = order.subtotal ?? 0;
         const total = order.total ?? 0;
-        const tip = total - subtotal;
+        // La comisión del mesero va dentro del total pero no es propina del cliente
+        const commission = order.commission ?? 0;
+        const tip = total - subtotal - commission;
         const people = order.peopleCount ?? 1;
 
         summary.totalSales += total;
         summary.totalSubtotal += subtotal;
         summary.totalTips += tip;
+        summary.totalCommission += commission;
         summary.totalPeople += people;
 
         // Items activos
@@ -487,6 +493,7 @@ const DailySummary: React.FC = () => {
             totalSales: 0,
             totalOrders: 0,
             totalTips: 0,
+            totalCommission: 0,
             totalPeople: 0,
             salesCash: 0,
             salesCard: 0,
@@ -510,6 +517,7 @@ const DailySummary: React.FC = () => {
         ws.totalSales += total;
         ws.totalOrders += 1;
         ws.totalTips += tip;
+        ws.totalCommission += commission;
         ws.totalPeople += people;
         ws.salesCash += cashSale;
         ws.salesCard += cardSale;
@@ -695,6 +703,15 @@ const DailySummary: React.FC = () => {
   const dAvgSalePerPerson = summary && summary.totalPeople > 0 ? dTotalSales / summary.totalPeople : 0;
   const adjWaiterSales = (w: WaiterStats) =>
     w.totalSales - (demoMode ? w.salesCash * (1 - demoFactor) : 0);
+  // Lo vendido en productos (sin propina del cliente ni comisión)
+  const adjWaiterProducts = (w: WaiterStats) => adjWaiterSales(w) - w.totalTips - w.totalCommission;
+  // Comisión que se le paga en efectivo a cada mesero (tabla por producto): se descuenta del efectivo
+  const waiterCommissionTotal = summary
+    ? summary.waiterStats.reduce((s, w) => s + getWaiterTableTip(w.orders, tipCatalog).amount, 0)
+    : 0;
+  const cashInRegisterValue = summary
+    ? adjCash(summary.paymentMethods.efectivo) - summary.totalTipsNet - waiterCommissionTotal
+    : 0;
 
   // ── Ticket de cierre de caja (80mm) ─────────────────────────────────────
   const printClosingReport = () => {
@@ -754,6 +771,7 @@ const DailySummary: React.FC = () => {
     lines.push(sep());
     lines.push(fmtLine("Total vendido:", fmtM(dTotalSales)));
     lines.push(fmtLine("Subtotal (sin propina):", fmtM(dTotalSubtotal)));
+    lines.push(fmtLine("Comisiones:", fmtM(summary.totalCommission)));
     lines.push(fmtLine("Propinas:", fmtM(summary.totalTips)));
     lines.push("");
 
@@ -766,8 +784,10 @@ const DailySummary: React.FC = () => {
     lines.push(
       fmtLine("  -Propinas (Total):", `-${fmtM(summary.totalTipsNet)}`)
     );
-    const cashInRegister =
-      adjCash(summary.paymentMethods.efectivo) - summary.totalTipsNet;
+    lines.push(
+      fmtLine("  -Comisiones meseros:", `-${fmtM(waiterCommissionTotal)}`)
+    );
+    const cashInRegister = cashInRegisterValue;
     lines.push(fmtLine("  Efectivo en caja:", fmtM(cashInRegister)));
     lines.push(fmtLine("Tarjeta:", fmtM(summary.paymentMethods.tarjeta)));
     lines.push(
@@ -845,12 +865,13 @@ const DailySummary: React.FC = () => {
         lines.push(sep("-"));
         lines.push(fmtLine("Cuentas:", String(w.totalOrders)));
         lines.push(fmtLine("Personas:", String(w.totalPeople)));
-        lines.push(fmtLine("Vendido:", fmtM(adjWaiterSales(w) - w.totalTips)));
+        lines.push(fmtLine("Vendido:", fmtM(adjWaiterProducts(w))));
+        lines.push(fmtLine("Comision cobrada:", fmtM(w.totalCommission)));
         lines.push(fmtLine("Propina cliente:", fmtM(w.totalTips)));
         lines.push(fmtLine("Total:", fmtM(adjWaiterSales(w))));
         const wt = getWaiterTableTip(w.orders, tipCatalog);
-        lines.push(fmtLine("LE TOCA:", fmtM(wt.amount)));
-        if (wt.pending.length > 0) lines.push(`  (${wt.pending.length} prod. sin propina definida)`);
+        lines.push(fmtLine("COMISION A PAGAR:", fmtM(wt.amount)));
+        if (wt.pending.length > 0) lines.push(`  (${wt.pending.length} prod. sin comision definida)`);
         lines.push(sep());
       });
       lines.push("");
@@ -923,7 +944,7 @@ const DailySummary: React.FC = () => {
               onClick={() =>
                 exportShiftReportToExcel(
                   shiftOrders,
-                  summary,
+                  { ...summary, waiterCommissionTotal },
                   cardTypeBreakdown,
                   { gastos },
                   shiftStart,
@@ -1117,14 +1138,18 @@ const DailySummary: React.FC = () => {
                       -{formatCurrency(summary.totalTipsNet)}
                     </span>
                   </div>
+                  <div className="flex justify-between items-center pl-4 text-sm mt-1">
+                    <span className="text-gray-400">— Comisiones meseros</span>
+                    <span className="text-gray-400 font-semibold">
+                      -{formatCurrency(waiterCommissionTotal)}
+                    </span>
+                  </div>
                   <div className="flex justify-between items-center pl-4 text-sm border-t border-gray-600 pt-1 mt-1">
                     <span className="text-green-400 font-medium">
                       Efectivo en caja
                     </span>
                     <span className="text-green-400 font-bold">
-                      {formatCurrency(
-                        adjCash(summary.paymentMethods.efectivo) - summary.totalTipsNet
-                      )}
+                      {formatCurrency(cashInRegisterValue)}
                     </span>
                   </div>
                 </div>
@@ -1222,9 +1247,7 @@ const DailySummary: React.FC = () => {
                   <div className="flex justify-between items-center text-sm mb-2">
                     <span className="text-gray-400">Efectivo en caja</span>
                     <span className="text-gray-300 font-medium">
-                      {formatCurrency(
-                        adjCash(summary.paymentMethods.efectivo) - summary.totalTipsNet
-                      )}
+                      {formatCurrency(cashInRegisterValue)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-sm mb-2">
@@ -1238,11 +1261,7 @@ const DailySummary: React.FC = () => {
                       Efectivo Final en Caja
                     </span>
                     <span className="text-green-400 font-bold text-lg">
-                      {formatCurrency(
-                        adjCash(summary.paymentMethods.efectivo) -
-                          summary.totalTipsNet -
-                          gastosTotal
-                      )}
+                      {formatCurrency(cashInRegisterValue - gastosTotal)}
                     </span>
                   </div>
                 </div>
@@ -1397,9 +1416,10 @@ const DailySummary: React.FC = () => {
                         <th className="text-right px-4 py-2">Cuentas</th>
                         <th className="text-right px-4 py-2">Personas</th>
                         <th className="text-right px-4 py-2">Vendido</th>
+                        <th className="text-right px-4 py-2">Comisión cobrada</th>
                         <th className="text-right px-4 py-2">Propina cliente</th>
                         <th className="text-right px-4 py-2">Total</th>
-                        <th className="text-right px-4 py-2 text-green-400">Le toca</th>
+                        <th className="text-right px-4 py-2 text-green-400">Comisión a pagar</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700/50">
@@ -1408,7 +1428,8 @@ const DailySummary: React.FC = () => {
                           <td className="px-4 py-3 text-white font-semibold">{waiter.waiterName}</td>
                           <td className="px-4 py-3 text-right text-gray-300">{waiter.totalOrders}</td>
                           <td className="px-4 py-3 text-right text-gray-300">{waiter.totalPeople}</td>
-                          <td className="px-4 py-3 text-right text-gray-200">{formatCurrency(adjWaiterSales(waiter) - waiter.totalTips)}</td>
+                          <td className="px-4 py-3 text-right text-gray-200">{formatCurrency(adjWaiterProducts(waiter))}</td>
+                          <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(waiter.totalCommission)}</td>
                           <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(waiter.totalTips)}</td>
                           <td className="px-4 py-3 text-right text-white font-bold">{formatCurrency(adjWaiterSales(waiter))}</td>
                           <td className="px-4 py-3 text-right">
@@ -1435,10 +1456,11 @@ const DailySummary: React.FC = () => {
                         <td className="px-4 py-3 text-right text-gray-300">{summary.totalOrders}</td>
                         <td className="px-4 py-3 text-right text-gray-300">{summary.totalPeople}</td>
                         <td className="px-4 py-3 text-right text-gray-200">{formatCurrency(dTotalSubtotal)}</td>
+                        <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(summary.totalCommission)}</td>
                         <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(summary.totalTips)}</td>
                         <td className="px-4 py-3 text-right text-white">{formatCurrency(dTotalSales)}</td>
                         <td className="px-4 py-3 text-right text-green-400">
-                          {formatCurrency(summary.waiterStats.reduce((s, w) => s + getWaiterTableTip(w.orders, tipCatalog).amount, 0))}
+                          {formatCurrency(waiterCommissionTotal)}
                         </td>
                       </tr>
                     </tfoot>
@@ -1453,7 +1475,7 @@ const DailySummary: React.FC = () => {
                     const products = getSoldProducts(waiter.orders, tipCatalog);
                     const waiterTip = products.reduce((s, p) => s + p.tip, 0);
                     const productsTotal = products.reduce((s, p) => s + p.amount, 0);
-                    const sold = adjWaiterSales(waiter) - waiter.totalTips;
+                    const sold = adjWaiterProducts(waiter);
                     const discounts = productsTotal - sold;
                     return (
                       <div key={waiter.waiterId} className="border border-gray-700 rounded-xl overflow-hidden">
@@ -1468,6 +1490,10 @@ const DailySummary: React.FC = () => {
                               <p className="text-gray-200 font-bold">{formatCurrency(sold)}</p>
                             </div>
                             <div>
+                              <p className="text-gray-400 text-xs">Comisión cobrada</p>
+                              <p className="text-gray-300 font-bold">{formatCurrency(waiter.totalCommission)}</p>
+                            </div>
+                            <div>
                               <p className="text-gray-400 text-xs">Propina cliente</p>
                               <p className="text-gray-300 font-bold">{formatCurrency(waiter.totalTips)}</p>
                             </div>
@@ -1476,7 +1502,7 @@ const DailySummary: React.FC = () => {
                               <p className="text-white font-bold">{formatCurrency(adjWaiterSales(waiter))}</p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">Le toca</p>
+                              <p className="text-gray-400 text-xs">Comisión a pagar</p>
                               <p className="text-green-400 font-bold">{formatCurrency(waiterTip)}</p>
                             </div>
                           </div>
@@ -1488,7 +1514,7 @@ const DailySummary: React.FC = () => {
                                 <th className="text-left px-4 py-2">Producto</th>
                                 <th className="text-right px-4 py-2">Cantidad</th>
                                 <th className="text-right px-4 py-2">Importe</th>
-                                <th className="text-right px-4 py-2 text-green-400">Le toca</th>
+                                <th className="text-right px-4 py-2 text-green-400">Comisión</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700/50">

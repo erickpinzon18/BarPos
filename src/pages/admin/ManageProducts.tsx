@@ -158,7 +158,7 @@ const ManageProducts: React.FC = () => {
                     <div>
                       <p className="text-xl font-semibold text-red-500">${p.price.toFixed(2)}</p>
                       <p className={`text-xs mt-0.5 ${typeof p.tipPerUnit === 'number' ? 'text-green-400' : 'text-amber-400'}`}>
-                        {typeof p.tipPerUnit === 'number' ? `Propina mesero: $${p.tipPerUnit}` : 'Propina mesero: pendiente'}
+                        {typeof p.tipPerUnit === 'number' ? `Comisión mesero: $${p.tipPerUnit}` : 'Comisión mesero: pendiente'}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -228,7 +228,7 @@ const ManageProducts: React.FC = () => {
                       <input id="product-price" type="number" value={form.price === 0 ? '' : form.price} onChange={(e) => setForm(prev => ({ ...prev, price: Number(e.target.value) }))} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-60 block w-full p-2.5" placeholder="150.00" required />
                     </div>
                     <div>
-                      <label htmlFor="product-tip" className="block mb-2 text-sm font-medium text-gray-300">Propina mesero por unidad ($)</label>
+                      <label htmlFor="product-tip" className="block mb-2 text-sm font-medium text-gray-300">Comisión mesero por unidad ($)</label>
                       <input id="product-tip" type="number" min="0" value={form.tipPerUnit ?? ''} onChange={(e) => setForm(prev => ({ ...prev, tipPerUnit: e.target.value === '' ? undefined : Number(e.target.value) }))} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-60 block w-full p-2.5" placeholder="Ej: 30 (vacío = pendiente)" />
                     </div>
                     <div className="flex items-end pb-2">

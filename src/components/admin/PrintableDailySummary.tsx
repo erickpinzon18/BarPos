@@ -29,6 +29,9 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
     const formatCurrency = (n: number) => `$${n.toFixed(2)}`;
     const gastosTotal = (expenses?.gastos ?? []).reduce((s, g) => s + g.monto, 0);
     const hasExpenses = !!expenses && expenses.gastos.length > 0;
+    // Comisión que se le paga en efectivo a los meseros: se descuenta del efectivo
+    const commissionPaid = Object.values(waiterTableTips ?? {}).reduce((s, n) => s + n, 0);
+    const cashInRegister = summary.paymentMethods.efectivo - summary.totalTipsNet - commissionPaid;
     const withFolio = (ticketDetails ?? []).filter((t) => t.folio);
     const folioRange = withFolio.length > 0
       ? { first: withFolio[0].folio as string, last: withFolio[withFolio.length - 1].folio as string }
@@ -126,8 +129,12 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                   <td className="text-right font-medium text-gray-500">-{formatCurrency(summary.totalTipsNet)}</td>
                 </tr>
                 <tr>
+                  <td className="py-1 text-gray-500 pl-4">— Comisiones meseros</td>
+                  <td className="text-right font-medium text-gray-500">-{formatCurrency(commissionPaid)}</td>
+                </tr>
+                <tr>
                   <td className="py-1 font-semibold text-green-700 pl-4 border-b border-gray-200 pb-2">Efectivo en Caja</td>
-                  <td className="text-right font-semibold text-green-700 border-b border-gray-200 pb-2">{formatCurrency(summary.paymentMethods.efectivo - summary.totalTipsNet)}</td>
+                  <td className="text-right font-semibold text-green-700 border-b border-gray-200 pb-2">{formatCurrency(cashInRegister)}</td>
                 </tr>
                 <tr>
                   <td className="py-1">Tarjeta</td>
@@ -165,7 +172,7 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                     <td className="py-2 font-bold text-green-700">Efectivo Final en Caja</td>
                     <td className="text-right font-bold text-green-700">
                       {formatCurrency(
-                        (summary.paymentMethods.efectivo - summary.totalTipsNet) - gastosTotal
+                        cashInRegister - gastosTotal
                       )}
                     </td>
                   </tr>
@@ -189,10 +196,14 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                     </span>
                   </div>
                   
-                  <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-5 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500 text-xs">Vendido</p>
-                      <p className="font-medium">{formatCurrency(w.totalSales - w.totalTips)}</p>
+                      <p className="font-medium">{formatCurrency(w.totalSales - w.totalTips - (w.totalCommission ?? 0))}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Comisión cobrada</p>
+                      <p className="font-medium">{formatCurrency(w.totalCommission ?? 0)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Propina cliente</p>
@@ -203,7 +214,7 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                       <p className="font-bold">{formatCurrency(w.totalSales)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Le toca</p>
+                      <p className="text-gray-500 text-xs">Comisión a pagar</p>
                       <p className="font-bold">{formatCurrency(waiterTableTips?.[w.waiterId] ?? 0)}</p>
                     </div>
                   </div>

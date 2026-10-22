@@ -4,7 +4,7 @@
  * Modifica este archivo para agregar/remover categorías y se reflejará en todo el sistema
  */
 
-export type CategoryKey = 'Bebida' | 'Botella' | 'Shot' | 'Servicio' | 'Entrada' | 'Comida' | 'Postre';
+export type CategoryKey = 'Bebida' | 'Botella' | 'Shot' | 'Promos' | 'Servicio' | 'Entrada' | 'Comida' | 'Postre';
 
 export interface Category {
   key: CategoryKey;
@@ -37,6 +37,13 @@ export const CATEGORIES: Category[] = [
     label: 'Shot',
     icon: '🥃',
     color: 'bg-red-500',
+    workstation: 'barra'
+  },
+  {
+    key: 'Promos',
+    label: 'Promos',
+    icon: '🎉',
+    color: 'bg-pink-500',
     workstation: 'barra'
   },
   {

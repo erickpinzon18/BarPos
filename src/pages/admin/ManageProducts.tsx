@@ -51,7 +51,7 @@ const ManageProducts: React.FC = () => {
   const openEditModal = (p: Product) => {
     setModalTitle('Editar Producto');
     setEditingId(p.id);
-    setForm({ name: p.name, description: p.description || '', price: p.price, category: p.category, available: p.available });
+    setForm({ name: p.name, description: p.description || '', price: p.price, category: p.category, available: p.available, tipPerUnit: p.tipPerUnit });
     // mount modal and trigger animation
     setShowModal(true);
   };
@@ -60,11 +60,13 @@ const ManageProducts: React.FC = () => {
     e?.preventDefault();
     if (!form.name || !form.price) return alert('Nombre y precio requeridos');
 
+    // Firestore no acepta undefined: sin propina definida se guarda null (= pendiente)
+    const tipPerUnit = typeof form.tipPerUnit === 'number' && !isNaN(form.tipPerUnit) ? form.tipPerUnit : null;
     if (editingId) {
-      const res = await updateProduct(editingId, { name: form.name, description: form.description, price: form.price, category: form.category, available: form.available });
+      const res = await updateProduct(editingId, { name: form.name, description: form.description, price: form.price, category: form.category, available: form.available, tipPerUnit } as any);
       if (!res.success) alert(res.error || 'Error al actualizar');
     } else {
-      const res = await addProduct(form as any);
+      const res = await addProduct({ ...form, tipPerUnit } as any);
       if (!res.success) alert(res.error || 'Error al crear producto');
     }
     setShowModal(false);
@@ -153,7 +155,12 @@ const ManageProducts: React.FC = () => {
                   </div>
                   {p.description && <p className="text-sm text-gray-400 mt-2">{p.description}</p>}
                   <div className="flex justify-between items-center mt-4">
-                    <p className="text-xl font-semibold text-red-500">${p.price.toFixed(2)}</p>
+                    <div>
+                      <p className="text-xl font-semibold text-red-500">${p.price.toFixed(2)}</p>
+                      <p className={`text-xs mt-0.5 ${typeof p.tipPerUnit === 'number' ? 'text-green-400' : 'text-amber-400'}`}>
+                        {typeof p.tipPerUnit === 'number' ? `Propina mesero: $${p.tipPerUnit}` : 'Propina mesero: pendiente'}
+                      </p>
+                    </div>
                     <div className="flex items-center gap-3">
                       <button onClick={() => openEditModal(p)} className="font-medium text-blue-400 hover:underline text-sm">Editar</button>
                       <button onClick={() => handleDelete(p.id)} className="font-medium text-red-500 hover:underline text-sm">Eliminar</button>
@@ -219,6 +226,10 @@ const ManageProducts: React.FC = () => {
                     <div>
                       <label htmlFor="product-price" className="block mb-2 text-sm font-medium text-gray-300">Precio ($)</label>
                       <input id="product-price" type="number" value={form.price === 0 ? '' : form.price} onChange={(e) => setForm(prev => ({ ...prev, price: Number(e.target.value) }))} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-60 block w-full p-2.5" placeholder="150.00" required />
+                    </div>
+                    <div>
+                      <label htmlFor="product-tip" className="block mb-2 text-sm font-medium text-gray-300">Propina mesero por unidad ($)</label>
+                      <input id="product-tip" type="number" min="0" value={form.tipPerUnit ?? ''} onChange={(e) => setForm(prev => ({ ...prev, tipPerUnit: e.target.value === '' ? undefined : Number(e.target.value) }))} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-60 block w-full p-2.5" placeholder="Ej: 30 (vacío = pendiente)" />
                     </div>
                     <div className="flex items-end pb-2">
                       <label className="flex items-center space-x-2 cursor-pointer"><input id="product-available" type="checkbox" checked={form.available} onChange={(e) => setForm(prev => ({ ...prev, available: e.target.checked }))} className="h-4 w-4 rounded bg-gray-600 border-gray-500 text-red-500 focus:ring-red-500" /> <span className="text-sm text-gray-300">Disponible</span></label>

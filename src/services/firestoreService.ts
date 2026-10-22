@@ -637,6 +637,7 @@ export const addItemToOrder = async (orderId: string, product: Product, quantity
       quantity,
       status: 'pendiente',
       notes,
+      ...(typeof product.tipPerUnit === 'number' ? { tipPerUnit: product.tipPerUnit } : {}),
       category: product.category,
       createdAt: new Date(),
       updatedAt: new Date()

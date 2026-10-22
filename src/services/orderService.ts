@@ -132,6 +132,10 @@ export const addItemToOrder = async (
 
     const orderData = orderDoc.data() as Order;
 
+    // Propina por unidad del producto (se copia al item para que no cambie si después se edita el catálogo)
+    const productDoc = await getDoc(doc(db, 'products', productId));
+    const tipPerUnit = productDoc.exists() ? productDoc.data().tipPerUnit : undefined;
+
     // Crear nuevo item
     const newItem: OrderItem = {
       id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -142,6 +146,7 @@ export const addItemToOrder = async (
       status: 'pendiente',
       category: category as any,
       ...(notes ? { notes } : {}),
+      ...(typeof tipPerUnit === 'number' ? { tipPerUnit } : {}),
       createdAt: new Date(),
       updatedAt: new Date()
     };

@@ -18,10 +18,12 @@ interface PrintableDailySummaryProps {
     total: number;
     cashNotes?: string;
   }[];
+  /** Lo que le toca a cada mesero según la tabla de propinas por producto (waiterId -> monto) */
+  waiterTableTips?: Record<string, number>;
 }
 
 export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySummaryProps>(
-  ({ summary, shiftStart, shiftEnd, expenses, cardTypeBreakdown, ticketDetails }, ref) => {
+  ({ summary, shiftStart, shiftEnd, expenses, cardTypeBreakdown, ticketDetails, waiterTableTips }, ref) => {
     if (!summary) return null;
 
     const formatCurrency = (n: number) => `$${n.toFixed(2)}`;
@@ -187,18 +189,22 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                     </span>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500 text-xs">Vendido</p>
                       <p className="font-medium">{formatCurrency(w.totalSales - w.totalTips)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Propina</p>
+                      <p className="text-gray-500 text-xs">Propina cliente</p>
                       <p className="font-medium">{formatCurrency(w.totalTips)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Total</p>
                       <p className="font-bold">{formatCurrency(w.totalSales)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs">Le toca</p>
+                      <p className="font-bold">{formatCurrency(waiterTableTips?.[w.waiterId] ?? 0)}</p>
                     </div>
                   </div>
                 </div>

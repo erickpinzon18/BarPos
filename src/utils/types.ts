@@ -23,6 +23,7 @@ export interface Product {
   category: CategoryKey;
   imageUrl?: string;
   available: boolean;
+  tipPerUnit?: number; // Propina fija para el mesero por unidad vendida (sin definir = pendiente)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -80,6 +81,7 @@ export interface OrderItem {
   deliveredAt?: Date; // Cuándo se marcó como entregado
   deliveredBy?: string; // ID de quien lo marcó como entregado
   deliveredByName?: string; // Nombre de quien lo marcó como entregado
+  tipPerUnit?: number; // Propina para el mesero por unidad, copiada del producto al pedirlo
   swapFromName?: string; // Nombre del producto anterior cuando se cambió por swap (para reimprimir ticket de cambio)
   cancelReason?: string; // Motivo de cancelación del item
   pendingCancelPrint?: boolean; // Marca un item recién cancelado para que se imprima ticket de cancelación en barra/cocina
@@ -187,6 +189,7 @@ export interface ProductFormData {
   price: number;
   category: Product['category'];
   available: boolean;
+  tipPerUnit?: number;
 }
 
 export interface TableFormData {

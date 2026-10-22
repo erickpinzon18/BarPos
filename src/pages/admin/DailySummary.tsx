@@ -13,7 +13,8 @@ import {
 } from "firebase/firestore";
 import { toast } from "react-hot-toast";
 import { db } from "../../services/firebase";
-import type { Order } from "../../utils/types";
+import type { Order, OrderItem } from "../../utils/types";
+import { getProducts } from "../../services/firestoreService";
 import {
   Calendar,
   DollarSign,
@@ -119,20 +120,37 @@ interface ShiftSummary {
   totalCashierShare: number;
 }
 
+// Propina de mesero por unidad: la copiada al item al pedirlo o, si no la trae
+// (pedidos de antes del cambio), la del catálogo actual. null = pendiente de definir.
+type TipCatalog = Map<string, number | null>;
+const itemTipPerUnit = (i: OrderItem, catalog: TipCatalog): number | null =>
+  typeof i.tipPerUnit === 'number' ? i.tipPerUnit : (catalog.get(i.productId) ?? null);
+
 // Agrupa los productos vendidos (sin eliminados) de un conjunto de órdenes
-const getSoldProducts = (orders: Order[]) => {
-  const map = new Map<string, { name: string; quantity: number; amount: number }>();
+const getSoldProducts = (orders: Order[], catalog: TipCatalog) => {
+  const map = new Map<string, { name: string; quantity: number; amount: number; tip: number; tipPending: boolean }>();
   orders.forEach(o => {
     (o.items || []).forEach(i => {
       if (i.isDeleted) return;
       const qty = i.quantity ?? 1;
-      const row = map.get(i.productName) ?? { name: i.productName, quantity: 0, amount: 0 };
+      const row = map.get(i.productName) ?? { name: i.productName, quantity: 0, amount: 0, tip: 0, tipPending: false };
       row.quantity += qty;
       row.amount += (i.productPrice ?? 0) * qty;
+      const tpu = itemTipPerUnit(i, catalog);
+      if (tpu === null) row.tipPending = true; else row.tip += tpu * qty;
       map.set(i.productName, row);
     });
   });
   return [...map.values()].sort((a, b) => b.amount - a.amount);
+};
+
+// Lo que le toca al mesero según la tabla de propinas por producto
+const getWaiterTableTip = (orders: Order[], catalog: TipCatalog) => {
+  const products = getSoldProducts(orders, catalog);
+  return {
+    amount: products.reduce((s, p) => s + p.tip, 0),
+    pending: products.filter(p => p.tipPending).map(p => p.name),
+  };
 };
 
 const CHARS_80MM = 30;
@@ -155,6 +173,14 @@ const DailySummary: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentShiftDate());
   const [waiterTab, setWaiterTab] = useState<'resumen' | 'detalle'>('resumen');
+  const [tipCatalog, setTipCatalog] = useState<TipCatalog>(new Map());
+
+  useEffect(() => {
+    getProducts().then(res => {
+      if (!res.success || !res.data) return;
+      setTipCatalog(new Map(res.data.map(p => [p.id, typeof p.tipPerUnit === 'number' ? p.tipPerUnit : null])));
+    });
+  }, []);
   const [pendingTab, setPendingTab] = useState<'resumen' | 'detalle'>('resumen');
 
   // Gastos del Turno — lista de conceptos con su monto
@@ -820,8 +846,11 @@ const DailySummary: React.FC = () => {
         lines.push(fmtLine("Cuentas:", String(w.totalOrders)));
         lines.push(fmtLine("Personas:", String(w.totalPeople)));
         lines.push(fmtLine("Vendido:", fmtM(adjWaiterSales(w) - w.totalTips)));
-        lines.push(fmtLine("Propina:", fmtM(w.totalTips)));
+        lines.push(fmtLine("Propina cliente:", fmtM(w.totalTips)));
         lines.push(fmtLine("Total:", fmtM(adjWaiterSales(w))));
+        const wt = getWaiterTableTip(w.orders, tipCatalog);
+        lines.push(fmtLine("LE TOCA:", fmtM(wt.amount)));
+        if (wt.pending.length > 0) lines.push(`  (${wt.pending.length} prod. sin propina definida)`);
         lines.push(sep());
       });
       lines.push("");
@@ -1368,8 +1397,9 @@ const DailySummary: React.FC = () => {
                         <th className="text-right px-4 py-2">Cuentas</th>
                         <th className="text-right px-4 py-2">Personas</th>
                         <th className="text-right px-4 py-2">Vendido</th>
-                        <th className="text-right px-4 py-2">Propina</th>
+                        <th className="text-right px-4 py-2">Propina cliente</th>
                         <th className="text-right px-4 py-2">Total</th>
+                        <th className="text-right px-4 py-2 text-green-400">Le toca</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700/50">
@@ -1379,8 +1409,23 @@ const DailySummary: React.FC = () => {
                           <td className="px-4 py-3 text-right text-gray-300">{waiter.totalOrders}</td>
                           <td className="px-4 py-3 text-right text-gray-300">{waiter.totalPeople}</td>
                           <td className="px-4 py-3 text-right text-gray-200">{formatCurrency(adjWaiterSales(waiter) - waiter.totalTips)}</td>
-                          <td className="px-4 py-3 text-right text-green-400 font-semibold">{formatCurrency(waiter.totalTips)}</td>
+                          <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(waiter.totalTips)}</td>
                           <td className="px-4 py-3 text-right text-white font-bold">{formatCurrency(adjWaiterSales(waiter))}</td>
+                          <td className="px-4 py-3 text-right">
+                            {(() => {
+                              const t = getWaiterTableTip(waiter.orders, tipCatalog);
+                              return (
+                                <>
+                                  <span className="text-green-400 font-bold">{formatCurrency(t.amount)}</span>
+                                  {t.pending.length > 0 && (
+                                    <p className="text-[11px] text-amber-400" title={t.pending.join(', ')}>
+                                      + {t.pending.length} producto{t.pending.length > 1 ? 's' : ''} pendiente{t.pending.length > 1 ? 's' : ''}
+                                    </p>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1390,8 +1435,11 @@ const DailySummary: React.FC = () => {
                         <td className="px-4 py-3 text-right text-gray-300">{summary.totalOrders}</td>
                         <td className="px-4 py-3 text-right text-gray-300">{summary.totalPeople}</td>
                         <td className="px-4 py-3 text-right text-gray-200">{formatCurrency(dTotalSubtotal)}</td>
-                        <td className="px-4 py-3 text-right text-green-400">{formatCurrency(summary.totalTips)}</td>
+                        <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(summary.totalTips)}</td>
                         <td className="px-4 py-3 text-right text-white">{formatCurrency(dTotalSales)}</td>
+                        <td className="px-4 py-3 text-right text-green-400">
+                          {formatCurrency(summary.waiterStats.reduce((s, w) => s + getWaiterTableTip(w.orders, tipCatalog).amount, 0))}
+                        </td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1402,7 +1450,8 @@ const DailySummary: React.FC = () => {
               {waiterTab === 'detalle' && (
                 <div className="space-y-6">
                   {summary.waiterStats.map((waiter) => {
-                    const products = getSoldProducts(waiter.orders);
+                    const products = getSoldProducts(waiter.orders, tipCatalog);
+                    const waiterTip = products.reduce((s, p) => s + p.tip, 0);
                     const productsTotal = products.reduce((s, p) => s + p.amount, 0);
                     const sold = adjWaiterSales(waiter) - waiter.totalTips;
                     const discounts = productsTotal - sold;
@@ -1419,12 +1468,16 @@ const DailySummary: React.FC = () => {
                               <p className="text-gray-200 font-bold">{formatCurrency(sold)}</p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">Propina</p>
-                              <p className="text-green-400 font-bold">{formatCurrency(waiter.totalTips)}</p>
+                              <p className="text-gray-400 text-xs">Propina cliente</p>
+                              <p className="text-gray-300 font-bold">{formatCurrency(waiter.totalTips)}</p>
                             </div>
                             <div>
                               <p className="text-gray-400 text-xs">Total</p>
                               <p className="text-white font-bold">{formatCurrency(adjWaiterSales(waiter))}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-xs">Le toca</p>
+                              <p className="text-green-400 font-bold">{formatCurrency(waiterTip)}</p>
                             </div>
                           </div>
                         </div>
@@ -1435,16 +1488,22 @@ const DailySummary: React.FC = () => {
                                 <th className="text-left px-4 py-2">Producto</th>
                                 <th className="text-right px-4 py-2">Cantidad</th>
                                 <th className="text-right px-4 py-2">Importe</th>
+                                <th className="text-right px-4 py-2 text-green-400">Le toca</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700/50">
                               {products.length === 0 ? (
-                                <tr><td colSpan={3} className="px-4 py-4 text-center text-gray-500">Sin productos</td></tr>
+                                <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-500">Sin productos</td></tr>
                               ) : products.map(p => (
                                 <tr key={p.name} className="hover:bg-gray-700/30 transition-colors">
                                   <td className="px-4 py-2 text-gray-200">{p.name}</td>
                                   <td className="px-4 py-2 text-right text-gray-300">{p.quantity}</td>
                                   <td className="px-4 py-2 text-right text-white">{formatCurrency(p.amount)}</td>
+                                  <td className="px-4 py-2 text-right">
+                                    {p.tipPending
+                                      ? <span className="text-amber-400 text-xs">{p.tip > 0 ? `${formatCurrency(p.tip)} + pendiente` : 'pendiente'}</span>
+                                      : <span className="text-green-400">{formatCurrency(p.tip)}</span>}
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1453,12 +1512,14 @@ const DailySummary: React.FC = () => {
                                 <tr className="border-t border-gray-700 text-sm">
                                   <td className="px-4 py-2 text-gray-400" colSpan={2}>Descuentos / promociones</td>
                                   <td className="px-4 py-2 text-right text-red-400">-{formatCurrency(discounts)}</td>
+                                  <td />
                                 </tr>
                               )}
                               <tr className="border-t-2 border-gray-600 bg-gray-700/40 font-bold">
                                 <td className="px-4 py-3 text-white">TOTAL VENDIDO</td>
                                 <td className="px-4 py-3 text-right text-gray-300">{products.reduce((s, p) => s + p.quantity, 0)}</td>
                                 <td className="px-4 py-3 text-right text-white">{formatCurrency(sold)}</td>
+                                <td className="px-4 py-3 text-right text-green-400">{formatCurrency(waiterTip)}</td>
                               </tr>
                             </tfoot>
                           </table>
@@ -1530,6 +1591,9 @@ const DailySummary: React.FC = () => {
           expenses={{ gastos }}
           cardTypeBreakdown={cardTypeBreakdown}
           ticketDetails={ticketDetails}
+          waiterTableTips={Object.fromEntries(
+            (summary?.waiterStats ?? []).map(w => [w.waiterId, getWaiterTableTip(w.orders, tipCatalog).amount])
+          )}
         />
       </div>
     </div>

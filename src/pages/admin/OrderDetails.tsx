@@ -33,6 +33,7 @@ import {
   updateOrderStatusInKanban,
   cancelEmptyOrder,
 } from "../../services/firestoreService";
+import { tableLabel } from '../../utils/tableLabel';
 
 const OrderDetails: React.FC = () => {
   const { tableId } = useParams<{ tableId: string }>();
@@ -657,7 +658,7 @@ const OrderDetails: React.FC = () => {
             <h1 className="text-3xl font-bold text-white">
               {order.tableNumber === 0
                 ? "🍹 Barra"
-                : `Mesa ${order.tableNumber}`}
+                : tableLabel(order.tableNumber)}
             </h1>
             <p className="text-gray-400">Orden #{order.id.slice(-8)}</p>
           </div>

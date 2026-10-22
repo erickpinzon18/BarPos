@@ -11,6 +11,8 @@ import { LogOut, User } from 'lucide-react';
 import type { Table } from '../../utils/types';
 import { SECTIONS, sortTables } from '../../components/common/TableGrid';
 import { withEffectiveStatus } from '../../utils/tableStatus';
+import { isTakeoutNumber } from '../../utils/venueLayout';
+import { tableLabel } from '../../utils/tableLabel';
 
 const WaiterHome: React.FC = () => {
   const navigate = useNavigate();
@@ -174,7 +176,7 @@ const WaiterHome: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-4">
               <span className="text-xl font-bold text-white">
-                {isBar ? barLabel : `Mesa ${table.number}`}
+                {isBar ? barLabel : tableLabel(table.number)}
               </span>
               <span className={`${isBar ? 'bg-purple-500 text-purple-100' : 'bg-green-500 text-green-100'} text-sm font-bold px-3 py-1 rounded-full`}>
                 {isBar ? 'Tu Barra' : 'Tu Mesa'}
@@ -234,7 +236,7 @@ const WaiterHome: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-6">
               <span className="text-xl font-bold text-white">
-                {isBar ? barLabel : `Mesa ${table.number}`}
+                {isBar ? barLabel : tableLabel(table.number)}
               </span>
               <span className={`${isBar ? 'bg-purple-600' : 'bg-green-600'} text-gray-200 text-sm font-bold px-3 py-1 rounded-full`}>
                 Libre
@@ -266,7 +268,7 @@ const WaiterHome: React.FC = () => {
           <>
             <div className="flex justify-between items-center mb-4">
               <span className="text-xl font-bold text-white">
-                {isBar ? barLabel : `Mesa ${table.number}`}
+                {isBar ? barLabel : tableLabel(table.number)}
               </span>
               <span className="bg-red-600 text-red-100 text-sm font-bold px-3 py-1 rounded-full">
                 Ocupada
@@ -417,6 +419,8 @@ const WaiterHome: React.FC = () => {
             <h2 className="text-xl font-bold text-white mb-2">
               ¿Abrir {tableToConfirm.number === 0 || /^B\d+$/i.test(String(tableToConfirm.number))
                 ? `la barra ${tableToConfirm.number === 0 ? '' : tableToConfirm.number}`.trim()
+                : isTakeoutNumber(tableToConfirm.number)
+                ? `${String(tableToConfirm.number).replace(/^Llevar/i, 'para llevar')}`
                 : `la mesa ${tableToConfirm.number}`}?
             </h2>
             <p className="text-gray-400 text-sm mb-6">

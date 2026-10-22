@@ -6,6 +6,7 @@ import KitchenStatusControl from '../../components/common/KitchenStatusControl';
 import { ChefHat, Wine, Filter, RefreshCw } from 'lucide-react';
 import type { OrderItemStatus } from '../../utils/types';
 import { getCategoriesByWorkstation } from '../../utils/categories';
+import { tableLabel } from '../../utils/tableLabel';
 
 const KitchenControl: React.FC = () => {
   const { orders, loading, error } = useActiveOrders();
@@ -172,7 +173,7 @@ const KitchenControl: React.FC = () => {
           <div key={`${item.orderId}-${item.id}`} className="relative">
             {/* Table info badge */}
             <div className="absolute -top-2 -right-2 bg-red-600 text-gray-900 text-xs font-bold px-2 py-1 rounded-full z-10">
-              {item.tableNumber === 0 ? '🍹 Barra' : `Mesa ${item.tableNumber}`}
+              {item.tableNumber === 0 ? '🍹 Barra' : tableLabel(item.tableNumber)}
             </div>
             
             <KitchenStatusControl

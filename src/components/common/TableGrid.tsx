@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Table, Order, Reservation } from '../../utils/types';
+import { tableLabel } from '../../utils/tableLabel';
 
 interface TableGridProps {
   tables: Table[];
@@ -21,12 +22,14 @@ export interface SectionDef {
 const isMesa  = (n: string) => /^\d+$/.test(n) && Number(n) >= 1;
 const isBarra = (n: string) => n === '0' || /^B\d+$/i.test(n);
 const isSala  = (n: string) => n.startsWith('Sala');
+const isLlevar = (n: string) => n.startsWith('Llevar');
 
 export const SECTIONS: SectionDef[] = [
   { title: 'Mesas', filter: isMesa,  cols: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' },
   { title: 'Barra', filter: isBarra, cols: 'grid-cols-2 sm:grid-cols-5', wide: true },
   { title: 'Salas', filter: isSala,  cols: 'grid-cols-1 sm:grid-cols-3' },
-  { title: 'Otras', filter: n => !isMesa(n) && !isBarra(n) && !isSala(n), cols: 'grid-cols-2 sm:grid-cols-4' },
+  { title: 'Para llevar', filter: isLlevar, cols: 'grid-cols-2 sm:grid-cols-5' },
+  { title: 'Otras', filter: n => !isMesa(n) && !isBarra(n) && !isSala(n) && !isLlevar(n), cols: 'grid-cols-2 sm:grid-cols-4' },
 ];
 
 export function sortTables(a: Table, b: Table): number {
@@ -57,9 +60,9 @@ const TableCard: React.FC<CardProps> = ({
   const isBar = table.number === 0 || /^B\d+$/i.test(String(table.number));
   const label = isBar
     ? (table.number === 0 ? '🍹 Barra' : `🍹 ${table.number}`)
-    : typeof table.number === 'string'
-    ? table.number
-    : `Mesa ${table.number}`;
+    : isLlevar(String(table.number))
+    ? `🥡 ${tableLabel(table.number)}`
+    : tableLabel(table.number);
 
   const activeItems = order?.items.filter(i => !i.isDeleted) ?? [];
   const itemCount = activeItems.reduce((s, i) => s + i.quantity, 0);

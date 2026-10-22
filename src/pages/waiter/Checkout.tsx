@@ -15,6 +15,7 @@ import {
 import { printTicket } from "../../utils/printTicket";
 import { usePaperSize } from "../../hooks/usePaperSize";
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
+import { tableLabel } from '../../utils/tableLabel';
 
 const WaiterCheckout: React.FC = () => {
   const location = useLocation();
@@ -432,7 +433,7 @@ const WaiterCheckout: React.FC = () => {
                 Checkout -{" "}
                 {order.tableNumber === 0
                   ? "🍹 Barra"
-                  : `Mesa ${order.tableNumber}`}
+                  : tableLabel(order.tableNumber)}
                 {/* Status badge */}
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-semibold ${

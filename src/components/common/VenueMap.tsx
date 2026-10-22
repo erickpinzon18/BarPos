@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Table, Order, Reservation } from '../../utils/types';
-import { TABLE_LAYOUT, DECOR_LAYOUT, isLayoutTable } from '../../utils/venueLayout';
+import { TABLE_LAYOUT, DECOR_LAYOUT, isLayoutTable, isTakeoutNumber } from '../../utils/venueLayout';
+import { tableLabel } from '../../utils/tableLabel';
 
 interface VenueMapProps {
   tables: Table[];
@@ -39,8 +40,9 @@ const Popup: React.FC<PopupProps> = ({
   const isBar    = isBarNumber(table.number);
   const label    = isBar
     ? (table.number === 0 ? '🍹 Barra' : `🍹 ${table.number}`)
+    : isTakeoutNumber(table.number) ? `🥡 ${String(table.number).replace(/^Llevar/i, 'Para llevar')}`
     : typeof table.number === 'string' ? table.number
-    : `Mesa ${table.number}`;
+    : tableLabel(table.number);
 
   const accentBtn = accentColor === 'red'   ? 'bg-red-600 hover:bg-red-700'
     : accentColor === 'orange' ? 'bg-orange-500 hover:bg-orange-600'
@@ -199,6 +201,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
 
           const label = isBar
             ? (pos.number === 0 ? 'Barra' : String(pos.number))
+            : isTakeoutNumber(pos.number) ? `🥡 ${String(pos.number).replace(/^Llevar\s*/i, '')}`
             : typeof pos.number === 'string' ? pos.number
             : String(pos.number);
 
@@ -314,7 +317,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
                   className="px-3 py-1.5 rounded-lg border text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ backgroundColor: ac.bg, borderColor: ac.border }}
                 >
-                  {typeof t.number === 'number' ? `Mesa ${t.number}` : t.number}
+                  {typeof t.number === 'number' ? tableLabel(t.number) : t.number}
                 </button>
               );
             })}

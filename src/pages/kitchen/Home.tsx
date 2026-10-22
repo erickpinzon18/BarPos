@@ -11,6 +11,8 @@ import { useTodayReservations } from '../../hooks/useTodayReservations';
 import toast from 'react-hot-toast';
 import type { Table } from '../../utils/types';
 import { withEffectiveStatus } from '../../utils/tableStatus';
+import { isTakeoutNumber } from '../../utils/venueLayout';
+import { tableLabel } from '../../utils/tableLabel';
 
 const KitchenHome: React.FC = () => {
   const navigate = useNavigate();
@@ -65,7 +67,7 @@ const KitchenHome: React.FC = () => {
     setTableToConfirm(null);
 
     setOpeningTableId(table.id);
-    const label = table.number === 0 ? 'Barra' : `Mesa ${table.number}`;
+    const label = table.number === 0 ? 'Barra' : tableLabel(table.number);
     const toastId = toast.loading(`Abriendo ${label}...`);
     try {
       await createEmptyOrder(
@@ -135,6 +137,8 @@ const KitchenHome: React.FC = () => {
             <h2 className="text-xl font-bold text-white mb-2">
               ¿Abrir {tableToConfirm.number === 0 || /^B\d+$/i.test(String(tableToConfirm.number))
                 ? `la barra ${tableToConfirm.number === 0 ? '' : tableToConfirm.number}`.trim()
+                : isTakeoutNumber(tableToConfirm.number)
+                ? `${String(tableToConfirm.number).replace(/^Llevar/i, 'para llevar')}`
                 : `la mesa ${tableToConfirm.number}`}?
             </h2>
             <p className="text-gray-400 text-sm mb-6">

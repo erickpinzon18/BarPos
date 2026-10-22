@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import type { Order } from "../../utils/types";
 import { TrendingUp, DollarSign, Users, Package, Clock, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { getShiftRange, getCurrentShiftDate, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
+import { tableLabel } from '../../utils/tableLabel';
 
 const CARD_COMMISSION_RATE = 0.05;
 
@@ -238,7 +239,7 @@ const MisVentas: React.FC = () => {
                   {rows.map(({ o, subtotal, tip, cardComm, tipNet, cashAmt, cardAmt }) => (
                     <tr key={o.id} className="hover:bg-gray-700/20 transition-colors">
                       <td className="px-4 py-2 text-gray-300">
-                        {o.tableNumber === 0 ? "Barra" : `Mesa ${o.tableNumber}`}
+                        {o.tableNumber === 0 ? "Barra" : tableLabel(o.tableNumber)}
                         {o.tableName ? <span className="text-gray-500 text-xs ml-1">({o.tableName})</span> : null}
                       </td>
                       <td className="px-4 py-2 text-gray-400">

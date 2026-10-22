@@ -6,6 +6,7 @@ import { updateOrderStatusInKanban } from '../../services/firestoreService';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Order } from '../../utils/types';
 import { KANBAN_DELIVERED_RETENTION_MINUTES } from '../../utils/constants';
+import { tableLabel as formatTableLabel } from '../../utils/tableLabel';
 
 const WaiterKanban: React.FC = () => {
   const { orders, loading } = useKitchenOrders();
@@ -88,7 +89,7 @@ const WaiterKanban: React.FC = () => {
       ? dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
       : '';
     const isBar = tableNumber === 0;
-    const tableLabel = isBar ? '🍹 Barra' : `Mesa ${tableNumber ?? '?'}`;
+    const tableLabel = isBar ? '🍹 Barra' : formatTableLabel(tableNumber ?? '?');
     const displayName = tableName || tableLabel;
 
     return (

@@ -44,6 +44,9 @@ export const TABLE_LAYOUT: TablePos[] = [
   { number: 'Sala 1', x: 43,   y: 7,  w: 10.5, h: 28 },
   { number: 'Sala 2', x: 81.5, y: 15, w: 15,   h: 26 },
   { number: 'Sala 3', x: 73,   y: 77, w: 18,   h: 20 },
+
+  // ── Para llevar (fila sobre la barra) ─────────────────
+  ...[1, 2, 3, 4, 5].map((n, i) => ({ number: `Llevar ${n}`, x: 33 + i * 5.75, y: 68.5, w: 5, h: SH })),
 ];
 
 /** Elementos decorativos (no son mesas). */
@@ -52,6 +55,9 @@ export const DECOR_LAYOUT = [
 ];
 
 const LAYOUT_KEYS = new Set(TABLE_LAYOUT.map(p => String(p.number)));
+
+/** ¿Es un lugar "para llevar"? */
+export const isTakeoutNumber = (number: number | string): boolean => /^Llevar\b/i.test(String(number));
 
 /** ¿La mesa forma parte del plano actual? */
 export const isLayoutTable = (number: number | string): boolean => LAYOUT_KEYS.has(String(number));

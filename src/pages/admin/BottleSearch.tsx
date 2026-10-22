@@ -3,6 +3,7 @@ import { getOrdersByDateRange, getProducts } from '../../services/firestoreServi
 import type { Order, OrderItem, Product } from '../../utils/types';
 import toast from 'react-hot-toast';
 import { Search, Wine, X, CalendarDays, ChevronDown, ChevronUp } from 'lucide-react';
+import { tableLabel } from '../../utils/tableLabel';
 
 interface BottleSaleEntry {
   order: Order;
@@ -270,7 +271,7 @@ const BottleSearch: React.FC = () => {
                           >
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-white font-semibold">
-                                {item.quantity}x · {order.tableNumber === 0 ? 'Barra' : `Mesa ${order.tableNumber ?? '-'}`}
+                                {item.quantity}x · {order.tableNumber === 0 ? 'Barra' : tableLabel(order.tableNumber ?? '-')}
                                 {order.tableName && <span className="text-red-400 font-normal"> · 🏷️ {order.tableName}</span>}
                               </p>
                               <p className="text-xs text-gray-400">

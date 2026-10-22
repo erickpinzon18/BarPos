@@ -18,6 +18,7 @@ import QuantityModal from '../../components/common/QuantityModal';
 import SwapServiceModal from '../../components/common/SwapServiceModal';
 import { getCategoryInfo } from '../../utils/categories';
 import type { OrderItem, Product, User as AppUser } from '../../utils/types';
+import { tableLabel } from '../../utils/tableLabel';
 
 const WaiterOrderDetails: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
@@ -646,7 +647,7 @@ const WaiterOrderDetails: React.FC = () => {
                             <ArrowLeft className="w-6 h-6 text-gray-400" />
                         </button>
                         <div className="flex-1">
-                            <h1 className="text-2xl font-bold text-white">{isBar ? '🍹 Barra' : `Mesa ${order.tableNumber}`}</h1>
+                            <h1 className="text-2xl font-bold text-white">{isBar ? '🍹 Barra' : tableLabel(order.tableNumber)}</h1>
                             <p className="text-xs text-gray-400">#{order.id.slice(-8)}</p>
                         </div>
                     </div>
@@ -1196,7 +1197,7 @@ const WaiterOrderDetails: React.FC = () => {
                                     <option value="">No mover (dejar en esta mesa)</option>
                                     {freeTables.map(t => (
                                         <option key={t.id} value={t.id}>
-                                            {t.number === 0 ? 'Barra' : `Mesa ${t.number}`}
+                                            {t.number === 0 ? 'Barra' : tableLabel(t.number)}
                                         </option>
                                     ))}
                                 </select>

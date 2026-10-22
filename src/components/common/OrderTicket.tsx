@@ -2,13 +2,14 @@
 import React from 'react';
 import type { Order } from '../../utils/types';
 import { Card, CardContent, CardHeader } from '../ui/Card';
+import { tableLabel } from '../../utils/tableLabel';
 
 export const OrderTicket: React.FC<{ order: Order }> = ({ order }) => {
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <span className="font-semibold">{order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber}`}</span>
+          <span className="font-semibold">{order.tableNumber === 0 ? '🍹 Barra' : tableLabel(order.tableNumber)}</span>
           <span className="text-sm text-gray-400">Mesero: {order.waiterName}</span>
         </div>
       </CardHeader>

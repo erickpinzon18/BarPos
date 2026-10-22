@@ -32,6 +32,7 @@ import {
   Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { tableLabel } from '../../utils/tableLabel';
 
 const statusColors: Record<ReservationStatus, string> = {
   pendiente: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
@@ -207,7 +208,7 @@ const Reservations: React.FC = () => {
         priority,
         notes,
         tableId: tableId || null,
-        tableName: table ? `Mesa ${table.number}` : null,
+        tableName: table ? tableLabel(table.number) : null,
         updatedAt: Timestamp.now(),
       };
 

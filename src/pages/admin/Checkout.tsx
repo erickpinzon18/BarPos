@@ -16,6 +16,7 @@ import {
 import { Tag, Clock, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
+import { tableLabel } from '../../utils/tableLabel';
 
 const AdminCheckout: React.FC = () => {
   const location = useLocation();
@@ -634,7 +635,7 @@ const AdminCheckout: React.FC = () => {
                 Checkout -{" "}
                 {order.tableNumber === 0
                   ? "🍹 Barra"
-                  : `Mesa ${order.tableNumber}`}
+                  : tableLabel(order.tableNumber)}
               </h1>
               {order.payments && order.payments.length > 0 && (
                 <div className="text-xs text-gray-400">

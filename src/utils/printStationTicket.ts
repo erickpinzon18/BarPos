@@ -1,4 +1,5 @@
 import { sendToPrinter, type PaperSize } from './printTicket';
+import { tableLabel } from './tableLabel';
 
 export interface StationTicketItem {
   productName: string;
@@ -62,9 +63,9 @@ export const printStationTicket = (opts: StationTicketOptions): void => {
 
   const mesaLabel = tableNumber === 0
     ? 'Barra Principal'
-    : tableName && tableName !== `Mesa ${tableNumber}`
-      ? `Mesa ${tableNumber} - ${tableName}`
-      : `Mesa ${tableNumber}`;
+    : tableName && tableName !== tableLabel(tableNumber)
+      ? `${tableLabel(tableNumber)} - ${tableName}`
+      : tableLabel(tableNumber);
   lines.push(mesaLabel);
   lines.push(`Mesero: ${waiterName}`);
 

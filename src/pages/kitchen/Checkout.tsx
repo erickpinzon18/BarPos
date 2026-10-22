@@ -12,6 +12,7 @@ import { Tag, Clock } from 'lucide-react';
 import { printTicket } from '../../utils/printTicket';
 import { usePaperSize } from '../../hooks/usePaperSize';
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
+import { tableLabel } from '../../utils/tableLabel';
 
 const KitchenCheckout: React.FC = () => {
   const location = useLocation();
@@ -306,7 +307,7 @@ const KitchenCheckout: React.FC = () => {
           <div className="flex items-center space-x-3">
             <div>
               <h1 className="text-3xl font-bold text-white">
-                Checkout - {order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber}`}
+                Checkout - {order.tableNumber === 0 ? '🍹 Barra' : tableLabel(order.tableNumber)}
               </h1>
             </div>
             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${order.status === 'pagado' ? 'bg-green-600 text-white' : order.status === 'cancelado' ? 'bg-red-600 text-white' : 'bg-yellow-500 text-gray-900'}`}>

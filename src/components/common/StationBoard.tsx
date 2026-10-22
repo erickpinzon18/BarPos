@@ -9,6 +9,7 @@ import { getCategoriesByWorkstation, getCategoryInfo } from '../../utils/categor
 import { KANBAN_DELIVERED_RETENTION_MINUTES } from '../../utils/constants';
 import { updateItemsStatus } from '../../services/firestoreService';
 import { useAuth } from '../../contexts/AuthContext';
+import { tableLabel } from '../../utils/tableLabel';
 
 type Station = 'cocina' | 'barra';
 
@@ -119,7 +120,7 @@ export const StationBoard: React.FC<StationBoardProps> = ({ orders, station }) =
   };
 
   const tableTitle = (order: Order) => {
-    const base = order.tableNumber === 0 ? '🍹 Barra' : `Mesa ${order.tableNumber ?? '?'}`;
+    const base = order.tableNumber === 0 ? '🍹 Barra' : tableLabel(order.tableNumber ?? '?');
     return order.tableName ? `${base} · ${order.tableName}` : base;
   };
 

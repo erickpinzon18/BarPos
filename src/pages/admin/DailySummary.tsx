@@ -32,6 +32,7 @@ import { PrintableDailySummary } from "../../components/admin/PrintableDailySumm
 import { useActiveOrders } from "../../hooks/useOrders";
 import { exportShiftReportToExcel } from "../../utils/exportExcel";
 import { getShiftRange, getCurrentShiftDate, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
+import { tableLabel as formatTableLabel } from '../../utils/tableLabel';
 
 // Ya no se descuenta comisión de tarjeta a las propinas: la propina es la completa.
 const CARD_COMMISSION_RATE = 0;
@@ -209,7 +210,7 @@ const DailySummary: React.FC = () => {
       const activeItems = order.items?.filter(i => !i.isDeleted) || [];
       const orderTotal = activeItems.reduce((s, i) => s + (i.productPrice || 0) * (i.quantity || 0), 0);
       total += orderTotal;
-      const tableLabel = order.tableNumber === 0 ? 'Barra' : `Mesa ${order.tableNumber}`;
+      const tableLabel = order.tableNumber === 0 ? 'Barra' : formatTableLabel(order.tableNumber);
       console.group(`${tableLabel}${order.tableName ? ` (${order.tableName})` : ''} — $${orderTotal.toFixed(2)}`);
       console.log('ID orden:', order.id);
       console.log('Mesero:', order.waiterName || '—', '| ID:', order.waiterId || '—');
@@ -263,7 +264,7 @@ const DailySummary: React.FC = () => {
         folio: o.folio,
         folioSeq: o.folioSeq,
         id: o.id,
-        table: o.tableNumber === 0 ? "Barra" : `Mesa ${o.tableNumber}`,
+        table: o.tableNumber === 0 ? "Barra" : formatTableLabel(o.tableNumber),
         waiter: o.waiterName,
         method: o.paymentMethod,
         total: o.total ?? 0,
@@ -1286,7 +1287,7 @@ const DailySummary: React.FC = () => {
                         .map(order => {
                           const activeItems = (order.items || []).filter(i => !i.isDeleted);
                           const orderTotal = activeItems.reduce((s, i) => s + i.productPrice * i.quantity, 0);
-                          const tableLabel = order.tableNumber === 0 ? 'Barra' : `Mesa ${order.tableNumber}`;
+                          const tableLabel = order.tableNumber === 0 ? 'Barra' : formatTableLabel(order.tableNumber);
                           return (
                             <div key={order.id} className="bg-gray-700/40 border border-gray-600/50 rounded-lg p-3">
                               <div className="flex items-center justify-between mb-2">

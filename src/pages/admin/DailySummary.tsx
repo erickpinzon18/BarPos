@@ -294,9 +294,14 @@ const DailySummary: React.FC = () => {
         waiter: o.waiterName,
         method: o.paymentMethod,
         total: o.total ?? 0,
+        // Comisión del mesero (tabla) y propina de la cuenta
+        commission: getSoldProducts([o], tipCatalog).reduce((sum, p) => sum + p.tip, 0),
+        tip: typeof o.tipAmount === "number"
+          ? o.tipAmount
+          : Math.max(0, (o.total ?? 0) - (o.subtotal ?? 0) + ((o as any).discount ?? 0)),
         cashNotes: o.cashNotes,
       }));
-  }, [shiftOrders]);
+  }, [shiftOrders, tipCatalog]);
 
   // Rango de folios del turno (primer y último folio asignado, en orden de secuencia)
   const folioRange = React.useMemo(() => {
@@ -683,7 +688,6 @@ const DailySummary: React.FC = () => {
   };
 
   const formatCurrency = (n: number) => `$${n.toFixed(2)}`;
-  const formatPercent = (n: number) => `${n.toFixed(1)}%`;
 
   // ── Valores ajustados para demo mode ──────────────────────────────────────
   const cashReduction = demoMode && summary
@@ -761,9 +765,12 @@ const DailySummary: React.FC = () => {
     // ── Ventas Generales ────────────────────────────────────────────────────
     lines.push(center("VENTAS GENERALES"));
     lines.push(sep());
-    lines.push(fmtLine("Total vendido:", fmtM(dTotalSales)));
-    lines.push(fmtLine("Subtotal (sin propina):", fmtM(dTotalSubtotal)));
+    lines.push(fmtLine("Total cobrado:", fmtM(dTotalSales)));
+    lines.push(fmtLine("Productos:", fmtM(dTotalSubtotal)));
     lines.push(fmtLine("Propinas:", fmtM(summary.totalTips)));
+    lines.push("  (promos 10% + autorizadas)");
+    lines.push(fmtLine("Comisiones:", fmtM(waiterCommissionTotal)));
+    lines.push("  (incluidas en el precio)");
     lines.push("");
 
     // ── Métodos de Pago ─────────────────────────────────────────────────────
@@ -772,12 +779,8 @@ const DailySummary: React.FC = () => {
     lines.push(
       fmtLine("Efectivo (Total):", fmtM(adjCash(summary.paymentMethods.efectivo)))
     );
-    lines.push(
-      fmtLine("  -Propinas (Total):", `-${fmtM(summary.totalTipsNet)}`)
-    );
-    lines.push(
-      fmtLine("  -Comisiones meseros:", `-${fmtM(waiterCommissionTotal)}`)
-    );
+    lines.push(fmtLine("  -Propinas:", `-${fmtM(summary.totalTipsNet)}`));
+    lines.push(fmtLine("  -Comisiones:", `-${fmtM(waiterCommissionTotal)}`));
     const cashInRegister = cashInRegisterValue;
     lines.push(fmtLine("  Efectivo en caja:", fmtM(cashInRegister)));
     lines.push(fmtLine("Tarjeta:", fmtM(summary.paymentMethods.tarjeta)));
@@ -841,9 +844,6 @@ const DailySummary: React.FC = () => {
     lines.push(
       fmtLine("Promedio venta/ticket:", fmtM(dAvgOrderValue))
     );
-    lines.push(
-      fmtLine("Propina promedio:", formatPercent(summary.averageTipPercent))
-    );
     lines.push("");
 
     // ── Por mesero ──────────────────────────────────────────────────────────
@@ -857,13 +857,39 @@ const DailySummary: React.FC = () => {
         lines.push(fmtLine("Cuentas:", String(w.totalOrders)));
         lines.push(fmtLine("Personas:", String(w.totalPeople)));
         lines.push(fmtLine("Vendido:", fmtM(adjWaiterProducts(w))));
-        lines.push(fmtLine("Propina cliente:", fmtM(w.totalTips)));
-        lines.push(fmtLine("Total:", fmtM(adjWaiterSales(w))));
+        lines.push(fmtLine("Propina:", fmtM(w.totalTips)));
+        lines.push(fmtLine("Total cobrado:", fmtM(adjWaiterSales(w))));
+        lines.push("");
+        // Productos con su comisión
+        const products = getSoldProducts(w.orders, tipCatalog);
+        products.forEach((p) => {
+          lines.push(`${p.quantity}x ${p.name}`.slice(0, CHARS_80MM));
+          lines.push(fmtLine(`   ${fmtM(p.amount)}`, p.tipPending ? "com. pend." : `com ${fmtM(p.tip)}`));
+        });
         const wt = getWaiterTableTip(w.orders, tipCatalog);
-        lines.push(fmtLine("COMISION A PAGAR:", fmtM(wt.amount)));
-        if (wt.pending.length > 0) lines.push(`  (${wt.pending.length} prod. sin comision definida)`);
+        lines.push(sep("-"));
+        lines.push(fmtLine("Comision:", fmtM(wt.amount)));
+        if (wt.pending.length > 0) lines.push(`  (${wt.pending.length} prod. sin comision)`);
+        lines.push(fmtLine("Propina:", fmtM(w.totalTips)));
+        lines.push(fmtLine("A ENTREGAR:", fmtM(wt.amount + w.totalTips)));
+        lines.push("");
+        lines.push("Firma: ______________________");
         lines.push(sep());
       });
+      lines.push("");
+
+      // ── Resumen de pago a meseros ──────────────────────────────────────────
+      lines.push(center("PAGO A MESEROS"));
+      lines.push(sep());
+      let totalPayout = 0;
+      summary.waiterStats.forEach((w) => {
+        const amount = getWaiterTableTip(w.orders, tipCatalog).amount + w.totalTips;
+        totalPayout += amount;
+        lines.push(fmtLine(`${w.waiterName}:`.slice(0, 19), fmtM(amount)));
+      });
+      lines.push(sep("-"));
+      lines.push(fmtLine("TOTAL:", fmtM(totalPayout)));
+      lines.push("  (comisiones + propinas)");
       lines.push("");
     }
 
@@ -875,6 +901,9 @@ const DailySummary: React.FC = () => {
         const folioLabel = t.folio ? `Folio ${t.folio}` : t.id.slice(0, 6).toUpperCase();
         lines.push(fmtLine(`${folioLabel} — ${t.table}`, fmtM(t.total)));
         lines.push(`  ${t.waiter ?? "-"} · ${t.method ?? "-"}`);
+        if (t.commission > 0 || t.tip > 0) {
+          lines.push(`  Com ${fmtM(t.commission)} · Prop ${fmtM(t.tip)}`);
+        }
         if (t.cashNotes) {
           lines.push(`  Nota: ${t.cashNotes}`);
         }

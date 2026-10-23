@@ -36,7 +36,7 @@ const TipAuthGate: React.FC<TipAuthGateProps> = ({ unlocked, onUnlock, disabled,
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="font-semibold text-white">Propina</h3>
-          <p className="text-xs text-gray-400 mt-1">Sin propina. Solo se agrega con autorización del dueño.</p>
+          <p className="text-xs text-gray-400 mt-1">La propina de promos (10%) se agrega sola. Cualquier otra propina solo con autorización del dueño.</p>
         </div>
         <button
           type="button"

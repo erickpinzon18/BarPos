@@ -17,6 +17,7 @@ import { usePaperSize } from "../../hooks/usePaperSize";
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 import { tableLabel } from '../../utils/tableLabel';
 import TipAuthGate from '../../components/common/TipAuthGate';
+import { PROMO_TIP_RATE, getPromoTipBase } from '../../utils/promoDays';
 
 const WaiterCheckout: React.FC = () => {
   const location = useLocation();
@@ -113,7 +114,7 @@ const WaiterCheckout: React.FC = () => {
   }, [order]);
 
   // tipPercent is stored as decimal (0.15). tipAmount is computed from subtotal.
-  const tipAmount = useMemo(
+  const manualTipAmount = useMemo(
     () => subtotal * tipPercent,
     [subtotal, tipPercent]
   );
@@ -164,6 +165,15 @@ const WaiterCheckout: React.FC = () => {
     [itemDiscountMap]
   );
 
+  // Propina automática de promos (10% de lo que se cobra en Promos) + la que autorice el dueño
+  const promoTip = useMemo(
+    () => Math.round(getPromoTipBase(activeItems, itemDiscountMap) * PROMO_TIP_RATE * 100) / 100,
+    [activeItems, itemDiscountMap]
+  );
+  const tipAmount = manualTipAmount + promoTip;
+  // % efectivo sobre el subtotal (para estadísticas de propina promedio)
+  const effectiveTipPercent = subtotal > 0 ? tipAmount / subtotal : 0;
+
   const total = useMemo(
     () => subtotal - discountAmount + tipAmount,
     [subtotal, discountAmount, tipAmount]
@@ -207,7 +217,7 @@ const WaiterCheckout: React.FC = () => {
       order: orderToPrint as Order,
       subtotal,
       tipAmount,
-      tipPercent,
+      tipPercent: effectiveTipPercent,
       discountAmount,
       itemDiscounts,
       total,
@@ -267,7 +277,7 @@ const WaiterCheckout: React.FC = () => {
           receivedAmount: total,
           change: 0,
           tipAmount: tipAmount,
-          tipPercent: tipPercent,
+          tipPercent: effectiveTipPercent,
           discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
         };
@@ -288,7 +298,7 @@ const WaiterCheckout: React.FC = () => {
           splitPayments.push({ method: "transferencia", amount: tra });
         paymentDetails = {
           tipAmount: tipAmount,
-          tipPercent: tipPercent,
+          tipPercent: effectiveTipPercent,
           discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           splitPayments,
@@ -296,7 +306,7 @@ const WaiterCheckout: React.FC = () => {
         } else {
         paymentDetails = {
           tipAmount: tipAmount,
-          tipPercent: tipPercent,
+          tipPercent: effectiveTipPercent,
           discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
@@ -562,12 +572,18 @@ const WaiterCheckout: React.FC = () => {
                   <span className="font-bold">Subtotal:</span>
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
-                {tipAmount > 0 && (
+{promoTip > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="font-bold">Propina promos ({PROMO_TIP_RATE * 100}%):</span>
+                    <span>${promoTip.toFixed(2)}</span>
+                  </div>
+                )}
+                {manualTipAmount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="font-bold">
                       Propina ({formatTipPercent(tipPercent)}%):
                     </span>
-                    <span>${tipAmount.toFixed(2)}</span>
+                    <span>${manualTipAmount.toFixed(2)}</span>
                   </div>
                 )}
                 {activePromos.map(promo => {
@@ -673,7 +689,7 @@ const WaiterCheckout: React.FC = () => {
               </div>
               <div className="mt-2 text-xs md:text-sm text-gray-400">
                 Seleccionado: {formatTipPercent(tipPercent)}% = $
-                {tipAmount.toFixed(2)}
+                {manualTipAmount.toFixed(2)}
               </div>
             </div>
             </TipAuthGate>

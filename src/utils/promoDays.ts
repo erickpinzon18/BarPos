@@ -1,6 +1,6 @@
 // src/utils/promoDays.ts
 // Productos de la categoría Promos: solo se venden los días configurados (activeDays).
-import type { Product } from './types';
+import type { Product, OrderItem } from './types';
 import { getCurrentShiftDate } from './shift';
 
 export const PROMO_CATEGORY = 'Promos';
@@ -26,3 +26,15 @@ export const formatPromoDays = (days?: number[]): string =>
   !days || days.length === 0 || days.length === 7
     ? 'Todos los días'
     : WEEKDAY_ORDER.filter(d => days.includes(d)).map(d => WEEKDAY_LABELS[d]).join(', ');
+
+/** Propina automática: 10% sobre lo que se cobra de productos Promos (los de comisión no llevan). */
+export const PROMO_TIP_RATE = 0.1;
+
+/** Base de la propina de promos: importe de los items Promos menos su descuento. */
+export const getPromoTipBase = (
+  items: Pick<OrderItem, 'id' | 'category' | 'productPrice' | 'quantity' | 'isDeleted'>[],
+  itemDiscounts: Record<string, number> = {}
+): number =>
+  items
+    .filter(i => !i.isDeleted && i.category === PROMO_CATEGORY)
+    .reduce((s, i) => s + i.productPrice * i.quantity - (itemDiscounts[i.id] ?? 0), 0);

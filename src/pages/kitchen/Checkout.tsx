@@ -14,6 +14,7 @@ import { usePaperSize } from '../../hooks/usePaperSize';
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 import { tableLabel } from '../../utils/tableLabel';
 import TipAuthGate from '../../components/common/TipAuthGate';
+import { PROMO_TIP_RATE, getPromoTipBase } from '../../utils/promoDays';
 
 const KitchenCheckout: React.FC = () => {
   const location = useLocation();
@@ -68,7 +69,7 @@ const KitchenCheckout: React.FC = () => {
   const peopleCount = order?.peopleCount ?? 1;
   const activeItems = order?.items?.filter(i => !i.isDeleted) ?? [];
   const subtotal = useMemo(() => activeItems.reduce((s, it) => s + it.productPrice * it.quantity, 0), [activeItems]);
-  const tipAmount = useMemo(() => subtotal * tipPercent, [subtotal, tipPercent]);
+  const manualTipAmount = useMemo(() => subtotal * tipPercent, [subtotal, tipPercent]);
 
   const itemPromoMap = useMemo(() => {
     const map: Record<string, (typeof activePromotions)[0] | null> = {};
@@ -114,6 +115,15 @@ const KitchenCheckout: React.FC = () => {
     [itemDiscountMap]
   );
 
+  // Propina automática de promos (10% de lo que se cobra en Promos) + la que autorice el dueño
+  const promoTip = useMemo(
+    () => Math.round(getPromoTipBase(activeItems, itemDiscountMap) * PROMO_TIP_RATE * 100) / 100,
+    [activeItems, itemDiscountMap]
+  );
+  const tipAmount = manualTipAmount + promoTip;
+  // % efectivo sobre el subtotal (para estadísticas de propina promedio)
+  const effectiveTipPercent = subtotal > 0 ? tipAmount / subtotal : 0;
+
   const total = useMemo(() => subtotal - discountAmount + tipAmount, [subtotal, discountAmount, tipAmount]);
 
   const activePromos = useMemo(() => {
@@ -153,7 +163,7 @@ const KitchenCheckout: React.FC = () => {
       order: orderToPrint as Order,
       subtotal,
       tipAmount,
-      tipPercent,
+      tipPercent: effectiveTipPercent,
       discountAmount,
       itemDiscounts,
       total,
@@ -200,7 +210,7 @@ const KitchenCheckout: React.FC = () => {
       const orderId = order.id;
       let paymentDetails: any;
       if (paymentMethod === 'efectivo') {
-        paymentDetails = { receivedAmount: total, change: 0, tipAmount, tipPercent, discountAmount, cashierId: authorizedUser?.id };
+        paymentDetails = { receivedAmount: total, change: 0, tipAmount, tipPercent: effectiveTipPercent, discountAmount, cashierId: authorizedUser?.id };
       } else if (paymentMethod === 'mixto') {
         const efe = Number(mixedEfectivo || 0);
         const tar = Number(mixedTarjeta || 0);
@@ -209,9 +219,9 @@ const KitchenCheckout: React.FC = () => {
         if (efe > 0) splitPayments.push({ method: 'efectivo', amount: efe, receivedAmount: efe, change: 0 });
         if (tar > 0) splitPayments.push({ method: 'tarjeta', amount: tar, cardOperationNumber: cardOperationNumber });
         if (tra > 0) splitPayments.push({ method: 'transferencia', amount: tra });
-        paymentDetails = { tipAmount, tipPercent, discountAmount, cashierId: authorizedUser?.id, splitPayments };
+        paymentDetails = { tipAmount, tipPercent: effectiveTipPercent, discountAmount, cashierId: authorizedUser?.id, splitPayments };
       } else {
-        paymentDetails = { tipAmount, tipPercent, discountAmount, cashierId: authorizedUser?.id, cardOperationNumber: paymentMethod === 'tarjeta' ? cardOperationNumber : undefined };
+        paymentDetails = { tipAmount, tipPercent: effectiveTipPercent, discountAmount, cashierId: authorizedUser?.id, cardOperationNumber: paymentMethod === 'tarjeta' ? cardOperationNumber : undefined };
       }
       const res = await closeTable(tableId, orderId, paymentMethod, peopleCount, paymentDetails);
       if (!res.success) throw new Error(res.error || 'Error al cerrar mesa');
@@ -378,7 +388,8 @@ const KitchenCheckout: React.FC = () => {
 
             <div className="border-t border-dashed border-gray-600 mt-4 pt-2">
               <div className="flex justify-between"><span className="font-bold">Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-              {tipAmount > 0 && <div className="flex justify-between"><span className="font-bold">Propina ({formatTipPercent(tipPercent)}%):</span><span>${tipAmount.toFixed(2)}</span></div>}
+              {promoTip > 0 && <div className="flex justify-between"><span className="font-bold">Propina promos ({PROMO_TIP_RATE * 100}%):</span><span>${promoTip.toFixed(2)}</span></div>}
+              {manualTipAmount > 0 && <div className="flex justify-between"><span className="font-bold">Propina ({formatTipPercent(tipPercent)}%):</span><span>${manualTipAmount.toFixed(2)}</span></div>}
               {activePromos.map(promo => {
                 const promoDiscount = activeItems
                   .filter(i => itemPromoMap[i.id]?.id === promo.id)

@@ -18,6 +18,7 @@ import toast from "react-hot-toast";
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 import { tableLabel } from '../../utils/tableLabel';
 import TipAuthGate from '../../components/common/TipAuthGate';
+import { PROMO_TIP_RATE, getPromoTipBase } from '../../utils/promoDays';
 
 const AdminCheckout: React.FC = () => {
   const location = useLocation();
@@ -136,7 +137,7 @@ const AdminCheckout: React.FC = () => {
   );
 
   // tipPercent is stored as decimal (0.15). tipAmount is computed from subtotal.
-  const tipAmount = useMemo(
+  const manualTipAmount = useMemo(
     () => subtotal * tipPercent,
     [subtotal, tipPercent]
   );
@@ -187,6 +188,15 @@ const AdminCheckout: React.FC = () => {
     [itemDiscountMap]
   );
 
+  // Propina automática de promos (10% de lo que se cobra en Promos) + la que autorice el dueño
+  const promoTip = useMemo(
+    () => Math.round(getPromoTipBase(activeItems, itemDiscountMap) * PROMO_TIP_RATE * 100) / 100,
+    [activeItems, itemDiscountMap]
+  );
+  const tipAmount = manualTipAmount + promoTip;
+  // % efectivo sobre el subtotal (para estadísticas de propina promedio)
+  const effectiveTipPercent = subtotal > 0 ? tipAmount / subtotal : 0;
+
   const total = useMemo(
     () => subtotal - discountAmount + tipAmount,
     [subtotal, discountAmount, tipAmount]
@@ -220,7 +230,7 @@ const AdminCheckout: React.FC = () => {
       order: orderToPrint as Order,
       subtotal,
       tipAmount,
-      tipPercent,
+      tipPercent: effectiveTipPercent,
       discountAmount,
       itemDiscounts,
       total,
@@ -308,7 +318,7 @@ const AdminCheckout: React.FC = () => {
           receivedAmount: total,
           change: 0,
           tipAmount: tipAmount,
-          tipPercent: tipPercent,
+          tipPercent: effectiveTipPercent,
           discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
@@ -329,7 +339,7 @@ const AdminCheckout: React.FC = () => {
           splitPayments.push({ method: "transferencia", amount: tra });
         paymentDetails = {
           tipAmount: tipAmount,
-          tipPercent: tipPercent,
+          tipPercent: effectiveTipPercent,
           discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
@@ -338,7 +348,7 @@ const AdminCheckout: React.FC = () => {
       } else if (paymentMethod === "tarjeta") {
         paymentDetails = {
           tipAmount: tipAmount,
-          tipPercent: tipPercent,
+          tipPercent: effectiveTipPercent,
           discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
@@ -347,7 +357,7 @@ const AdminCheckout: React.FC = () => {
       } else {
         paymentDetails = {
           tipAmount: tipAmount,
-          tipPercent: tipPercent,
+          tipPercent: effectiveTipPercent,
           discountAmount: discountAmount,
           cashierId: authorizedUser?.id,
           cashierName: authorizedUser?.displayName || authorizedUser?.email,
@@ -757,12 +767,18 @@ const AdminCheckout: React.FC = () => {
                 <span className="font-bold">Subtotal:</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              {tipAmount > 0 && (
+{promoTip > 0 && (
+                <div className="flex justify-between">
+                  <span className="font-bold">Propina promos ({PROMO_TIP_RATE * 100}%):</span>
+                  <span>${promoTip.toFixed(2)}</span>
+                </div>
+              )}
+              {manualTipAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="font-bold">
                     Propina ({formatTipPercent(tipPercent)}%):
                   </span>
-                  <span id="tip-amount">${tipAmount.toFixed(2)}</span>
+                  <span id="tip-amount">${manualTipAmount.toFixed(2)}</span>
                 </div>
               )}
               {activePromos.map(promo => {
@@ -873,7 +889,7 @@ const AdminCheckout: React.FC = () => {
                 </div>
                 <div className="mt-3 flex justify-between items-center text-sm text-gray-400">
                   <span>{formatTipPercent(tipPercent)}% del subtotal</span>
-                  <span className="text-white font-bold text-lg">${tipAmount.toFixed(2)}</span>
+                  <span className="text-white font-bold text-lg">${manualTipAmount.toFixed(2)}</span>
                 </div>
               </>
             ) : (
@@ -899,7 +915,7 @@ const AdminCheckout: React.FC = () => {
                     className="flex-1 bg-gray-900 border border-gray-700 text-white text-center rounded-lg focus:ring-red-500 focus:border-red-600 py-3 px-3 disabled:cursor-not-allowed"
                   />
                 </div>
-                {subtotal > 0 && tipAmount > 0 && (
+                {subtotal > 0 && manualTipAmount > 0 && (
                   <div className="mt-2 text-sm text-gray-400">
                     Equivale al <span className="text-white font-semibold">{formatTipPercent(tipPercent)}%</span> del subtotal
                   </div>
@@ -947,7 +963,7 @@ const AdminCheckout: React.FC = () => {
                   {tipUnlocked && <button
                     disabled={isReadOnly}
                     onClick={() => {
-                      const newTipAmount = tipAmount + overpaymentTip;
+                      const newTipAmount = manualTipAmount + overpaymentTip;
                       setTipMode("amount");
                       setCustomTipAmount(newTipAmount.toFixed(2));
                       setTipPercent(subtotal > 0 ? newTipAmount / subtotal : 0);

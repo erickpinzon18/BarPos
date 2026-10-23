@@ -1529,6 +1529,9 @@ const DailySummary: React.FC = () => {
                                 const oTotal = order.total ?? 0;
                                 const oCommission = order.commission ?? 0;
                                 const oDiscount = (order as any).discount ?? 0;
+                                // Comisión del mesero según la tabla (igual que la columna Comisión),
+                                // aunque la cuenta se haya cobrado sin comisión (cuentas de antes del cambio)
+                                const oWaiterCommission = orderProducts.reduce((sum, p) => sum + p.tip, 0);
                                 const oTip = typeof order.tipAmount === 'number'
                                   ? order.tipAmount
                                   : Math.max(0, oTotal - oSubtotal - oCommission + oDiscount);
@@ -1548,7 +1551,7 @@ const DailySummary: React.FC = () => {
                                           </span>
                                           <span className="flex gap-4 text-xs">
                                             <span className="text-gray-400">Productos <span className="text-gray-200 font-semibold">{formatCurrency(oSubtotal - oDiscount)}</span></span>
-                                            <span className="text-gray-400">Comisión <span className="text-gray-200 font-semibold">{formatCurrency(oCommission)}</span></span>
+                                            <span className="text-gray-400">Comisión <span className="text-green-400 font-semibold">{formatCurrency(oWaiterCommission)}</span></span>
                                             <span className="text-gray-400">Propina <span className={`font-semibold ${oTip > 0 ? 'text-amber-300' : 'text-gray-200'}`}>{formatCurrency(oTip)}</span></span>
                                             <span className="text-gray-400">Total <span className="text-white font-bold">{formatCurrency(oTotal)}</span></span>
                                           </span>

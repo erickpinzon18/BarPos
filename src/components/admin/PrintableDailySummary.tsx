@@ -196,14 +196,10 @@ export const PrintableDailySummary = forwardRef<HTMLDivElement, PrintableDailySu
                     </span>
                   </div>
                   
-                  <div className="grid grid-cols-5 gap-4 text-sm">
+                  <div className="grid grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500 text-xs">Vendido</p>
-                      <p className="font-medium">{formatCurrency(w.totalSales - w.totalTips - (w.totalCommission ?? 0))}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs">Comisión cobrada</p>
-                      <p className="font-medium">{formatCurrency(w.totalCommission ?? 0)}</p>
+                      <p className="font-medium">{formatCurrency(w.totalSales - w.totalTips)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Propina cliente</p>

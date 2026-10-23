@@ -56,7 +56,6 @@ interface WaiterStats {
   totalSales: number; // ventas totales (con propina)
   totalOrders: number;
   totalTips: number; // propinas brutas (todas)
-  totalCommission: number; // comisión del mesero cobrada a los clientes
   totalPeople: number; // personas totales atendidas por mesero
 
   // Ventas por método
@@ -92,7 +91,6 @@ interface ShiftSummary {
   totalOrders: number;
   totalItems: number;
   totalTips: number; // propinas brutas
-  totalCommission: number; // comisión del mesero cobrada a los clientes
   totalSubtotal: number;
   totalPeople: number; // total personas atendidas en el turno
 
@@ -372,7 +370,6 @@ const DailySummary: React.FC = () => {
         totalTransferTips: 0,
         totalCardTipsNet: 0,
         totalTipsNet: 0,
-        totalCommission: 0,
         averageOrderValue: 0,
         averageTipPercent: 0,
         averagePeoplePerOrder: 0,
@@ -393,15 +390,12 @@ const DailySummary: React.FC = () => {
       ordersData.forEach((order) => {
         const subtotal = order.subtotal ?? 0;
         const total = order.total ?? 0;
-        // La comisión del mesero va dentro del total pero no es propina del cliente
-        const commission = order.commission ?? 0;
-        const tip = total - subtotal - commission;
+        const tip = total - subtotal;
         const people = order.peopleCount ?? 1;
 
         summary.totalSales += total;
         summary.totalSubtotal += subtotal;
         summary.totalTips += tip;
-        summary.totalCommission += commission;
         summary.totalPeople += people;
 
         // Items activos
@@ -493,7 +487,6 @@ const DailySummary: React.FC = () => {
             totalSales: 0,
             totalOrders: 0,
             totalTips: 0,
-            totalCommission: 0,
             totalPeople: 0,
             salesCash: 0,
             salesCard: 0,
@@ -517,7 +510,6 @@ const DailySummary: React.FC = () => {
         ws.totalSales += total;
         ws.totalOrders += 1;
         ws.totalTips += tip;
-        ws.totalCommission += commission;
         ws.totalPeople += people;
         ws.salesCash += cashSale;
         ws.salesCard += cardSale;
@@ -703,8 +695,8 @@ const DailySummary: React.FC = () => {
   const dAvgSalePerPerson = summary && summary.totalPeople > 0 ? dTotalSales / summary.totalPeople : 0;
   const adjWaiterSales = (w: WaiterStats) =>
     w.totalSales - (demoMode ? w.salesCash * (1 - demoFactor) : 0);
-  // Lo vendido en productos (sin propina del cliente ni comisión)
-  const adjWaiterProducts = (w: WaiterStats) => adjWaiterSales(w) - w.totalTips - w.totalCommission;
+  // Lo vendido en productos (sin propina del cliente; el precio ya incluye la comisión)
+  const adjWaiterProducts = (w: WaiterStats) => adjWaiterSales(w) - w.totalTips;
   // Comisión que se le paga en efectivo a cada mesero (tabla por producto): se descuenta del efectivo
   const waiterCommissionTotal = summary
     ? summary.waiterStats.reduce((s, w) => s + getWaiterTableTip(w.orders, tipCatalog).amount, 0)
@@ -771,7 +763,6 @@ const DailySummary: React.FC = () => {
     lines.push(sep());
     lines.push(fmtLine("Total vendido:", fmtM(dTotalSales)));
     lines.push(fmtLine("Subtotal (sin propina):", fmtM(dTotalSubtotal)));
-    lines.push(fmtLine("Comisiones:", fmtM(summary.totalCommission)));
     lines.push(fmtLine("Propinas:", fmtM(summary.totalTips)));
     lines.push("");
 
@@ -866,7 +857,6 @@ const DailySummary: React.FC = () => {
         lines.push(fmtLine("Cuentas:", String(w.totalOrders)));
         lines.push(fmtLine("Personas:", String(w.totalPeople)));
         lines.push(fmtLine("Vendido:", fmtM(adjWaiterProducts(w))));
-        lines.push(fmtLine("Comision cobrada:", fmtM(w.totalCommission)));
         lines.push(fmtLine("Propina cliente:", fmtM(w.totalTips)));
         lines.push(fmtLine("Total:", fmtM(adjWaiterSales(w))));
         const wt = getWaiterTableTip(w.orders, tipCatalog);
@@ -1416,7 +1406,6 @@ const DailySummary: React.FC = () => {
                         <th className="text-right px-4 py-2">Cuentas</th>
                         <th className="text-right px-4 py-2">Personas</th>
                         <th className="text-right px-4 py-2">Vendido</th>
-                        <th className="text-right px-4 py-2">Comisión cobrada</th>
                         <th className="text-right px-4 py-2">Propina cliente</th>
                         <th className="text-right px-4 py-2">Total</th>
                         <th className="text-right px-4 py-2 text-green-400">Comisión a pagar</th>
@@ -1429,7 +1418,6 @@ const DailySummary: React.FC = () => {
                           <td className="px-4 py-3 text-right text-gray-300">{waiter.totalOrders}</td>
                           <td className="px-4 py-3 text-right text-gray-300">{waiter.totalPeople}</td>
                           <td className="px-4 py-3 text-right text-gray-200">{formatCurrency(adjWaiterProducts(waiter))}</td>
-                          <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(waiter.totalCommission)}</td>
                           <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(waiter.totalTips)}</td>
                           <td className="px-4 py-3 text-right text-white font-bold">{formatCurrency(adjWaiterSales(waiter))}</td>
                           <td className="px-4 py-3 text-right">
@@ -1456,7 +1444,6 @@ const DailySummary: React.FC = () => {
                         <td className="px-4 py-3 text-right text-gray-300">{summary.totalOrders}</td>
                         <td className="px-4 py-3 text-right text-gray-300">{summary.totalPeople}</td>
                         <td className="px-4 py-3 text-right text-gray-200">{formatCurrency(dTotalSubtotal)}</td>
-                        <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(summary.totalCommission)}</td>
                         <td className="px-4 py-3 text-right text-gray-300">{formatCurrency(summary.totalTips)}</td>
                         <td className="px-4 py-3 text-right text-white">{formatCurrency(dTotalSales)}</td>
                         <td className="px-4 py-3 text-right text-green-400">
@@ -1488,10 +1475,6 @@ const DailySummary: React.FC = () => {
                             <div>
                               <p className="text-gray-400 text-xs">Vendido</p>
                               <p className="text-gray-200 font-bold">{formatCurrency(sold)}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-400 text-xs">Comisión cobrada</p>
-                              <p className="text-gray-300 font-bold">{formatCurrency(waiter.totalCommission)}</p>
                             </div>
                             <div>
                               <p className="text-gray-400 text-xs">Propina cliente</p>
@@ -1527,14 +1510,12 @@ const DailySummary: React.FC = () => {
                                 const orderProducts = getSoldProducts([order], tipCatalog);
                                 const oSubtotal = order.subtotal ?? 0;
                                 const oTotal = order.total ?? 0;
-                                const oCommission = order.commission ?? 0;
                                 const oDiscount = (order as any).discount ?? 0;
-                                // Comisión del mesero según la tabla (igual que la columna Comisión),
-                                // aunque la cuenta se haya cobrado sin comisión (cuentas de antes del cambio)
+                                // Comisión del mesero según la tabla (sale del precio cobrado)
                                 const oWaiterCommission = orderProducts.reduce((sum, p) => sum + p.tip, 0);
                                 const oTip = typeof order.tipAmount === 'number'
                                   ? order.tipAmount
-                                  : Math.max(0, oTotal - oSubtotal - oCommission + oDiscount);
+                                  : Math.max(0, oTotal - oSubtotal + oDiscount);
                                 const time = order.completedAt
                                   ? new Date(order.completedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
                                   : '';

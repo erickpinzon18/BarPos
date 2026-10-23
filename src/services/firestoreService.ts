@@ -444,8 +444,6 @@ export const closeTable = async (
     cardType?: string;
     cardDetail?: string;
     discountAmount?: number;
-    /** Comisión del mesero (monto fijo por producto) que se le cobra al cliente encima del precio */
-    commissionAmount?: number;
     /** Cargos individuales (efectivo/tarjeta/transferencia). Se usa tanto para pago mixto
      * como para pago 100% tarjeta con varios cargos (distintos tipos de tarjeta). */
     splitPayments?: { method: 'efectivo' | 'tarjeta' | 'transferencia', amount: number, receivedAmount?: number, change?: number, cardOperationNumber?: string, cardType?: string, cardDetail?: string }[]
@@ -471,10 +469,9 @@ export const closeTable = async (
     // Get tip and discount amounts (default to 0 if not provided)
     const tipAmount = paymentDetails?.tipAmount ?? 0;
     const discountAmount = paymentDetails?.discountAmount ?? 0;
-    const commission = paymentDetails?.commissionAmount ?? 0;
 
-    // Calculate total (subtotal + comisión + tip - discount, NO TAX)
-    const total = subtotal + commission + tipAmount - discountAmount;
+    // Calculate total (subtotal + tip - discount, NO TAX)
+    const total = subtotal + tipAmount - discountAmount;
 
     // Assign the next consecutive folio (global, never resets). Nunca debe bloquear el cierre
     // de la mesa: si falla (permisos, red, etc.) seguimos cerrando sin folio y se puede
@@ -507,7 +504,6 @@ export const closeTable = async (
       subtotal,
       total,
       tipAmount,
-      commission,
       discount: discountAmount > 0 ? discountAmount : null,
       tax: null, // Explicitly set to null to remove any old tax values
       completedAt: Timestamp.now(),

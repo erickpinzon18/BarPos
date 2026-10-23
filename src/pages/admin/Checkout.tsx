@@ -17,7 +17,6 @@ import { Tag, Clock, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 import { tableLabel } from '../../utils/tableLabel';
-import { useCommissionCatalog, getItemsCommission } from '../../utils/commission';
 import TipAuthGate from '../../components/common/TipAuthGate';
 
 const AdminCheckout: React.FC = () => {
@@ -188,16 +187,9 @@ const AdminCheckout: React.FC = () => {
     [itemDiscountMap]
   );
 
-  // Comisión del mesero (fija por producto) que se cobra encima del precio
-  const commissionCatalog = useCommissionCatalog();
-  const commission = useMemo(
-    () => getItemsCommission(activeItems, commissionCatalog),
-    [activeItems, commissionCatalog]
-  );
-
   const total = useMemo(
-    () => subtotal - discountAmount + commission + tipAmount,
-    [subtotal, discountAmount, commission, tipAmount]
+    () => subtotal - discountAmount + tipAmount,
+    [subtotal, discountAmount, tipAmount]
   );
 
   // Unique promos active on this order (for display in UI)
@@ -230,7 +222,6 @@ const AdminCheckout: React.FC = () => {
       tipAmount,
       tipPercent,
       discountAmount,
-      commission,
       itemDiscounts,
       total,
       perPerson,
@@ -363,7 +354,6 @@ const AdminCheckout: React.FC = () => {
         };
       }
 
-      paymentDetails.commissionAmount = commission;
       const res = await closeTable(
         tableId,
         orderId,
@@ -767,12 +757,6 @@ const AdminCheckout: React.FC = () => {
                 <span className="font-bold">Subtotal:</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
-              {commission > 0 && (
-                <div className="flex justify-between">
-                  <span className="font-bold">Comisión:</span>
-                  <span>${commission.toFixed(2)}</span>
-                </div>
-              )}
               {tipAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="font-bold">

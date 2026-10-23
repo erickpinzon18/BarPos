@@ -142,7 +142,7 @@ const AdminTickets: React.FC = () => {
     const subtotal = order.subtotal ?? 0;
     const total = order.total ?? 0;
     const discountAmount = (order as any).discount ?? 0;
-    const tipAmount = (order as any).tipAmount ?? order.payments?.[0]?.tipAmount ?? Math.max(0, total - subtotal - (order.commission ?? 0) + discountAmount);
+    const tipAmount = (order as any).tipAmount ?? order.payments?.[0]?.tipAmount ?? Math.max(0, total - subtotal + discountAmount);
     const tipPercent = order.payments?.[0]?.tipPercent;
     const perPerson = order.peopleCount ? total / order.peopleCount : undefined;
 
@@ -378,12 +378,6 @@ const AdminTickets: React.FC = () => {
                     </div>
                   ) : null;
                 })()}
-                {(selected.commission ?? 0) > 0 && (
-                  <div className="flex justify-between items-center text-md">
-                    <span className="text-gray-300">Comisión:</span>
-                    <span className="font-semibold text-white">${(selected.commission ?? 0).toFixed(2)}</span>
-                  </div>
-                )}
                 <div className="flex justify-between items-center text-md">
                   <span className="text-gray-300">Propina{(() => {
                     const tipPercent = selected.payments?.[0]?.tipPercent ?? 0;
@@ -391,7 +385,7 @@ const AdminTickets: React.FC = () => {
                   })()}:</span>
                   <span className="font-semibold text-white">${(() => {
                     const discount = (selected as any).discount ?? 0;
-                    const tip = (selected as any).tipAmount ?? selected.payments?.[0]?.tipAmount ?? Math.max(0, (selected.total ?? 0) - (selected.subtotal ?? 0) - (selected.commission ?? 0) + discount);
+                    const tip = (selected as any).tipAmount ?? selected.payments?.[0]?.tipAmount ?? Math.max(0, (selected.total ?? 0) - (selected.subtotal ?? 0) + discount);
                     return tip.toFixed(2);
                   })()}</span>
                 </div>

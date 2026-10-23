@@ -111,7 +111,6 @@ export interface Order {
   tax?: number;
   total?: number;
   tipAmount?: number; // Propina del cliente (solo si la autorizó un admin)
-  commission?: number; // Comisión del mesero cobrada al cliente (suma de tipPerUnit de los items)
   adminComments?: string; // Comentarios administrativos (no visibles en ticket de cliente)
   cashNotes?: string; // Notas del cajero al cobrar (ej. faltantes, notas finales). No sale en ticket de cliente, sí en el corte de caja.
   folio?: string; // Folio consecutivo alfanumérico (A1..A10000, B1..., AA1...), asignado al cerrar la cuenta

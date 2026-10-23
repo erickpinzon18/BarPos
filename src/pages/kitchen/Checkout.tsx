@@ -13,7 +13,6 @@ import { printTicket } from '../../utils/printTicket';
 import { usePaperSize } from '../../hooks/usePaperSize';
 import { parseTipPercentInput, formatTipPercent } from '../../utils/tip';
 import { tableLabel } from '../../utils/tableLabel';
-import { useCommissionCatalog, getItemsCommission } from '../../utils/commission';
 import TipAuthGate from '../../components/common/TipAuthGate';
 
 const KitchenCheckout: React.FC = () => {
@@ -115,11 +114,7 @@ const KitchenCheckout: React.FC = () => {
     [itemDiscountMap]
   );
 
-  // Comisión del mesero (fija por producto) que se cobra encima del precio
-  const commissionCatalog = useCommissionCatalog();
-  const commission = useMemo(() => getItemsCommission(activeItems, commissionCatalog), [activeItems, commissionCatalog]);
-
-  const total = useMemo(() => subtotal - discountAmount + commission + tipAmount, [subtotal, discountAmount, commission, tipAmount]);
+  const total = useMemo(() => subtotal - discountAmount + tipAmount, [subtotal, discountAmount, tipAmount]);
 
   const activePromos = useMemo(() => {
     const seen = new Set<string>();
@@ -160,7 +155,6 @@ const KitchenCheckout: React.FC = () => {
       tipAmount,
       tipPercent,
       discountAmount,
-      commission,
       itemDiscounts,
       total,
       perPerson,
@@ -219,7 +213,6 @@ const KitchenCheckout: React.FC = () => {
       } else {
         paymentDetails = { tipAmount, tipPercent, discountAmount, cashierId: authorizedUser?.id, cardOperationNumber: paymentMethod === 'tarjeta' ? cardOperationNumber : undefined };
       }
-      paymentDetails.commissionAmount = commission;
       const res = await closeTable(tableId, orderId, paymentMethod, peopleCount, paymentDetails);
       if (!res.success) throw new Error(res.error || 'Error al cerrar mesa');
       setIsReadOnly(true);
@@ -385,7 +378,6 @@ const KitchenCheckout: React.FC = () => {
 
             <div className="border-t border-dashed border-gray-600 mt-4 pt-2">
               <div className="flex justify-between"><span className="font-bold">Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-              {commission > 0 && <div className="flex justify-between"><span className="font-bold">Comisión:</span><span>${commission.toFixed(2)}</span></div>}
               {tipAmount > 0 && <div className="flex justify-between"><span className="font-bold">Propina ({formatTipPercent(tipPercent)}%):</span><span>${tipAmount.toFixed(2)}</span></div>}
               {activePromos.map(promo => {
                 const promoDiscount = activeItems

@@ -85,7 +85,7 @@ const MisVentas: React.FC = () => {
   const rows: OrderRow[] = orders.map(o => {
     const total = o.total ?? 0;
     const subtotal = o.subtotal ?? 0;
-    const tip = total - subtotal - (o.commission ?? 0);
+    const tip = total - subtotal;
     let cashAmt = 0, cardAmt = 0;
     if (o.paymentMethod === "mixto" && Array.isArray(o.payments)) {
       o.payments.forEach(p => {

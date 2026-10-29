@@ -951,6 +951,75 @@ const ItemModal: React.FC<{ item: Partial<InventoryItem>; onClose: () => void; o
   );
 };
 
+/** Selector de insumo con buscador (sin acentos, por cualquier parte del nombre) */
+const ItemPicker: React.FC<{
+  items: InventoryItem[];
+  value: string;
+  onChange: (id: string) => void;
+}> = ({ items, value, onChange }) => {
+  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+  const selected = items.find((i) => i.id === value);
+  const [open, setOpen] = useState(!value);
+  const [q, setQ] = useState("");
+  const [hi, setHi] = useState(0);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  const results = useMemo(() => {
+    const words = norm(q).split(/\s+/).filter(Boolean);
+    return items
+      .filter((i) => i.active !== false)
+      .filter((i) => words.every((w) => norm(i.name).includes(w)))
+      .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || a.name.localeCompare(b.name));
+  }, [items, q]);
+
+  const pick = (id: string) => { onChange(id); setOpen(false); setQ(""); };
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => { setOpen(true); setHi(0); }}
+        className="w-full flex items-center justify-between gap-2 bg-gray-800 rounded-lg px-3 py-2.5 border border-gray-600 hover:border-red-500 text-left">
+        <span className={selected ? "text-white font-medium truncate" : "text-gray-500"}>{selected?.name ?? "Elegir insumo…"}</span>
+        {selected && <span className="text-xs text-gray-500 shrink-0">{KIND_LABEL[selected.kind]}</span>}
+      </button>
+    );
+  }
+
+  return (
+    <div ref={boxRef} className="relative">
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <input autoFocus value={q} placeholder="Buscar botella, cerveza, refresco…"
+          onChange={(e) => { setQ(e.target.value); setHi(0); }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") { e.preventDefault(); setHi((h) => Math.min(h + 1, results.length - 1)); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
+            else if (e.key === "Enter") { e.preventDefault(); if (results[hi]) pick(results[hi].id); }
+            else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
+          }}
+          className="w-full bg-gray-800 text-white rounded-lg pl-9 pr-3 py-2.5 border border-red-500 focus:outline-none text-sm" />
+      </div>
+      <div className="mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900">
+        {results.length === 0 && <div className="px-3 py-3 text-sm text-gray-500">Sin resultados</div>}
+        {results.map((x, idx) => (
+          <button type="button" key={x.id} onMouseEnter={() => setHi(idx)} onClick={() => pick(x.id)}
+            className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm ${idx === hi ? "bg-red-600/20 text-white" : "text-gray-300"} ${x.id === value ? "font-semibold" : ""}`}>
+            <span className="truncate">{x.name}</span>
+            <span className="text-xs text-gray-500 shrink-0">{KIND_LABEL[x.kind]}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const RecipeModal: React.FC<{
   recipe: InventoryRecipe;
   items: InventoryItem[];
@@ -988,7 +1057,7 @@ const RecipeModal: React.FC<{
           <h2 className="text-lg font-bold text-white">Receta: <span className="text-red-400">{recipe.productName}</span></h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={22} /></button>
         </div>
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <p className="text-xs text-gray-500">
             Lo que descuenta <b>1</b> unidad vendida de este producto. Los mezcladores elegidos en el modal de botella/trago
             se descuentan aparte desde las notas; no los agregues aquí.
@@ -998,22 +1067,30 @@ const RecipeModal: React.FC<{
             No consume inventario (ej: Vaso roto, cargos)
           </label>
           {!noInventory && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {lines.map((l, i) => {
                 const it = itemById.get(l.itemId);
                 return (
-                  <div key={i} className="flex gap-2 items-center">
-                    <select value={l.itemId} onChange={(e) => update(i, { itemId: e.target.value })} className={`${inputCls} flex-1`}>
-                      <option value="">— Insumo —</option>
-                      {items.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                    </select>
-                    <input type="number" min={0} step={0.25} value={l.qty}
-                      onChange={(e) => update(i, { qty: parseFloat(e.target.value) || 0 })} className={`${inputCls} w-20 text-center`} />
-                    <select value={l.per} onChange={(e) => update(i, { per: e.target.value as "unit" | "serving" })} className={`${inputCls} w-28`}>
-                      <option value="unit">{it?.unit ?? "unidad"}</option>
-                      <option value="serving">trago(s)</option>
-                    </select>
-                    <button onClick={() => setLines((p) => p.filter((_, idx) => idx !== i))} className="text-gray-500 hover:text-red-400"><Trash2 size={16} /></button>
+                  <div key={i} className="rounded-xl border border-gray-700 bg-gray-800/40 p-3 space-y-2">
+                    <div className="flex gap-2 items-start">
+                      <div className="flex-1 min-w-0">
+                        <ItemPicker items={items} value={l.itemId} onChange={(id) => update(i, { itemId: id })} />
+                      </div>
+                      <button onClick={() => setLines((p) => p.filter((_, idx) => idx !== i))} className="p-2 text-gray-500 hover:text-red-400" title="Quitar">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <span className="text-xs text-gray-500 w-16">Descuenta</span>
+                      <input type="number" min={0} step={0.25} value={l.qty}
+                        onChange={(e) => update(i, { qty: parseFloat(e.target.value) || 0 })}
+                        className="bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-red-500 focus:outline-none text-sm w-24 text-center" />
+                      <select value={l.per} onChange={(e) => update(i, { per: e.target.value as "unit" | "serving" })}
+                        className="bg-gray-800 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-red-500 focus:outline-none text-sm flex-1">
+                        <option value="unit">{it?.unit ?? "unidad"}(s) completa(s)</option>
+                        <option value="serving">trago(s){it && it.servingsPerUnit > 1 ? ` (1/${it.servingsPerUnit} de ${it.unit})` : ""}</option>
+                      </select>
+                    </div>
                   </div>
                 );
               })}

@@ -20,6 +20,7 @@ import {
   // Tag,
   CalendarDays,
   Archive,
+  History,
   CircleDollarSign,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -179,12 +180,12 @@ const AdminLayout: React.FC = () => {
                   <span>Inventario</span>
                 </NavLink>
                 <NavLink
-                  to="/admin/inventory-stats"
+                  to="/admin/inventory-history"
                   className={navLinkClassMobile}
                   onClick={closeMobileMenu}
                 >
-                  <BarChart3 size={20} />
-                  <span>Stats Inventario</span>
+                  <History size={20} />
+                  <span>Histórico Inventario</span>
                 </NavLink>
                 <NavLink
                   to="/admin/manage-products"

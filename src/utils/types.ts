@@ -211,3 +211,66 @@ export interface FirestoreResponse<T> {
 export type WithId<T> = T & { id: string };
 export type CreateData<T> = Omit<T, 'id' | 'createdAt' | 'updatedAt'>;
 export type UpdateData<T> = Partial<Omit<T, 'id' | 'createdAt'>>;
+
+// ─── Inventario ──────────────────────────────────────────────────────────────
+
+export type InventoryItemKind = 'botella' | 'cerveza' | 'refresco' | 'jugo' | 'otro';
+export type InventoryUnit = 'botella' | 'pz' | 'jarra';
+
+/** Insumo físico que se cuenta en inventario (ej: "Centenario Plata 700 ml", "Agua Mineral") */
+export interface InventoryItem {
+  id: string;
+  name: string;
+  kind: InventoryItemKind;
+  unit: InventoryUnit;
+  /** Tragos que salen de una unidad (botellas: default 16; resto: 1) */
+  servingsPerUnit: number;
+  /** Textos con los que aparece este insumo en las notas de mezcladores (ej: "Agua Tónica") */
+  mixerAliases: string[];
+  minStock?: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InventoryRecipeLine {
+  itemId: string;
+  qty: number;
+  /** 'unit' = unidades completas; 'serving' = tragos (qty / servingsPerUnit) */
+  per: 'unit' | 'serving';
+}
+
+/** Receta de un producto de la carta. El id del documento es el productId. */
+export interface InventoryRecipe {
+  productId: string;
+  productName: string;
+  lines: InventoryRecipeLine[];
+  /** El producto se vende pero no consume ningún insumo (ej: Vaso roto) */
+  noInventory?: boolean;
+  updatedAt?: Date;
+  updatedBy?: string;
+}
+
+export type InventoryMovementType = 'inicial' | 'compra' | 'extraccion' | 'conteo';
+
+export interface InventoryMovementLine {
+  itemId: string;
+  itemName: string;
+  /** compra/extraccion: cantidad movida (positiva). inicial/conteo: cantidad contada */
+  qty: number;
+  /** Solo conteo: existencia que calculaba el sistema al momento del conteo */
+  expected?: number;
+}
+
+export interface InventoryMovement {
+  id: string;
+  type: InventoryMovementType;
+  at: Date;
+  lines: InventoryMovementLine[];
+  reason?: string;
+  supplier?: string;
+  note?: string;
+  createdBy: string;
+  createdByName: string;
+  createdAt: Date;
+}

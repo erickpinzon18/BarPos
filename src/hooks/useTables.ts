@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { Table } from '../utils/types';
 import { getTablesRealtime } from '../services/firestoreService';
 import { showErrorToast } from '../utils/errorHandler';
-import { isLayoutTable } from '../utils/venueLayout';
+import { getTablePos, hasStoredLayout } from '../utils/venueLayout';
 
 export const useTables = () => {
   const [tables, setTables] = useState<Table[]>([]);
@@ -14,7 +14,8 @@ export const useTables = () => {
     try {
       const unsubscribe = getTablesRealtime((data) => {
         // Solo mesas del plano; las de fuera se muestran mientras sigan ocupadas
-        setTables(data.filter(t => isLayoutTable(t.number) || t.status === 'ocupada'));
+        const stored = hasStoredLayout(data);
+        setTables(data.filter(t => !!getTablePos(t, stored) || t.status === 'ocupada'));
         setLoading(false);
         setError(null);
       });

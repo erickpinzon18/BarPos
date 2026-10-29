@@ -10,6 +10,7 @@ import {
   Receipt,
   Package,
   Settings,
+  LayoutGrid,
   LogOut,
   UserCircle,
   ClipboardCheck,
@@ -170,6 +171,10 @@ export const AdminSidebar: React.FC = () => {
 
         {/* Sección Inferior: Configuración y Usuario */}
         <div>
+          <NavLink to="/admin/layout" className={navLinkClass}>
+            <LayoutGrid size={20} />
+            <span>Plano de mesas</span>
+          </NavLink>
           <NavLink to="/admin/settings" className={navLinkClass}>
             <Settings size={20} />
             <span>Configuración</span>

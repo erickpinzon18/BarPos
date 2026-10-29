@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Table, Order, Reservation } from '../../utils/types';
-import { TABLE_LAYOUT, DECOR_LAYOUT, isLayoutTable, isTakeoutNumber } from '../../utils/venueLayout';
+import { resolveLayout, isTakeoutNumber } from '../../utils/venueLayout';
+import { useVenueDecor } from '../../services/venueLayoutService';
 import { tableLabel } from '../../utils/tableLabel';
 
 interface VenueMapProps {
@@ -148,6 +149,9 @@ export const VenueMap: React.FC<VenueMapProps> = ({
   tables, orders, reservations = [], onTableClick, onCheckout, accentColor, currentUserId,
 }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const decor = useVenueDecor();
+  const placed = resolveLayout(tables);
+  const placedIds = new Set(placed.map(p => p.table.id));
 
   const ac = accentColor === 'red'
     ? { bg: 'rgba(185,28,28,0.65)',  border: '#ef4444', glow: '0 0 14px rgba(239,68,68,0.45)',  hi: '#fca5a5' }
@@ -171,9 +175,9 @@ export const VenueMap: React.FC<VenueMapProps> = ({
         }}
         onClick={() => setSelectedId(null)}
       >
-        {DECOR_LAYOUT.map(d => (
+        {decor.map(d => (
           <div
-            key={d.label}
+            key={d.id}
             className="absolute flex items-center justify-center pointer-events-none"
             style={{
               left: `${d.x}%`, top: `${d.y}%`, width: `${d.w}%`, height: `${d.h}%`,
@@ -186,9 +190,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
           </div>
         ))}
 
-        {TABLE_LAYOUT.map(pos => {
-          const table = tables.find(t => String(t.number) === String(pos.number));
-          if (!table) return null;
+        {placed.map(({ table, pos }) => {
 
           const order    = orders.find(o => o.tableId === table.id);
           const isActive = table.status === 'ocupada' && !!order;
@@ -196,14 +198,13 @@ export const VenueMap: React.FC<VenueMapProps> = ({
           const reservation = reservations.find(r => r.tableId === table.id);
           const isReserved = !!reservation && !isActive; // Show reservation color only when not occupied
           const isSel    = selectedId === table.id;
-          const isCircle = false;
-          const isBar    = isBarNumber(pos.number);
+          const isCircle = pos.shape === 'round';
+          const isBar    = isBarNumber(table.number);
 
           const label = isBar
-            ? (pos.number === 0 ? 'Barra' : String(pos.number))
-            : isTakeoutNumber(pos.number) ? tableLabel(pos.number)
-            : typeof pos.number === 'string' ? pos.number
-            : String(pos.number);
+            ? (table.number === 0 ? 'Barra' : String(table.number))
+            : isTakeoutNumber(table.number) ? tableLabel(table.number)
+            : String(table.number);
 
           const totalStr = (() => {
             if (!order || isOtherWaiter) return null;
@@ -225,7 +226,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
 
           return (
             <div
-              key={String(pos.number)}
+              key={table.id}
               onClick={e => {
                 e.stopPropagation();
                 if (!isOtherWaiter) setSelectedId(p => p === table.id ? null : table.id);
@@ -254,7 +255,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
               {/* Label — px so it stays readable at min-width */}
               <span
                 className="font-bold text-white leading-none pointer-events-none drop-shadow-sm"
-                style={{ fontSize: isBar ? '14px' : isCircle ? '9px' : isTakeoutNumber(pos.number) ? '11px' : '12px' }}
+                style={{ fontSize: isBar ? '14px' : isCircle ? '9px' : isTakeoutNumber(table.number) ? '11px' : '12px' }}
               >
                 {label}
               </span>
@@ -301,7 +302,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
 
       {/* Mesas fuera del plano que siguen ocupadas (cuentas abiertas antes del cambio) */}
       {(() => {
-        const others = tables.filter(t => !isLayoutTable(t.number) && orders.some(o => o.tableId === t.id));
+        const others = tables.filter(t => !placedIds.has(t.id) && orders.some(o => o.tableId === t.id));
         if (others.length === 0) return null;
         return (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">

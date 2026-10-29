@@ -10,6 +10,7 @@ import {
   Receipt,
   Package,
   Settings,
+  LayoutGrid,
   LogOut,
   Menu,
   X,
@@ -212,6 +213,14 @@ const AdminLayout: React.FC = () => {
                     <span>Modificar Precios</span>
                   </NavLink>
                 )}
+                <NavLink
+                  to="/admin/layout"
+                  className={navLinkClassMobile}
+                  onClick={closeMobileMenu}
+                >
+                  <LayoutGrid size={20} />
+                  <span>Plano de mesas</span>
+                </NavLink>
                 <NavLink
                   to="/admin/settings"
                   className={navLinkClassMobile}

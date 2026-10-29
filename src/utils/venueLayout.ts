@@ -1,6 +1,9 @@
 // src/utils/venueLayout.ts
 // Plano del local (Wikka SM). Posiciones en % del área del mapa (x, y = esquina superior izquierda).
-// Las mesas se ligan por su campo `number` en Firestore.
+// El plano se edita en Admin → Plano de mesas y se guarda en cada mesa (`tables/{id}.layout`)
+// y en `config/venueLayout` (decoración). Mientras no se haya guardado ninguno, se usa el plano
+// por defecto de abajo, ligado a las mesas por su campo `number`.
+import type { Table, TableLayout, VenueDecor } from './types';
 
 export interface TablePos {
   number: number | string;
@@ -50,9 +53,9 @@ export const TABLE_LAYOUT: TablePos[] = [
   ...[1, 2, 3, 4, 5].map((n, i) => ({ number: `Llevar ${n}`, x: 27 + i * 7, y: 68.5, w: 6.5, h: SH })),
 ];
 
-/** Elementos decorativos (no son mesas). */
-export const DECOR_LAYOUT = [
-  { label: 'Barra', x: 26, y: 82, w: 34, h: 16 },
+/** Elementos decorativos por defecto (no son mesas). */
+export const DECOR_LAYOUT: VenueDecor[] = [
+  { id: 'barra', label: 'Barra', x: 26, y: 82, w: 34, h: 16 },
 ];
 
 const LAYOUT_KEYS = new Set(TABLE_LAYOUT.map(p => String(p.number)));
@@ -60,6 +63,25 @@ const LAYOUT_KEYS = new Set(TABLE_LAYOUT.map(p => String(p.number)));
 /** ¿Es un lugar "para llevar"? */
 export const isTakeoutNumber = (number: number | string): boolean => /^Llevar\b/i.test(String(number));
 
-/** ¿La mesa forma parte del plano actual? */
+/** ¿La mesa forma parte del plano por defecto? */
 export const isLayoutTable = (number: number | string): boolean => LAYOUT_KEYS.has(String(number));
+
+/** ¿Ya se guardó un plano editado (alguna mesa tiene posición en la BD)? */
+export const hasStoredLayout = (tables: Table[]): boolean => tables.some((t) => !!t.layout);
+
+/** Posición de la mesa en el plano vigente, o null si está fuera del plano. */
+export const getTablePos = (table: Table, stored: boolean): TableLayout | null => {
+  if (stored) return table.layout ?? null;
+  const p = TABLE_LAYOUT.find((l) => String(l.number) === String(table.number));
+  return p ? { x: p.x, y: p.y, w: p.w, h: p.h } : null;
+};
+
+/** Mesas del plano vigente con su posición. */
+export const resolveLayout = (tables: Table[]): { table: Table; pos: TableLayout }[] => {
+  const stored = hasStoredLayout(tables);
+  return tables.flatMap((table) => {
+    const pos = getTablePos(table, stored);
+    return pos ? [{ table, pos }] : [];
+  });
+};
 

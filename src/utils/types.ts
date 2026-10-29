@@ -31,11 +31,31 @@ export interface Product {
 
 export type TableStatus = 'libre' | 'ocupada' | 'reservada' | 'limpieza';
 
+/** Posición de una mesa en el plano, en % del área del mapa (x, y = esquina superior izquierda) */
+export interface TableLayout {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  shape?: 'rect' | 'round';
+}
+
+/** Elemento decorativo del plano (barra, baños, entrada…); no es mesa */
+export interface VenueDecor {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface Table {
   id: string;
   number: number | string;
   // capacity: number;
   status: TableStatus;
+  layout?: TableLayout | null; // Posición en el plano (sin definir = fuera del plano)
   waiterId?: string;
   waiterName?: string;
   currentOrderId?: string;

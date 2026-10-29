@@ -17,6 +17,7 @@ import AdminCheckout from "./pages/admin/Checkout";
 import AdminOrderDetails from "./pages/admin/OrderDetails";
 import AdminKitchenControl from "./pages/admin/KitchenControl";
 import Settings from "./pages/admin/Settings";
+import TableLayoutEditor from './pages/admin/TableLayoutEditor';
 import AdminTickets from "./pages/admin/Tickets";
 import ManageProducts from "./pages/admin/ManageProducts";
 import Promotions from "./pages/admin/Promotions";
@@ -75,6 +76,7 @@ function App() {
           <Route path="inventory-stats" element={<InventoryStats />} />
           <Route path="bottle-search" element={<BottleSearch />} />
           <Route path="prices" element={<AdminPrices />} />
+          <Route path="layout" element={<TableLayoutEditor />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Route>

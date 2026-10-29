@@ -32,7 +32,7 @@ import { sendToPrinter } from "../../utils/printTicket";
 import { PrintableDailySummary } from "../../components/admin/PrintableDailySummary";
 import { useActiveOrders } from "../../hooks/useOrders";
 import { exportShiftReportToExcel } from "../../utils/exportExcel";
-import { getShiftRange, getCurrentShiftDate, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
+import { getShiftRange, getCurrentShiftDate, shiftDateKey, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
 import { tableLabel as formatTableLabel } from '../../utils/tableLabel';
 
 // Ya no se descuenta comisión de tarjeta a las propinas: la propina es la completa.
@@ -312,7 +312,7 @@ const DailySummary: React.FC = () => {
 
   const handlePrintPDF = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Cierre_Caja_${selectedDate.toISOString().split("T")[0]}`,
+    documentTitle: `Cierre_Caja_${shiftDateKey(selectedDate)}`,
     pageStyle: `
       @page {
         size: auto;
@@ -623,7 +623,7 @@ const DailySummary: React.FC = () => {
       console.groupEnd(); // CIERRE DE CAJA
 
       // Fetch shift expenses
-      const shiftDateStr = selectedDate.toISOString().split("T")[0];
+      const shiftDateStr = shiftDateKey(selectedDate);
       const expensesRef = doc(db, "shiftExpenses", shiftDateStr);
       const expensesSnap = await getDoc(expensesRef);
       if (expensesSnap.exists()) {
@@ -651,7 +651,7 @@ const DailySummary: React.FC = () => {
   const saveGastosToDB = async (list: Gasto[]) => {
     setSavingExpenses(true);
     try {
-      const shiftDateStr = selectedDate.toISOString().split("T")[0];
+      const shiftDateStr = shiftDateKey(selectedDate);
       await setDoc(doc(db, "shiftExpenses", shiftDateStr), { gastos: list }, { merge: true });
     } catch (error) {
       console.error(error);
@@ -990,7 +990,7 @@ const DailySummary: React.FC = () => {
           </div>
           <input
             type="date"
-            value={selectedDate.toISOString().split("T")[0]}
+            value={shiftDateKey(selectedDate)}
             onChange={(e) =>
               setSelectedDate(new Date(e.target.value + "T12:00:00"))
             }

@@ -36,3 +36,7 @@ export const getShiftDateFor = (d: Date): Date => {
 
 /** Fecha del turno actual (o del último, si aún no abre el de hoy). */
 export const getCurrentShiftDate = (): Date => getShiftDateFor(new Date());
+
+/** Clave "YYYY-MM-DD" de la fecha del turno en hora local (no UTC: de noche toISOString ya da el día siguiente). */
+export const shiftDateKey = (date: Date): string =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;

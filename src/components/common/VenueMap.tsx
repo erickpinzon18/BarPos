@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Table, Order, Reservation } from '../../utils/types';
-import { resolveLayout, isTakeoutNumber } from '../../utils/venueLayout';
-import { useVenueDecor } from '../../services/venueLayoutService';
+import { resolveLayout, isTakeoutNumber, canvasBoxStyle, boxStyle } from '../../utils/venueLayout';
+import { useVenueLayoutConfig } from '../../services/venueLayoutService';
 import { tableLabel } from '../../utils/tableLabel';
 
 interface VenueMapProps {
@@ -143,13 +143,11 @@ const Popup: React.FC<PopupProps> = ({
 
 // ─── VenueMap ─────────────────────────────────────────────────────────────────
 
-const MAP_MIN_W = 680; // px — keeps tables readable on mobile (≈59px per table)
-
 export const VenueMap: React.FC<VenueMapProps> = ({
   tables, orders, reservations = [], onTableClick, onCheckout, accentColor, currentUserId,
 }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const decor = useVenueDecor();
+  const { decor, canvas } = useVenueLayoutConfig();
   const placed = resolveLayout(tables);
   const placedIds = new Set(placed.map(p => p.table.id));
 
@@ -167,8 +165,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
       <div
         className="relative select-none"
         style={{
-          minWidth: `${MAP_MIN_W}px`,
-          aspectRatio: '1.95',
+          ...canvasBoxStyle(canvas),
           background: 'linear-gradient(145deg, #0d1117 0%, #111827 55%, #0d1117 100%)',
           border: '1px solid rgba(255,255,255,0.05)',
           borderRadius: '16px',
@@ -180,7 +177,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
             key={d.id}
             className="absolute flex items-center justify-center pointer-events-none"
             style={{
-              left: `${d.x}%`, top: `${d.y}%`, width: `${d.w}%`, height: `${d.h}%`,
+              ...boxStyle(d, canvas),
               borderRadius: '12px',
               background: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 8px, rgba(255,255,255,0.06) 8px 16px)',
               border: '1px dashed rgba(156,163,175,0.35)',
@@ -233,10 +230,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
               }}
               className="absolute transition-all duration-200 group flex flex-col items-center justify-center gap-0.5"
               style={{
-                left: `${pos.x}%`,
-                top: `${pos.y}%`,
-                width: `${pos.w}%`,
-                height: `${pos.h}%`,
+                ...boxStyle(pos, canvas),
                 borderRadius: isCircle ? '50%' : isBar ? '10px' : '8px',
                 backgroundColor: bgColor,
                 border,
@@ -287,8 +281,8 @@ export const VenueMap: React.FC<VenueMapProps> = ({
                   order={order}
                   reservation={reservation}
                   accentColor={accentColor}
-                  flipLeft={pos.x > 62}
-                  flipUp={pos.y > 55}
+                  flipLeft={(pos.x / canvas.w) * 100 > 62}
+                  flipUp={(pos.y / canvas.h) * 100 > 55}
                   isOtherWaiter={false}
                   onOpen={() => { setSelectedId(null); onTableClick(table); }}
                   onViewOrder={() => { setSelectedId(null); onTableClick(table); }}

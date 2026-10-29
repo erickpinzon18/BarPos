@@ -3,7 +3,7 @@
 // El plano se edita en Admin → Plano de mesas y se guarda en cada mesa (`tables/{id}.layout`)
 // y en `config/venueLayout` (decoración). Mientras no se haya guardado ninguno, se usa el plano
 // por defecto de abajo, ligado a las mesas por su campo `number`.
-import type { Table, TableLayout, VenueDecor } from './types';
+import type { Table, TableLayout, VenueCanvas, VenueDecor } from './types';
 
 export interface TablePos {
   number: number | string;
@@ -52,6 +52,26 @@ export const TABLE_LAYOUT: TablePos[] = [
   // En la BD se llaman 'Llevar N'; en pantalla se muestran como 'Extra N' (ver utils/tableLabel)
   ...[1, 2, 3, 4, 5].map((n, i) => ({ number: `Llevar ${n}`, x: 27 + i * 7, y: 68.5, w: 6.5, h: SH })),
 ];
+
+/** Área original del local: 100 x 100 unidades con proporción 1.95 : 1 (ancho : alto). */
+export const DEFAULT_CANVAS: VenueCanvas = { w: 100, h: 100 };
+export const BASE_ASPECT = 1.95;
+/** Ancho mínimo en px del área original, para que las mesas se lean bien en celular. */
+export const BASE_MIN_W = 680;
+
+/** Estilo del contenedor del plano según su tamaño (el área extra conserva la escala original). */
+export const canvasBoxStyle = (c: VenueCanvas) => ({
+  minWidth: `${Math.round((BASE_MIN_W * c.w) / 100)}px`,
+  aspectRatio: String((BASE_ASPECT * c.w) / c.h),
+});
+
+/** Caja en unidades del plano → estilo en % del contenedor. */
+export const boxStyle = (b: { x: number; y: number; w: number; h: number }, c: VenueCanvas) => ({
+  left: `${(b.x / c.w) * 100}%`,
+  top: `${(b.y / c.h) * 100}%`,
+  width: `${(b.w / c.w) * 100}%`,
+  height: `${(b.h / c.h) * 100}%`,
+});
 
 /** Elementos decorativos por defecto (no son mesas). */
 export const DECOR_LAYOUT: VenueDecor[] = [

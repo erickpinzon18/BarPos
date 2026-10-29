@@ -4,16 +4,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { Plus, Save, Undo2, Trash2, Copy, Square, Circle, LayoutGrid, Loader2, Type } from 'lucide-react';
+import { Plus, Save, Undo2, Trash2, Copy, Square, Circle, LayoutGrid, Loader2, Type, ArrowRightToLine, ArrowDownToLine, Shrink } from 'lucide-react';
 import { db } from '../../services/firebase';
 import { getTablesRealtime } from '../../services/firestoreService';
-import { saveVenueLayout, type LayoutTableDraft } from '../../services/venueLayoutService';
+import { parseVenueConfig, saveVenueLayout, type LayoutTableDraft } from '../../services/venueLayoutService';
 import { useAuth } from '../../contexts/AuthContext';
-import { DECOR_LAYOUT, isTakeoutNumber, resolveLayout } from '../../utils/venueLayout';
+import { DEFAULT_CANVAS, boxStyle, canvasBoxStyle, isTakeoutNumber, resolveLayout } from '../../utils/venueLayout';
 import { tableLabel } from '../../utils/tableLabel';
-import type { Table, TableLayout, VenueDecor } from '../../utils/types';
+import type { Table, TableLayout, VenueCanvas, VenueDecor } from '../../utils/types';
 
-const MAP_MIN_W = 680;
+/** Cuánto crece el plano por clic al ampliarlo (unidades; 100 = área original) y su máximo */
+const GROW_STEP = 25;
+const MAX_CANVAS = 400;
 const SNAP = 0.5;
 const MIN_SIZE = 3;
 const DEFAULT_SIZE = { w: 6, h: 9.5 };
@@ -35,6 +37,7 @@ const TableLayoutEditor: React.FC = () => {
   const [allTables, setAllTables] = useState<Table[]>([]);
   const [drafts, setDrafts] = useState<LayoutTableDraft[]>([]);
   const [decor, setDecor] = useState<VenueDecor[]>([]);
+  const [canvas, setCanvas] = useState<VenueCanvas>(DEFAULT_CANVAS);
   const [loaded, setLoaded] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,8 +50,9 @@ const TableLayoutEditor: React.FC = () => {
   // ─── Carga ────────────────────────────────────────────────────────────────
   const loadDecor = useCallback(async () => {
     const snap = await getDoc(doc(db, 'config', 'venueLayout'));
-    const d = snap.data();
-    setDecor(snap.exists() && Array.isArray(d?.decor) ? (d!.decor as VenueDecor[]) : DECOR_LAYOUT);
+    const cfg = parseVenueConfig(snap.data());
+    setDecor(cfg.decor);
+    setCanvas(cfg.canvas);
   }, []);
 
   const resetFrom = useCallback((tables: Table[]) => {
@@ -113,12 +117,12 @@ const TableLayoutEditor: React.FC = () => {
     const overlaps = (x: number, y: number) => boxes.some((b) => x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y);
     for (let r = 0; r < 60; r += 2) {
       for (const [dx, dy] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, -r], [r, -r], [-r, r]]) {
-        const x = clamp(snap(47 + dx), 0, 100 - w);
-        const y = clamp(snap(45 + dy), 0, 100 - h);
+        const x = clamp(snap(canvas.w / 2 - 3 + dx), 0, canvas.w - w);
+        const y = clamp(snap(canvas.h / 2 - 5 + dy), 0, canvas.h - h);
         if (!overlaps(x, y)) return { x, y };
       }
     }
-    return { x: 47, y: 45 };
+    return { x: clamp(snap(canvas.w / 2 - 3), 0, canvas.w - w), y: clamp(snap(canvas.h / 2 - 5), 0, canvas.h - h) };
   };
 
   const nextNumber = (): number => {
@@ -154,6 +158,26 @@ const TableLayoutEditor: React.FC = () => {
     if (selected.kind === 'table') setDrafts((p) => p.filter((d) => d.key !== selected.key));
     else setDecor((p) => p.filter((d) => d.id !== selected.key));
     setSelected(null);
+    setDirty(true);
+  };
+
+  // ─── Tamaño del plano ─────────────────────────────────────────────────────
+  /** Lo mínimo que puede medir el plano sin cortar mesas ni decoración */
+  const contentExtent = (): VenueCanvas => {
+    const boxes: Box[] = [...drafts.map((d) => d.layout), ...decor];
+    return {
+      w: Math.max(DEFAULT_CANVAS.w, ...boxes.map((b) => Math.ceil(b.x + b.w))),
+      h: Math.max(DEFAULT_CANVAS.h, ...boxes.map((b) => Math.ceil(b.y + b.h))),
+    };
+  };
+  const growCanvas = (axis: 'w' | 'h') => {
+    setCanvas((c) => ({ ...c, [axis]: Math.min(MAX_CANVAS, c[axis] + GROW_STEP) }));
+    setDirty(true);
+  };
+  const shrinkCanvas = () => {
+    const fit = contentExtent();
+    if (fit.w === canvas.w && fit.h === canvas.h) { toast('El plano ya está al mínimo'); return; }
+    setCanvas(fit);
     setDirty(true);
   };
 
@@ -210,17 +234,17 @@ const TableLayoutEditor: React.FC = () => {
     const d = drag.current;
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!d || !rect) return;
-    const dx = ((e.clientX - d.sx) / rect.width) * 100;
-    const dy = ((e.clientY - d.sy) / rect.height) * 100;
+    const dx = ((e.clientX - d.sx) / rect.width) * canvas.w;
+    const dy = ((e.clientY - d.sy) / rect.height) * canvas.h;
     if (d.mode === 'move') {
       setBox(d.kind, d.key, {
-        x: clamp(snap(d.start.x + dx), 0, 100 - d.start.w),
-        y: clamp(snap(d.start.y + dy), 0, 100 - d.start.h),
+        x: clamp(snap(d.start.x + dx), 0, canvas.w - d.start.w),
+        y: clamp(snap(d.start.y + dy), 0, canvas.h - d.start.h),
       });
     } else {
       setBox(d.kind, d.key, {
-        w: clamp(snap(d.start.w + dx), MIN_SIZE, 100 - d.start.x),
-        h: clamp(snap(d.start.h + dy), MIN_SIZE, 100 - d.start.y),
+        w: clamp(snap(d.start.w + dx), MIN_SIZE, canvas.w - d.start.x),
+        h: clamp(snap(d.start.h + dy), MIN_SIZE, canvas.h - d.start.y),
       });
     }
   };
@@ -241,10 +265,10 @@ const TableLayoutEditor: React.FC = () => {
       const box = getBox(selected.kind, selected.key);
       if (!box) return;
       const moves: Record<string, Partial<Box>> = {
-        ArrowLeft: { x: clamp(box.x - step, 0, 100 - box.w) },
-        ArrowRight: { x: clamp(box.x + step, 0, 100 - box.w) },
-        ArrowUp: { y: clamp(box.y - step, 0, 100 - box.h) },
-        ArrowDown: { y: clamp(box.y + step, 0, 100 - box.h) },
+        ArrowLeft: { x: clamp(box.x - step, 0, canvas.w - box.w) },
+        ArrowRight: { x: clamp(box.x + step, 0, canvas.w - box.w) },
+        ArrowUp: { y: clamp(box.y - step, 0, canvas.h - box.h) },
+        ArrowDown: { y: clamp(box.y + step, 0, canvas.h - box.h) },
       };
       if (moves[e.key]) { e.preventDefault(); setBox(selected.kind, selected.key, moves[e.key]); }
       else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelected(); }
@@ -279,7 +303,7 @@ const TableLayoutEditor: React.FC = () => {
 
     setSaving(true);
     try {
-      const r = await saveVenueLayout(drafts, decor, allTables, currentUser?.displayName || currentUser?.email || 'Admin');
+      const r = await saveVenueLayout(drafts, decor, canvas, allTables, currentUser?.displayName || currentUser?.email || 'Admin');
       toast.success(`Plano guardado${r.created ? ` · ${r.created} mesa(s) nueva(s)` : ''}`);
       setDirty(false);
       // Re-sincroniza con lo guardado (ids de mesas nuevas)
@@ -342,17 +366,24 @@ const TableLayoutEditor: React.FC = () => {
             ref={canvasRef}
             className="relative select-none"
             style={{
-              minWidth: `${MAP_MIN_W}px`,
-              aspectRatio: '1.95',
+              ...canvasBoxStyle(canvas),
               backgroundColor: '#0d1117',
               backgroundImage:
                 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-              backgroundSize: '5% 5%',
+              backgroundSize: `${500 / canvas.w}% ${500 / canvas.h}%`,
               border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: '16px',
             }}
             onPointerDown={() => setSelected(null)}
           >
+            {(canvas.w > DEFAULT_CANVAS.w || canvas.h > DEFAULT_CANVAS.h) && (
+              <div
+                className="absolute pointer-events-none"
+                style={{ ...boxStyle({ x: 0, y: 0, ...DEFAULT_CANVAS }, canvas), border: '1px dashed rgba(239,68,68,0.35)', borderRadius: '16px' }}
+              >
+                <span className="absolute right-2 bottom-1 text-[10px] text-red-400/70">Área original</span>
+              </div>
+            )}
             {decor.map((d) => {
               const isSel = selected?.kind === 'decor' && selected.key === d.id;
               return (
@@ -363,7 +394,7 @@ const TableLayoutEditor: React.FC = () => {
                   onPointerUp={onPointerUp}
                   className="absolute flex items-center justify-center cursor-move"
                   style={{
-                    left: `${d.x}%`, top: `${d.y}%`, width: `${d.w}%`, height: `${d.h}%`,
+                    ...boxStyle(d, canvas),
                     borderRadius: '12px', touchAction: 'none',
                     background: 'repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 8px, rgba(255,255,255,0.06) 8px 16px)',
                     border: isSel ? '2px solid #ef4444' : '1px dashed rgba(156,163,175,0.45)',
@@ -387,7 +418,7 @@ const TableLayoutEditor: React.FC = () => {
                   onPointerUp={onPointerUp}
                   className="absolute flex flex-col items-center justify-center cursor-move"
                   style={{
-                    left: `${d.layout.x}%`, top: `${d.layout.y}%`, width: `${d.layout.w}%`, height: `${d.layout.h}%`,
+                    ...boxStyle(d.layout, canvas),
                     borderRadius: d.layout.shape === 'round' ? '50%' : '8px',
                     touchAction: 'none',
                     backgroundColor: isSel ? 'rgba(185,28,28,0.45)' : 'rgba(31,41,55,0.95)',
@@ -428,12 +459,12 @@ const TableLayoutEditor: React.FC = () => {
                     <div key={k}>
                       <label className="block text-xs text-gray-400 mb-1">{k === 'w' ? 'Ancho %' : 'Alto %'}</label>
                       <input
-                        type="number" min={MIN_SIZE} max={100} step={SNAP}
+                        type="number" min={MIN_SIZE} max={k === 'w' ? canvas.w : canvas.h} step={SNAP}
                         value={selBox[k]}
                         onChange={(e) => {
                           const v = parseFloat(e.target.value);
                           if (isNaN(v)) return;
-                          const max = 100 - (k === 'w' ? selBox.x : selBox.y);
+                          const max = (k === 'w' ? canvas.w - selBox.x : canvas.h - selBox.y);
                           setBox(selected.kind, selected.key, { [k]: clamp(v, MIN_SIZE, max) });
                         }}
                         className={inputCls}
@@ -471,6 +502,27 @@ const TableLayoutEditor: React.FC = () => {
                 )}
               </div>
             )}
+          </div>
+
+          <div className="bg-gray-800 rounded-2xl p-4 border border-gray-700">
+            <h3 className="text-white font-semibold mb-1">Tamaño del plano</h3>
+            <p className="text-xs text-gray-400 mb-3">
+              Amplíalo para agregar el patio u otra área; las mesas actuales no se mueven. Agrega una decoración “Patio” para marcarlo.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => growCanvas('w')} disabled={canvas.w >= MAX_CANVAS} className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 disabled:opacity-40 text-gray-200 text-sm">
+                <ArrowRightToLine size={14} /> A la derecha
+              </button>
+              <button onClick={() => growCanvas('h')} disabled={canvas.h >= MAX_CANVAS} className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 disabled:opacity-40 text-gray-200 text-sm">
+                <ArrowDownToLine size={14} /> Hacia abajo
+              </button>
+            </div>
+            <button onClick={shrinkCanvas} className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 text-gray-300 text-sm">
+              <Shrink size={14} /> Ajustar al contenido
+            </button>
+            <p className="text-xs text-gray-500 mt-2">
+              Tamaño: {Math.round(canvas.w)}% × {Math.round(canvas.h)}% del área original
+            </p>
           </div>
 
           <div className="bg-gray-800 rounded-2xl p-4 border border-gray-700">

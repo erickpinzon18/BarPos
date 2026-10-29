@@ -4,27 +4,41 @@
 import { useEffect, useState } from 'react';
 import { collection, deleteField, doc, onSnapshot, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Table, TableLayout, VenueDecor } from '../utils/types';
-import { DECOR_LAYOUT } from '../utils/venueLayout';
+import type { Table, TableLayout, VenueCanvas, VenueDecor } from '../utils/types';
+import { DECOR_LAYOUT, DEFAULT_CANVAS } from '../utils/venueLayout';
 
 const DECOR_DOC = () => doc(db, 'config', 'venueLayout');
 
-/** Decoración del plano en tiempo real; si nunca se ha guardado, la de por defecto. */
-export const useVenueDecor = (): VenueDecor[] => {
-  const [decor, setDecor] = useState<VenueDecor[]>(DECOR_LAYOUT);
+export interface VenueLayoutConfig {
+  decor: VenueDecor[];
+  canvas: VenueCanvas;
+}
+
+/** Convierte el documento `config/venueLayout` (o su ausencia) en la configuración del plano. */
+export const parseVenueConfig = (data: Record<string, unknown> | undefined): VenueLayoutConfig => {
+  const c = data?.canvas as Partial<VenueCanvas> | undefined;
+  return {
+    decor: Array.isArray(data?.decor) ? (data!.decor as VenueDecor[]) : DECOR_LAYOUT,
+    canvas: {
+      w: typeof c?.w === 'number' && c.w >= 100 ? c.w : DEFAULT_CANVAS.w,
+      h: typeof c?.h === 'number' && c.h >= 100 ? c.h : DEFAULT_CANVAS.h,
+    },
+  };
+};
+
+/** Decoración y tamaño del plano en tiempo real; si nunca se ha guardado, los de por defecto. */
+export const useVenueLayoutConfig = (): VenueLayoutConfig => {
+  const [config, setConfig] = useState<VenueLayoutConfig>(() => parseVenueConfig(undefined));
   useEffect(
     () =>
       onSnapshot(
         DECOR_DOC(),
-        (snap) => {
-          const d = snap.data();
-          setDecor(snap.exists() && Array.isArray(d?.decor) ? (d!.decor as VenueDecor[]) : DECOR_LAYOUT);
-        },
+        (snap) => setConfig(parseVenueConfig(snap.data())),
         (err) => console.error('Error leyendo el plano:', err)
       ),
     []
   );
-  return decor;
+  return config;
 };
 
 /** Mesa del editor: existente (`tableId`) o nueva (sin `tableId`). */
@@ -48,11 +62,12 @@ const cleanLayout = (l: TableLayout): TableLayout => ({
  * Guarda el plano completo en un solo batch:
  * - mesas del plano: actualiza posición (y número si cambió) o crea la mesa nueva libre;
  * - mesas que tenían posición y ya no están: se quitan del plano (no se borran, conservan su historial);
- * - decoración: reemplaza la lista en `config/venueLayout`.
+ * - decoración y tamaño del plano: reemplaza `config/venueLayout`.
  */
 export const saveVenueLayout = async (
   drafts: LayoutTableDraft[],
   decor: VenueDecor[],
+  canvas: VenueCanvas,
   allTables: Table[],
   updatedBy: string
 ): Promise<{ created: number; updated: number; removed: number }> => {
@@ -99,6 +114,7 @@ export const saveVenueLayout = async (
 
   batch.set(DECOR_DOC(), {
     decor: decor.map((x) => ({ id: x.id, label: x.label.trim(), x: round(x.x), y: round(x.y), w: round(x.w), h: round(x.h) })),
+    canvas: { w: round(canvas.w), h: round(canvas.h) },
     updatedAt: now,
     updatedBy,
   });

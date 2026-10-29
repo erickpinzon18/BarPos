@@ -50,6 +50,12 @@ export interface VenueDecor {
   h: number;
 }
 
+/** Tamaño del plano en unidades: 100 x 100 es el área original del local; más grande = área extra (patio) */
+export interface VenueCanvas {
+  w: number;
+  h: number;
+}
+
 export interface Table {
   id: string;
   number: number | string;

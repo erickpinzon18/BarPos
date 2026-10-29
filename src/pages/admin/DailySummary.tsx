@@ -33,6 +33,7 @@ import { PrintableDailySummary } from "../../components/admin/PrintableDailySumm
 import { useActiveOrders } from "../../hooks/useOrders";
 import { exportShiftReportToExcel } from "../../utils/exportExcel";
 import { getShiftRange, getCurrentShiftDate, shiftDateKey, SHIFT_START_LABEL, SHIFT_END_LABEL } from '../../utils/shift';
+import { useAuth } from '../../contexts/AuthContext';
 import { tableLabel as formatTableLabel } from '../../utils/tableLabel';
 
 // Ya no se descuenta comisión de tarjeta a las propinas: la propina es la completa.
@@ -171,6 +172,7 @@ const DailySummary: React.FC = () => {
 
   const [summary, setSummary] = useState<ShiftSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const { currentUser } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentShiftDate());
   const [waiterTab, setWaiterTab] = useState<'resumen' | 'detalle'>('resumen');
   const [tipCatalog, setTipCatalog] = useState<TipCatalog>(new Map());
@@ -682,6 +684,7 @@ const DailySummary: React.FC = () => {
   };
 
   const handleRemoveGasto = (id: string) => {
+    if (!currentUser?.superAdmin) return;
     const next = gastos.filter((g) => g.id !== id);
     setGastos(next);
     void saveGastosToDB(next);
@@ -1246,12 +1249,14 @@ const DailySummary: React.FC = () => {
                         <span className="text-white font-medium">{g.concepto}</span>
                         <div className="flex items-center gap-3">
                           <span className="text-red-400 font-semibold">-{formatCurrency(g.monto)}</span>
-                          <button
-                            onClick={() => handleRemoveGasto(g.id)}
-                            className="text-red-400 hover:text-red-300 text-xs"
-                          >
-                            Quitar
-                          </button>
+                          {currentUser?.superAdmin && (
+                            <button
+                              onClick={() => handleRemoveGasto(g.id)}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                            >
+                              Quitar
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}

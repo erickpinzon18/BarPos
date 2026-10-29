@@ -771,7 +771,7 @@ const DailySummary: React.FC = () => {
     lines.push(fmtLine("Total cobrado:", fmtM(dTotalSales)));
     lines.push(fmtLine("Productos:", fmtM(dTotalSubtotal)));
     lines.push(fmtLine("Propinas:", fmtM(summary.totalTips)));
-    lines.push("  (promos 10% + autorizadas)");
+    lines.push("  (promos 10% + extra)");
     lines.push(fmtLine("Comisiones:", fmtM(waiterCommissionTotal)));
     lines.push("  (incluidas en el precio)");
     lines.push("");

@@ -65,6 +65,8 @@ const WaiterCheckout: React.FC = () => {
   const [tipPercent, setTipPercent] = useState<number>(0);
   // La propina solo se habilita con la clave del dueño
   const [tipUnlocked, setTipUnlocked] = useState(false);
+  // Propina extra que dejó el cliente (se suma a la propina de la cuenta)
+  const [extraTipInput, setExtraTipInput] = useState('');
   const [customTipPercent, setCustomTipPercent] = useState<string>(""); // user's input like '15' means 15%
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -170,7 +172,8 @@ const WaiterCheckout: React.FC = () => {
     () => Math.round(getPromoTipBase(activeItems, itemDiscountMap) * PROMO_TIP_RATE * 100) / 100,
     [activeItems, itemDiscountMap]
   );
-  const tipAmount = manualTipAmount + promoTip;
+  const extraTip = Math.max(0, Math.round((parseFloat(extraTipInput) || 0) * 100) / 100);
+  const tipAmount = manualTipAmount + promoTip + extraTip;
   // % efectivo sobre el subtotal (para estadísticas de propina promedio)
   const effectiveTipPercent = subtotal > 0 ? tipAmount / subtotal : 0;
 
@@ -578,6 +581,12 @@ const WaiterCheckout: React.FC = () => {
                     <span>${promoTip.toFixed(2)}</span>
                   </div>
                 )}
+                {extraTip > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="font-bold">Propina extra:</span>
+                    <span>${extraTip.toFixed(2)}</span>
+                  </div>
+                )}
                 {manualTipAmount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="font-bold">
@@ -633,7 +642,7 @@ const WaiterCheckout: React.FC = () => {
           {/* Controls Column */}
           <div className="space-y-4">
             {/* Propina Section */}
-            <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly}>
+            <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly} extraTip={extraTipInput} onExtraTipChange={setExtraTipInput}>
             <div className="bg-gray-800 p-4 md:p-6 rounded-2xl border border-gray-800">
               <h3 className="font-semibold text-white mb-3 md:mb-4">
                 💰 Propina

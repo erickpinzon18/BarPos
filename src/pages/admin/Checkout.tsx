@@ -67,6 +67,8 @@ const AdminCheckout: React.FC = () => {
   const [tipPercent, setTipPercent] = useState<number>(0);
   // La propina solo se habilita con la clave del dueño
   const [tipUnlocked, setTipUnlocked] = useState(false);
+  // Propina extra que dejó el cliente (se suma a la propina de la cuenta)
+  const [extraTipInput, setExtraTipInput] = useState('');
   const [customTipAmount, setCustomTipAmount] = useState<string>("");
   const [customTipPercent, setCustomTipPercent] = useState<string>("");
   const [closing, setClosing] = useState(false);
@@ -193,7 +195,8 @@ const AdminCheckout: React.FC = () => {
     () => Math.round(getPromoTipBase(activeItems, itemDiscountMap) * PROMO_TIP_RATE * 100) / 100,
     [activeItems, itemDiscountMap]
   );
-  const tipAmount = manualTipAmount + promoTip;
+  const extraTip = Math.max(0, Math.round((parseFloat(extraTipInput) || 0) * 100) / 100);
+  const tipAmount = manualTipAmount + promoTip + extraTip;
   // % efectivo sobre el subtotal (para estadísticas de propina promedio)
   const effectiveTipPercent = subtotal > 0 ? tipAmount / subtotal : 0;
 
@@ -773,6 +776,12 @@ const AdminCheckout: React.FC = () => {
                   <span>${promoTip.toFixed(2)}</span>
                 </div>
               )}
+              {extraTip > 0 && (
+                <div className="flex justify-between">
+                  <span className="font-bold">Propina extra:</span>
+                  <span>${extraTip.toFixed(2)}</span>
+                </div>
+              )}
               {manualTipAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="font-bold">
@@ -829,7 +838,7 @@ const AdminCheckout: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-          <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly}>
+          <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly} extraTip={extraTipInput} onExtraTipChange={setExtraTipInput}>
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-white">Propina</h3>
@@ -929,7 +938,7 @@ const AdminCheckout: React.FC = () => {
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-3">💰 Pago Recibido</h3>
             <p className="text-xs text-gray-500 mb-3">
-              Si el cliente paga más del total, se muestra el cambio. Con propina autorizada se puede aplicar como propina.
+              Si el cliente paga más del total, se muestra el cambio. Si deja el cambio de propina, anótalo en "Propina extra".
             </p>
             <div className="flex items-center gap-3">
               <span className="text-gray-400 text-sm font-semibold">$</span>

@@ -39,6 +39,8 @@ const KitchenCheckout: React.FC = () => {
   const [tipPercent, setTipPercent] = useState<number>(0);
   // La propina solo se habilita con la clave del dueño
   const [tipUnlocked, setTipUnlocked] = useState(false);
+  // Propina extra que dejó el cliente (se suma a la propina de la cuenta)
+  const [extraTipInput, setExtraTipInput] = useState('');
   const [customTipPercent, setCustomTipPercent] = useState<string>('');
   const [closing, setClosing] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -120,7 +122,8 @@ const KitchenCheckout: React.FC = () => {
     () => Math.round(getPromoTipBase(activeItems, itemDiscountMap) * PROMO_TIP_RATE * 100) / 100,
     [activeItems, itemDiscountMap]
   );
-  const tipAmount = manualTipAmount + promoTip;
+  const extraTip = Math.max(0, Math.round((parseFloat(extraTipInput) || 0) * 100) / 100);
+  const tipAmount = manualTipAmount + promoTip + extraTip;
   // % efectivo sobre el subtotal (para estadísticas de propina promedio)
   const effectiveTipPercent = subtotal > 0 ? tipAmount / subtotal : 0;
 
@@ -389,6 +392,7 @@ const KitchenCheckout: React.FC = () => {
             <div className="border-t border-dashed border-gray-600 mt-4 pt-2">
               <div className="flex justify-between"><span className="font-bold">Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
               {promoTip > 0 && <div className="flex justify-between"><span className="font-bold">Propina promos ({PROMO_TIP_RATE * 100}%):</span><span>${promoTip.toFixed(2)}</span></div>}
+              {extraTip > 0 && <div className="flex justify-between"><span className="font-bold">Propina extra:</span><span>${extraTip.toFixed(2)}</span></div>}
               {manualTipAmount > 0 && <div className="flex justify-between"><span className="font-bold">Propina ({formatTipPercent(tipPercent)}%):</span><span>${manualTipAmount.toFixed(2)}</span></div>}
               {activePromos.map(promo => {
                 const promoDiscount = activeItems
@@ -417,7 +421,7 @@ const KitchenCheckout: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-          <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly}>
+          <TipAuthGate unlocked={tipUnlocked} onUnlock={() => setTipUnlocked(true)} disabled={isReadOnly} extraTip={extraTipInput} onExtraTipChange={setExtraTipInput}>
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-800">
             <h3 className="font-semibold text-white mb-4">Propina</h3>
             <div className="flex space-x-2 items-center">

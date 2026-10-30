@@ -1443,6 +1443,7 @@ const DailySummary: React.FC = () => {
                         <th className="text-right px-4 py-2">Propina cliente</th>
                         <th className="text-right px-4 py-2">Total</th>
                         <th className="text-right px-4 py-2 text-green-400">Comisión a pagar</th>
+                        <th className="text-right px-4 py-2 text-emerald-300">Total a dar</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700/50">
@@ -1469,6 +1470,9 @@ const DailySummary: React.FC = () => {
                               );
                             })()}
                           </td>
+                          <td className="px-4 py-3 text-right text-emerald-300 font-bold">
+                            {formatCurrency(getWaiterTableTip(waiter.orders, tipCatalog).amount + waiter.totalTips)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1482,6 +1486,9 @@ const DailySummary: React.FC = () => {
                         <td className="px-4 py-3 text-right text-white">{formatCurrency(dTotalSales)}</td>
                         <td className="px-4 py-3 text-right text-green-400">
                           {formatCurrency(waiterCommissionTotal)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-emerald-300">
+                          {formatCurrency(waiterCommissionTotal + summary.totalTips)}
                         </td>
                       </tr>
                     </tfoot>
@@ -1521,6 +1528,10 @@ const DailySummary: React.FC = () => {
                             <div>
                               <p className="text-gray-400 text-xs">Comisión a pagar</p>
                               <p className="text-green-400 font-bold">{formatCurrency(waiterTip)}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-xs">Total a dar</p>
+                              <p className="text-emerald-300 font-bold">{formatCurrency(waiterTip + waiter.totalTips)}</p>
                             </div>
                           </div>
                         </div>

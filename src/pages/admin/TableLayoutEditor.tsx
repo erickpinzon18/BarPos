@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { Plus, Save, Undo2, Trash2, Copy, Square, Circle, LayoutGrid, Loader2, Type, ArrowRightToLine, ArrowDownToLine, Shrink } from 'lucide-react';
+import { Plus, Save, Undo2, Trash2, Copy, Square, Circle, LayoutGrid, Loader2, Type, ArrowRightToLine, ArrowDownToLine, ArrowLeftToLine, ArrowUpToLine, Shrink } from 'lucide-react';
 import { db } from '../../services/firebase';
 import { getTablesRealtime } from '../../services/firestoreService';
 import { parseVenueConfig, saveVenueLayout, type LayoutTableDraft } from '../../services/venueLayoutService';
@@ -19,6 +19,12 @@ const MAX_CANVAS = 400;
 const SNAP = 0.5;
 const MIN_SIZE = 3;
 const DEFAULT_SIZE = { w: 6, h: 9.5 };
+/** Tamaños rápidos para mesas nuevas (unidades del plano) */
+const SIZE_PRESETS = [
+  { id: 'chica', label: 'Chica', w: 6, h: 9.5 },
+  { id: 'mediana', label: 'Mediana', w: 8, h: 13 },
+  { id: 'grande', label: 'Grande / Sala', w: 12, h: 22 },
+] as const;
 
 type Selection = { kind: 'table' | 'decor'; key: string } | null;
 type Box = { x: number; y: number; w: number; h: number };
@@ -43,6 +49,7 @@ const TableLayoutEditor: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<Selection>(null);
   const [nameInput, setNameInput] = useState('');
+  const [newTable, setNewTable] = useState<{ name: string; size: (typeof SIZE_PRESETS)[number]['id']; shape: 'rect' | 'round' } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const drag = useRef<{ kind: 'table' | 'decor'; key: string; mode: 'move' | 'resize'; sx: number; sy: number; start: Box } | null>(null);
@@ -145,6 +152,29 @@ const TableLayoutEditor: React.FC = () => {
     setDirty(true);
   };
 
+  /** Valida el nombre de la ventana "Agregar mesa nueva" y la coloca en el plano */
+  const confirmNewTable = () => {
+    if (!newTable) return;
+    const raw = newTable.name.trim();
+    if (!raw) { toast.error('Escribe el número o nombre de la mesa'); return; }
+    const value = parseNumber(raw);
+    if (drafts.some((d) => normName(d.number) === normName(value))) { toast.error(`Ya hay una mesa "${raw}" en el plano`); return; }
+    const existing = allTables.find((t) => normName(t.number) === normName(value));
+    const preset = SIZE_PRESETS.find((p) => p.id === newTable.size)!;
+    const spot = freeSpot(preset.w, preset.h);
+    const d: LayoutTableDraft = {
+      key: existing?.id ?? newKey(),
+      tableId: existing?.id,
+      number: existing ? existing.number : value,
+      layout: { ...spot, w: preset.w, h: preset.h, shape: newTable.shape },
+    };
+    setDrafts((p) => [...p, d]);
+    setSelected({ kind: 'table', key: d.key });
+    setDirty(true);
+    setNewTable(null);
+    if (existing) toast.success(`La mesa "${raw}" ya existía; se agregó al plano`);
+  };
+
   const addDecor = () => {
     const spot = freeSpot(14, 10);
     const d: VenueDecor = { id: newKey(), label: 'Barra', ...spot, w: 14, h: 10 };
@@ -162,21 +192,41 @@ const TableLayoutEditor: React.FC = () => {
   };
 
   // ─── Tamaño del plano ─────────────────────────────────────────────────────
-  /** Lo mínimo que puede medir el plano sin cortar mesas ni decoración */
-  const contentExtent = (): VenueCanvas => {
-    const boxes: Box[] = [...drafts.map((d) => d.layout), ...decor];
-    return {
-      w: Math.max(DEFAULT_CANVAS.w, ...boxes.map((b) => Math.ceil(b.x + b.w))),
-      h: Math.max(DEFAULT_CANVAS.h, ...boxes.map((b) => Math.ceil(b.y + b.h))),
-    };
+  /** Recorre todo el contenido (mesas y decoración) dx/dy unidades */
+  const shiftAll = (dx: number, dy: number) => {
+    if (!dx && !dy) return;
+    setDrafts((p) => p.map((d) => ({ ...d, layout: { ...d.layout, x: d.layout.x + dx, y: d.layout.y + dy } })));
+    setDecor((p) => p.map((d) => ({ ...d, x: d.x + dx, y: d.y + dy })));
   };
-  const growCanvas = (axis: 'w' | 'h') => {
-    setCanvas((c) => ({ ...c, [axis]: Math.min(MAX_CANVAS, c[axis] + GROW_STEP) }));
+  type GrowSide = 'right' | 'down' | 'left' | 'up';
+  const canGrow = (side: GrowSide) => (side === 'right' || side === 'left' ? canvas.w : canvas.h) + GROW_STEP <= MAX_CANVAS;
+  const growCanvas = (side: GrowSide) => {
+    if (!canGrow(side)) return;
+    const horizontal = side === 'right' || side === 'left';
+    // Hacia la izquierda / arriba: el espacio nuevo queda al inicio, así que todo se recorre
+    if (side === 'left') shiftAll(GROW_STEP, 0);
+    if (side === 'up') shiftAll(0, GROW_STEP);
+    setCanvas((c) => ({
+      ...c,
+      w: horizontal ? c.w + GROW_STEP : c.w,
+      h: horizontal ? c.h : c.h + GROW_STEP,
+      ox: (c.ox ?? 0) + (side === 'left' ? GROW_STEP : 0),
+      oy: (c.oy ?? 0) + (side === 'up' ? GROW_STEP : 0),
+    }));
     setDirty(true);
   };
+  /** Recorta el espacio vacío por los 4 lados, sin cortar contenido ni el área original */
   const shrinkCanvas = () => {
-    const fit = contentExtent();
-    if (fit.w === canvas.w && fit.h === canvas.h) { toast('El plano ya está al mínimo'); return; }
+    const ox = canvas.ox ?? 0;
+    const oy = canvas.oy ?? 0;
+    const boxes: Box[] = [...drafts.map((d) => d.layout), ...decor, { x: ox, y: oy, ...DEFAULT_CANVAS }];
+    const minX = Math.max(0, Math.floor(Math.min(...boxes.map((b) => b.x))));
+    const minY = Math.max(0, Math.floor(Math.min(...boxes.map((b) => b.y))));
+    const maxX = Math.ceil(Math.max(...boxes.map((b) => b.x + b.w)));
+    const maxY = Math.ceil(Math.max(...boxes.map((b) => b.y + b.h)));
+    const fit = { w: maxX - minX, h: maxY - minY, ox: ox - minX, oy: oy - minY };
+    if (fit.w === canvas.w && fit.h === canvas.h && !minX && !minY) { toast('El plano ya está al mínimo'); return; }
+    shiftAll(-minX, -minY);
     setCanvas(fit);
     setDirty(true);
   };
@@ -342,8 +392,11 @@ const TableLayoutEditor: React.FC = () => {
           <p className="text-sm text-gray-400">Arrastra para mover, jala la esquina para cambiar el tamaño. Los cambios se aplican al presionar Guardar.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => addTable()} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold">
-            <Plus size={16} /> Mesa
+          <button
+            onClick={() => setNewTable({ name: String(nextNumber()), size: 'chica', shape: 'rect' })}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold"
+          >
+            <Plus size={16} /> Agregar mesa nueva
           </button>
           <button onClick={addDecor} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold">
             <Type size={16} /> Decoración
@@ -379,7 +432,7 @@ const TableLayoutEditor: React.FC = () => {
             {(canvas.w > DEFAULT_CANVAS.w || canvas.h > DEFAULT_CANVAS.h) && (
               <div
                 className="absolute pointer-events-none"
-                style={{ ...boxStyle({ x: 0, y: 0, ...DEFAULT_CANVAS }, canvas), border: '1px dashed rgba(239,68,68,0.35)', borderRadius: '16px' }}
+                style={{ ...boxStyle({ x: canvas.ox ?? 0, y: canvas.oy ?? 0, ...DEFAULT_CANVAS }, canvas), border: '1px dashed rgba(239,68,68,0.35)', borderRadius: '16px' }}
               >
                 <span className="absolute right-2 bottom-1 text-[10px] text-red-400/70">Área original</span>
               </div>
@@ -510,12 +563,21 @@ const TableLayoutEditor: React.FC = () => {
               Amplíalo para agregar el patio u otra área; las mesas actuales no se mueven. Agrega una decoración “Patio” para marcarlo.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => growCanvas('w')} disabled={canvas.w >= MAX_CANVAS} className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 disabled:opacity-40 text-gray-200 text-sm">
-                <ArrowRightToLine size={14} /> A la derecha
-              </button>
-              <button onClick={() => growCanvas('h')} disabled={canvas.h >= MAX_CANVAS} className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 disabled:opacity-40 text-gray-200 text-sm">
-                <ArrowDownToLine size={14} /> Hacia abajo
-              </button>
+              {([
+                ['up', 'Hacia arriba', ArrowUpToLine],
+                ['down', 'Hacia abajo', ArrowDownToLine],
+                ['left', 'A la izquierda', ArrowLeftToLine],
+                ['right', 'A la derecha', ArrowRightToLine],
+              ] as const).map(([side, label, Icon]) => (
+                <button
+                  key={side}
+                  onClick={() => growCanvas(side)}
+                  disabled={!canGrow(side)}
+                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 disabled:opacity-40 text-gray-200 text-sm"
+                >
+                  <Icon size={14} /> {label}
+                </button>
+              ))}
             </div>
             <button onClick={shrinkCanvas} className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-gray-900 hover:bg-gray-700 text-gray-300 text-sm">
               <Shrink size={14} /> Ajustar al contenido
@@ -546,6 +608,60 @@ const TableLayoutEditor: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {newTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setNewTable(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-white">Agregar mesa nueva</h2>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Número o nombre (ej. 25, P8, Patio 1)</label>
+              <input
+                autoFocus
+                value={newTable.name}
+                onChange={(e) => setNewTable({ ...newTable, name: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') confirmNewTable(); if (e.key === 'Escape') setNewTable(null); }}
+                onFocus={(e) => e.target.select()}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Tamaño</label>
+              <div className="grid grid-cols-3 gap-2">
+                {SIZE_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setNewTable({ ...newTable, size: p.id })}
+                    className={`py-2 rounded-lg text-sm ${newTable.size === p.id ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Forma</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['rect', 'round'] as const).map((sh) => (
+                  <button
+                    key={sh}
+                    onClick={() => setNewTable({ ...newTable, shape: sh })}
+                    className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm ${newTable.shape === sh ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+                  >
+                    {sh === 'rect' ? <Square size={14} /> : <Circle size={14} />} {sh === 'rect' ? 'Cuadrada' : 'Redonda'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">Aparece en un lugar libre del plano; luego arrástrala a su lugar y presiona “Guardar plano”.</p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={() => setNewTable(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Cancelar</button>
+              <button onClick={confirmNewTable} className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold">
+                <Plus size={16} /> Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

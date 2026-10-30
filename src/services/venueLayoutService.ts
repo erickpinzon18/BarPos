@@ -22,6 +22,8 @@ export const parseVenueConfig = (data: Record<string, unknown> | undefined): Ven
     canvas: {
       w: typeof c?.w === 'number' && c.w >= 100 ? c.w : DEFAULT_CANVAS.w,
       h: typeof c?.h === 'number' && c.h >= 100 ? c.h : DEFAULT_CANVAS.h,
+      ox: typeof c?.ox === 'number' && c.ox > 0 ? c.ox : 0,
+      oy: typeof c?.oy === 'number' && c.oy > 0 ? c.oy : 0,
     },
   };
 };
@@ -114,7 +116,7 @@ export const saveVenueLayout = async (
 
   batch.set(DECOR_DOC(), {
     decor: decor.map((x) => ({ id: x.id, label: x.label.trim(), x: round(x.x), y: round(x.y), w: round(x.w), h: round(x.h) })),
-    canvas: { w: round(canvas.w), h: round(canvas.h) },
+    canvas: { w: round(canvas.w), h: round(canvas.h), ox: round(canvas.ox ?? 0), oy: round(canvas.oy ?? 0) },
     updatedAt: now,
     updatedBy,
   });

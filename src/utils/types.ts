@@ -54,6 +54,9 @@ export interface VenueDecor {
 export interface VenueCanvas {
   w: number;
   h: number;
+  /** Dónde quedó el área original dentro del plano (si se amplió hacia la izquierda / arriba) */
+  ox?: number;
+  oy?: number;
 }
 
 export interface Table {

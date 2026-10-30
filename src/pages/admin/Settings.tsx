@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getConfig, saveConfig, requestDisableUser, getUsers, addUserClient } from '../../services/firestoreService';
+import { getConfig, saveConfig, requestDisableUser, getUsers } from '../../services/firestoreService';
+import { createStaffUser } from '../../services/userAdminService';
+import { useAuth } from '../../contexts/AuthContext';
+import type { UserRole } from '../../utils/types';
 import { auth } from '../../services/firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import toast from 'react-hot-toast';
@@ -7,6 +10,7 @@ import { printStationTicket } from '../../utils/printStationTicket';
 import type { PaperSize } from '../../utils/printTicket';
 
 const Settings: React.FC = () => {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'info' | 'users' | 'roles'>('info');
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
@@ -18,9 +22,9 @@ const Settings: React.FC = () => {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [newRole, setNewRole] = useState<'admin' | 'waiter' | 'kitchen'>('waiter');
+  const [newRole, setNewRole] = useState<UserRole>('waiter');
+  const [newPassword, setNewPassword] = useState('');
   const [newPin, setNewPin] = useState('');
-  const [newActive, setNewActive] = useState(true);
   const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
@@ -164,7 +168,9 @@ const Settings: React.FC = () => {
           <div className="tab-content bg-gray-800 rounded-2xl border border-gray-800 p-6">
             <div className="p-6 flex justify-between items-center border-b border-gray-800">
               <h2 className="text-2xl font-bold text-white">Usuarios del Sistema</h2>
-              {/* <button onClick={() => setShowAddUserModal(true)} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition transform hover:-translate-y-px">Agregar Usuario</button> */}
+              {currentUser?.superAdmin && (
+                <button onClick={() => setShowAddUserModal(true)} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition transform hover:-translate-y-px">Agregar Usuario</button>
+              )}
             </div>
             <div className="overflow-x-auto mt-4">
               <table className="w-full text-sm text-left text-gray-300">
@@ -222,50 +228,52 @@ const Settings: React.FC = () => {
           </div>
         )}
 
-        {/* Add User Modal (client-side only: creates Firestore profile, not Auth account) */}
-        {showAddUserModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-            <div className="bg-gray-800 rounded-2xl border border-gray-800 p-6 w-full max-w-lg">
+        {/* Alta de usuario (solo super admin): crea la cuenta para iniciar sesión y su perfil */}
+        {showAddUserModal && currentUser?.superAdmin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="bg-gray-800 rounded-2xl border border-gray-700 p-6 w-full max-w-lg">
               <h3 className="text-lg font-bold text-white mb-4">Agregar Usuario</h3>
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                if (!newName.trim() || !newEmail.trim()) { toast.error('Nombre y correo son obligatorios'); return; }
+                if (newPassword.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+                if (newPin && !/^\d{4}$/.test(newPin)) { toast.error('El PIN debe ser de 4 dígitos'); return; }
                 setCreatingUser(true);
                 try {
-                  // create Firestore profile document
-                  const payload = { displayName: newName, email: newEmail, role: newRole, pin: newPin, active: newActive };
-                  const res = await addUserClient(payload as any);
-                  if (!res.success) throw new Error(res.error || 'Error creando usuario');
-                  toast.success('Usuario creado (perfil guardado). Recuerde crear la cuenta en Auth mediante backend)');
-                  // refresh users
+                  await createStaffUser({ displayName: newName, email: newEmail, password: newPassword, role: newRole, pin: newPin }, currentUser);
+                  toast.success(`Usuario ${newName.trim()} creado. Ya puede iniciar sesión con ${newEmail.trim().toLowerCase()}`);
                   const refreshed = await getUsers();
                   if (refreshed.success) setUsers(refreshed.data ?? []);
                   setShowAddUserModal(false);
-                  setNewName(''); setNewEmail(''); setNewPin(''); setNewActive(true); setNewRole('waiter');
-                } catch (err: any) {
-                  console.error('Error creating user client-side', err);
-                  toast.error(err?.message || 'Error al crear usuario');
+                  setNewName(''); setNewEmail(''); setNewPassword(''); setNewPin(''); setNewRole('waiter');
+                } catch (err) {
+                  console.error('Error creando usuario', err);
+                  toast.error((err as Error)?.message || 'Error al crear usuario');
                 } finally {
                   setCreatingUser(false);
                 }
               }}>
                 <div className="grid grid-cols-1 gap-3">
                   <label className="text-sm text-gray-300">Nombre</label>
-                  <input value={newName} onChange={(e) => setNewName(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5" />
-                  <label className="text-sm text-gray-300">Email</label>
-                  <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5" />
+                  <input value={newName} onChange={(e) => setNewName(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="Ej. Juan Pérez" />
+                  <label className="text-sm text-gray-300">Correo (para iniciar sesión)</label>
+                  <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5" placeholder="juan@wikka.com" autoComplete="off" />
+                  <label className="text-sm text-gray-300">Contraseña (mínimo 6 caracteres)</label>
+                  <input type="text" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5" autoComplete="new-password" />
                   <label className="text-sm text-gray-300">Rol</label>
-                  <select value={newRole} onChange={(e) => setNewRole(e.target.value as any)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5">
-                    <option value="admin">Administrador</option>
+                  <select value={newRole} onChange={(e) => setNewRole(e.target.value as UserRole)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5">
                     <option value="waiter">Mesero</option>
+                    <option value="capitan">Capitán</option>
+                    <option value="admin">Administrador / Caja</option>
+                    <option value="barra">Barra</option>
                     <option value="kitchen">Cocina</option>
                   </select>
-                  <label className="text-sm text-gray-300">PIN (opcional)</label>
-                  <input value={newPin} onChange={(e) => setNewPin(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5" />
-                  <label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={newActive} onChange={(e) => setNewActive(e.target.checked)} /> Activo</label>
+                  <label className="text-sm text-gray-300">PIN de 4 dígitos (opcional, no se puede repetir)</label>
+                  <input inputMode="numeric" maxLength={4} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))} className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5" />
                 </div>
-                <div className="mt-4 flex justify-end gap-2">
-                  <button type="button" onClick={() => setShowAddUserModal(false)} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600">Cancelar</button>
-                  <button type="submit" disabled={creatingUser} className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-gray-900">{creatingUser ? 'Creando...' : 'Crear Usuario'}</button>
+                <div className="mt-5 flex justify-end gap-2">
+                  <button type="button" onClick={() => setShowAddUserModal(false)} className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 text-gray-200">Cancelar</button>
+                  <button type="submit" disabled={creatingUser} className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white font-semibold disabled:opacity-50">{creatingUser ? 'Creando...' : 'Crear Usuario'}</button>
                 </div>
               </form>
             </div>

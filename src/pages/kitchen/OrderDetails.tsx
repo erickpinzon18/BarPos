@@ -157,7 +157,8 @@ const KitchenOrderDetails: React.FC = () => {
         product.category,
         quantity,
         notes,
-        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined
+        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined,
+        products.find((p) => p.id === product.id)?.tipPerUnit ?? null
       );
     } catch (error: any) {
       throw error;
@@ -182,7 +183,8 @@ const KitchenOrderDetails: React.FC = () => {
         selectedItemForMore.category,
         quantity,
         notes,
-        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined
+        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined,
+        products.find((p) => p.id === selectedItemForMore.productId)?.tipPerUnit ?? null
       );
       setShowQuantityModal(false);
       setSelectedItemForMore(null);

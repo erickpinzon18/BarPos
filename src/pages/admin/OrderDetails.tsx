@@ -189,7 +189,8 @@ const OrderDetails: React.FC = () => {
         product.category,
         quantity,
         notes,
-        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined
+        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined,
+        products.find((p) => p.id === product.id)?.tipPerUnit ?? null
       );
 
       console.log("✅ Item agregado exitosamente");
@@ -230,7 +231,8 @@ const OrderDetails: React.FC = () => {
         selectedItemForMore.category,
         quantity,
         notes,
-        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined
+        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined,
+        products.find((p) => p.id === selectedItemForMore.productId)?.tipPerUnit ?? null
       );
 
       console.log(

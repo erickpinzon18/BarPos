@@ -1,5 +1,6 @@
 // src/services/orderService.ts
-import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc, writeBatch, arrayUnion } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 import { db } from './firebase';
 import type { Order, OrderItem, User, OrderItemStatus, CreateData, Table } from '../utils/types';
 
@@ -107,8 +108,15 @@ export const deleteOrderItem = async (
   }
 };
 
+/** Tiempo máximo que el botón espera la confirmación del servidor antes de soltarse */
+const ADD_ITEM_ACK_TIMEOUT_MS = 8000;
+
 /**
- * Agrega un item a una orden existente
+ * Agrega un item a una orden existente.
+ * Una sola escritura (arrayUnion): no lee la orden ni reescribe la lista completa, así que es
+ * rápida con mala señal y dos personas pueden agregar a la misma cuenta sin pisarse.
+ * Si el servidor tarda más de ADD_ITEM_ACK_TIMEOUT_MS, regresa igual (el producto ya se ve en
+ * la cuenta y Firestore lo sigue enviando) y avisa si al final falla.
  */
 export const addItemToOrder = async (
   orderId: string,
@@ -118,55 +126,55 @@ export const addItemToOrder = async (
   category: string,
   quantity: number,
   notes?: string,
-  addedBy?: { id: string; name: string }
+  addedBy?: { id: string; name: string },
+  /** Comisión por unidad ya conocida (producto cargado en pantalla); sin definir = se consulta */
+  knownTipPerUnit?: number | null
 ): Promise<void> => {
-  try {
-    console.log('➕ Agregando item a orden:', { orderId, productId, productName, quantity });
-
-    // Obtener la orden actual
-    const orderRef = doc(db, 'orders', orderId);
-    const orderDoc = await getDoc(orderRef);
-
-    if (!orderDoc.exists()) {
-      throw new Error('Orden no encontrada');
-    }
-
-    const orderData = orderDoc.data() as Order;
-
-    // Propina por unidad del producto (se copia al item para que no cambie si después se edita el catálogo)
+  // Propina por unidad del producto (se copia al item para que no cambie si después se edita el catálogo)
+  let tipPerUnit = knownTipPerUnit;
+  if (tipPerUnit === undefined) {
     const productDoc = await getDoc(doc(db, 'products', productId));
-    const tipPerUnit = productDoc.exists() ? productDoc.data().tipPerUnit : undefined;
+    tipPerUnit = productDoc.exists() ? productDoc.data().tipPerUnit : undefined;
+  }
 
-    // Crear nuevo item
-    const newItem: OrderItem = {
-      id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      productId: productId,
-      productName: productName,
-      productPrice: productPrice,
-      quantity: quantity,
-      status: 'pendiente',
-      category: category as any,
-      ...(notes ? { notes } : {}),
-      ...(typeof tipPerUnit === 'number' ? { tipPerUnit } : {}),
-      // Quién lo agregó: cualquier mesero puede atender cualquier mesa, así queda el registro
-      ...(addedBy ? { addedBy: addedBy.id, addedByName: addedBy.name } : {}),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+  const newItem: OrderItem = {
+    id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    productId,
+    productName,
+    productPrice,
+    quantity,
+    status: 'pendiente',
+    category: category as OrderItem['category'],
+    ...(notes ? { notes } : {}),
+    ...(typeof tipPerUnit === 'number' ? { tipPerUnit } : {}),
+    // Quién lo agregó: cualquier mesero puede atender cualquier mesa, así queda el registro
+    ...(addedBy ? { addedBy: addedBy.id, addedByName: addedBy.name } : {}),
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
 
-    // Agregar el nuevo item a la lista
-    const updatedItems = [...orderData.items, newItem];
+  const write = updateDoc(doc(db, 'orders', orderId), {
+    items: arrayUnion(newItem),
+    updatedAt: Timestamp.now()
+  });
 
-    // Actualizar la orden en Firestore
-    await updateDoc(orderRef, {
-      items: updatedItems,
-      updatedAt: Timestamp.now()
-    });
-
-    console.log('✅ Item agregado exitosamente');
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const slow = new Promise<'slow'>((resolve) => { timer = setTimeout(() => resolve('slow'), ADD_ITEM_ACK_TIMEOUT_MS); });
+  try {
+    const result = await Promise.race([write.then(() => 'ok' as const), slow]);
+    if (result === 'slow') {
+      console.warn('⏳ Conexión lenta al agregar item; se sigue enviando en segundo plano', { orderId, productName });
+      toast('Conexión lenta: el producto se está enviando. No cierres la app.', { icon: '📶', duration: 6000 });
+      write.catch((error) => {
+        console.error('❌ Error agregando item (en segundo plano):', error);
+        toast.error(`No se pudo agregar ${productName}. Revisa la cuenta y vuelve a intentarlo.`, { duration: 10000 });
+      });
+    }
   } catch (error) {
     console.error('❌ Error agregando item:', error);
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
 };
 

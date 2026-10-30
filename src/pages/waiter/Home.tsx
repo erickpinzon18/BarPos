@@ -75,17 +75,10 @@ const WaiterHome: React.FC = () => {
       return;
     }
 
-    // Si es una mesa de otro mesero, no hacer nada
-    if (table.status === 'ocupada' && table.waiterId !== currentUser?.id) {
-      return;
-    }
-
-    // Si es mi mesa, navegar a la orden
-    if (table.waiterId === currentUser?.id) {
-      const currentOrder = orders.find(order => order.tableId === table.id);
-      if (currentOrder) {
-        navigate(`/waiter/order/${table.id}`);
-      }
+    // Cualquier mesero puede atender cualquier mesa abierta; lo que agregue queda a su nombre
+    const currentOrder = orders.find(order => order.tableId === table.id);
+    if (currentOrder) {
+      navigate(`/waiter/order/${table.id}`);
     }
   };
 
@@ -118,6 +111,9 @@ const WaiterHome: React.FC = () => {
     // Determinar si la mesa pertenece al mesero actual
     const isMyTable = table.status === 'ocupada' && table.waiterId === currentUser?.id;
     const isFreeTable = table.status === 'libre';
+    // Mesa abierta de otro mesero: se puede atender igual que las propias
+    const currentOrderForTable = orders.find(order => order.tableId === table.id);
+    const canAttend = table.status === 'ocupada' && !!currentOrderForTable;
 
     // Determinar si es la barra (mesa 0 legacy o B1-B5)
     const isBar = table.number === 0 || /^B\d+$/i.test(String(table.number));
@@ -166,21 +162,29 @@ const WaiterHome: React.FC = () => {
         onClick={() => handleTableClick(table)}
         className={`bg-gray-800 p-6 rounded-2xl shadow-lg transition-transform duration-200 min-h-[200px] ${isMyTable
           ? `border-2 ${isBar ? 'border-purple-500' : 'border-green-500'} cursor-pointer hover:scale-105`
+          : canAttend
+            ? `border-2 border-dashed ${isBar ? 'border-purple-500' : 'border-sky-500'} cursor-pointer hover:scale-105`
           : isFreeTable
             ? `border-2 ${isBar ? 'border-purple-600' : 'border-green-600'} cursor-pointer hover:scale-105 ${isBar ? 'hover:border-purple-400' : 'hover:border-green-400'}`
             : 'border border-gray-800 opacity-40 cursor-not-allowed'
           }`}
       >
-        {isMyTable && isActive ? (
+        {canAttend && isActive ? (
           // Mesa Activa del Mesero
           <>
             <div className="flex justify-between items-center mb-4">
               <span className="text-xl font-bold text-white">
                 {isBar ? barLabel : tableLabel(table.number)}
               </span>
-              <span className={`${isBar ? 'bg-purple-500 text-purple-100' : 'bg-green-500 text-green-100'} text-sm font-bold px-3 py-1 rounded-full`}>
-                {isBar ? 'Tu Barra' : 'Tu Mesa'}
-              </span>
+              {isMyTable ? (
+                <span className={`${isBar ? 'bg-purple-500 text-purple-100' : 'bg-green-500 text-green-100'} text-sm font-bold px-3 py-1 rounded-full`}>
+                  {isBar ? 'Tu Barra' : 'Tu Mesa'}
+                </span>
+              ) : (
+                <span className="bg-sky-600 text-sky-100 text-sm font-bold px-3 py-1 rounded-full truncate max-w-[60%]">
+                  De {currentOrder?.waiterName || table.waiterName || 'otro mesero'}
+                </span>
+              )}
             </div>
             {currentOrder?.tableName && (
               <div className="mb-3 px-3 py-2 bg-gray-700/50 rounded-lg border border-gray-600">

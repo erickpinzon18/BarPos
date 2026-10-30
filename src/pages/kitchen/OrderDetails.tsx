@@ -156,7 +156,8 @@ const KitchenOrderDetails: React.FC = () => {
         product.price,
         product.category,
         quantity,
-        notes
+        notes,
+        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined
       );
     } catch (error: any) {
       throw error;
@@ -180,7 +181,8 @@ const KitchenOrderDetails: React.FC = () => {
         selectedItemForMore.productPrice,
         selectedItemForMore.category,
         quantity,
-        notes
+        notes,
+        currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined
       );
       setShowQuantityModal(false);
       setSelectedItemForMore(null);
@@ -730,6 +732,11 @@ const KitchenOrderDetails: React.FC = () => {
                           >
                             {item.productName}
                           </h3>
+                          {item.addedByName && item.addedBy !== order?.waiterId && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/40 text-sky-300 text-[11px] font-semibold flex-shrink-0" title="Producto agregado por otro mesero">
+                              Agregó: {item.addedByName}
+                            </span>
+                          )}
                           {isDeleted && (
                             <span className="ml-2 px-2 py-1 bg-gray-600 text-gray-300 text-xs font-bold rounded">
                               ELIMINADO

@@ -19,10 +19,12 @@ import SwapServiceModal from '../../components/common/SwapServiceModal';
 import { getCategoryInfo } from '../../utils/categories';
 import type { OrderItem, Product, User as AppUser } from '../../utils/types';
 import { tableLabel } from '../../utils/tableLabel';
+import { useAuth } from '../../contexts/AuthContext';
 
 const WaiterOrderDetails: React.FC = () => {
     const { tableId } = useParams<{ tableId: string }>();
     const navigate = useNavigate();
+    const { currentUser } = useAuth();
     const { order, loading, error } = useOrderByTableId(tableId ?? undefined);
     const { products } = useProducts();
     const { promotions: activePromotions } = useActivePromotions();
@@ -167,7 +169,8 @@ const WaiterOrderDetails: React.FC = () => {
                 product.price,
                 product.category,
                 quantity,
-                notes
+                notes,
+                currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined
             );
 
             console.log('✅ Item agregado exitosamente');
@@ -207,7 +210,8 @@ const WaiterOrderDetails: React.FC = () => {
                 selectedItemForMore.productPrice,
                 selectedItemForMore.category,
                 quantity,
-                notes
+                notes,
+                currentUser ? { id: currentUser.id, name: currentUser.displayName || currentUser.email } : undefined
             );
 
             console.log('✅ Item adicional agregado:', selectedItemForMore.productName, 'x', quantity);
@@ -820,6 +824,11 @@ const WaiterOrderDetails: React.FC = () => {
                                                     <h3 className={`font-semibold truncate ${isDeleted ? 'text-gray-500 line-through' : 'text-white'}`}>
                                                         {item.productName}
                                                     </h3>
+                                                    {item.addedByName && item.addedBy !== order?.waiterId && (
+                                                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/40 text-sky-300 text-[11px] font-semibold flex-shrink-0" title="Producto agregado por otro mesero">
+                                                        Agregó: {item.addedByName}
+                                                      </span>
+                                                    )}
                                                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${getStatusColor(item.status)}`}>
                                                         {getStatusText(item.status)}
                                                     </span>

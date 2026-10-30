@@ -111,6 +111,8 @@ export interface OrderItem {
   deliveredAt?: Date; // Cuándo se marcó como entregado
   deliveredBy?: string; // ID de quien lo marcó como entregado
   deliveredByName?: string; // Nombre de quien lo marcó como entregado
+  addedBy?: string; // ID de quien agregó el producto (puede no ser el mesero de la mesa)
+  addedByName?: string; // Nombre de quien agregó el producto
   tipPerUnit?: number; // Propina para el mesero por unidad, copiada del producto al pedirlo
   swapFromName?: string; // Nombre del producto anterior cuando se cambió por swap (para reimprimir ticket de cambio)
   cancelReason?: string; // Motivo de cancelación del item

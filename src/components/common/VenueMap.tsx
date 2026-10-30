@@ -11,7 +11,7 @@ interface VenueMapProps {
   onTableClick: (table: Table) => void;
   onCheckout: (orderId: string) => void;
   accentColor: 'red' | 'orange' | 'green';
-  /** Waiter view: tables occupied by another waiter are dimmed & non-interactive */
+  /** Vista de mesero: las mesas de otro mesero se pueden atender, pero se marcan como "de X" */
   currentUserId?: string;
 }
 
@@ -28,14 +28,15 @@ interface PopupProps {
   accentColor: 'red' | 'orange' | 'green';
   flipLeft: boolean;
   flipUp: boolean;
-  isOtherWaiter?: boolean;
+  /** La mesa es de otro mesero: se puede atender, lo que se agregue queda a nombre de quien lo agrega */
+  notMine?: boolean;
   onOpen: () => void;
   onViewOrder: () => void;
   onCheckout: () => void;
 }
 
 const Popup: React.FC<PopupProps> = ({
-  table, order, reservation, accentColor, flipLeft, flipUp, isOtherWaiter, onOpen, onViewOrder, onCheckout,
+  table, order, reservation, accentColor, flipLeft, flipUp, notMine, onOpen, onViewOrder, onCheckout,
 }) => {
   const isActive = table.status === 'ocupada' && !!order;
   const isBar    = isBarNumber(table.number);
@@ -69,19 +70,13 @@ const Popup: React.FC<PopupProps> = ({
     >
       <p className="text-white font-bold text-sm mb-1">{label}</p>
 
-      {/* Another waiter's table — info only */}
-      {isOtherWaiter ? (
-        <div className="space-y-1">
-          <p className="text-xs text-gray-500">Ocupada por:</p>
-          <p className="text-xs text-gray-300 font-medium">{order?.waiterName || 'Otro mesero'}</p>
-          {order && (
-            <p className="text-xs text-gray-600 mt-1">
-              {order.items.filter(i => !i.isDeleted).reduce((s, i) => s + i.quantity, 0)} items
+      {isActive && order ? (
+        <>
+          {notMine && (
+            <p className="mb-2 text-[11px] text-sky-300 bg-sky-500/10 border border-sky-500/30 rounded-lg px-2 py-1">
+              Mesa de {order.waiterName || 'otro mesero'}. Lo que agregues queda a tu nombre.
             </p>
           )}
-        </div>
-      ) : isActive && order ? (
-        <>
           {order.tableName && (
             <p className="text-xs text-gray-500 mb-2 truncate">🏷️ {order.tableName}</p>
           )}
@@ -191,7 +186,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
 
           const order    = orders.find(o => o.tableId === table.id);
           const isActive = table.status === 'ocupada' && !!order;
-          const isOtherWaiter = !!currentUserId && isActive && !!order && order.waiterId !== currentUserId;
+          const notMine = !!currentUserId && isActive && !!order && order.waiterId !== currentUserId;
           const reservation = reservations.find(r => r.tableId === table.id);
           const isReserved = !!reservation && !isActive; // Show reservation color only when not occupied
           const isSel    = selectedId === table.id;
@@ -204,18 +199,17 @@ export const VenueMap: React.FC<VenueMapProps> = ({
             : String(table.number);
 
           const totalStr = (() => {
-            if (!order || isOtherWaiter) return null;
+            if (!order) return null;
             const t = order.items.filter(i => !i.isDeleted)
               .reduce((s, i) => s + i.productPrice * i.quantity, 0);
             return `$${t.toFixed(0)}`;
           })();
 
-          const bgColor = isOtherWaiter ? 'rgba(31,41,55,0.55)'
-            : isActive  ? ac.bg
+          const bgColor = isActive  ? ac.bg
             : isReserved ? 'rgba(120,83,0,0.55)'
             : isSel ? 'rgba(255,255,255,0.08)'
             : 'rgba(31,41,55,0.95)';
-          const border  = isOtherWaiter ? '1px solid rgba(75,85,99,0.3)'
+          const border  = notMine ? `2px dashed ${ac.border}`
             : isActive  ? `2px solid ${ac.border}`
             : isReserved ? '2px solid #f59e0b'
             : isSel ? '1.5px solid rgba(255,255,255,0.35)'
@@ -226,7 +220,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
               key={table.id}
               onClick={e => {
                 e.stopPropagation();
-                if (!isOtherWaiter) setSelectedId(p => p === table.id ? null : table.id);
+                setSelectedId(p => p === table.id ? null : table.id);
               }}
               className="absolute transition-all duration-200 group flex flex-col items-center justify-center gap-0.5"
               style={{
@@ -234,10 +228,9 @@ export const VenueMap: React.FC<VenueMapProps> = ({
                 borderRadius: isCircle ? '50%' : isBar ? '10px' : '8px',
                 backgroundColor: bgColor,
                 border,
-                boxShadow: isActive && !isOtherWaiter ? ac.glow
+                boxShadow: isActive ? ac.glow
                   : isReserved ? '0 0 12px rgba(245,158,11,0.4)' : undefined,
-                opacity: isOtherWaiter ? 0.4 : 1,
-                cursor: isOtherWaiter ? 'default' : 'pointer',
+                cursor: 'pointer',
               }}
             >
               {/* Hover shimmer */}
@@ -275,7 +268,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
               )}
 
               {/* Popup */}
-              {isSel && !isOtherWaiter && (
+              {isSel && (
                 <Popup
                   table={table}
                   order={order}
@@ -283,7 +276,7 @@ export const VenueMap: React.FC<VenueMapProps> = ({
                   accentColor={accentColor}
                   flipLeft={(pos.x / canvas.w) * 100 > 62}
                   flipUp={(pos.y / canvas.h) * 100 > 55}
-                  isOtherWaiter={false}
+                  notMine={notMine}
                   onOpen={() => { setSelectedId(null); onTableClick(table); }}
                   onViewOrder={() => { setSelectedId(null); onTableClick(table); }}
                   onCheckout={() => { if (order) { setSelectedId(null); onCheckout(order.id); } }}
@@ -302,12 +295,9 @@ export const VenueMap: React.FC<VenueMapProps> = ({
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
             <span className="text-gray-400">Otras mesas abiertas:</span>
             {others.map(t => {
-              const order = orders.find(o => o.tableId === t.id);
-              const isOtherWaiter = !!currentUserId && !!order && order.waiterId !== currentUserId;
               return (
                 <button
                   key={t.id}
-                  disabled={isOtherWaiter}
                   onClick={() => onTableClick(t)}
                   className="px-3 py-1.5 rounded-lg border text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ backgroundColor: ac.bg, borderColor: ac.border }}

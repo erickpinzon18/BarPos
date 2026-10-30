@@ -117,7 +117,8 @@ export const addItemToOrder = async (
   productPrice: number,
   category: string,
   quantity: number,
-  notes?: string
+  notes?: string,
+  addedBy?: { id: string; name: string }
 ): Promise<void> => {
   try {
     console.log('➕ Agregando item a orden:', { orderId, productId, productName, quantity });
@@ -147,6 +148,8 @@ export const addItemToOrder = async (
       category: category as any,
       ...(notes ? { notes } : {}),
       ...(typeof tipPerUnit === 'number' ? { tipPerUnit } : {}),
+      // Quién lo agregó: cualquier mesero puede atender cualquier mesa, así queda el registro
+      ...(addedBy ? { addedBy: addedBy.id, addedByName: addedBy.name } : {}),
       createdAt: new Date(),
       updatedAt: new Date()
     };

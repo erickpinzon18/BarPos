@@ -4,10 +4,11 @@ import { usePromotions, isPromotionWithinSchedule } from '../../hooks/usePromoti
 import { addPromotion, updatePromotion, deletePromotion } from '../../services/firestoreService';
 import { CATEGORIES } from '../../utils/categories';
 import { useProducts } from '../../hooks/useProducts';
-import type { Promotion, DiscountType } from '../../utils/types';
+import type { Promotion, DiscountType, User } from '../../utils/types';
 import type { CategoryKey } from '../../utils/categories';
 import { Plus, Pencil, Trash2, Clock, Tag, X, Check, AlertTriangle, ChevronDown, ChevronUp, Package, CalendarDays } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSuperAdminPin } from '../../hooks/useSuperAdminPin';
 
 // 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
 const DAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -54,6 +55,7 @@ const discountTypeLabels: Record<DiscountType, string> = {
 };
 
 const Promotions: React.FC = () => {
+  const { requireSuperAdmin, pinModal } = useSuperAdminPin();
   const { promotions, loading, refresh } = usePromotions();
   const { products: allProducts } = useProducts(false); // todos los productos (incl. no disponibles)
   const [showModal, setShowModal] = useState(false);
@@ -163,63 +165,70 @@ const Promotions: React.FC = () => {
       return;
     }
 
-    setSaving(true);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        discountType: form.discountType,
-        discountValue,
-        categories: form.categories,
-        productIds: form.productIds,
-        cutoffTime: form.cutoffTime,
-        activeDays: form.activeDays,
-        active: form.active,
-      };
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim() || undefined,
+      discountType: form.discountType,
+      discountValue,
+      categories: form.categories,
+      productIds: form.productIds,
+      cutoffTime: form.cutoffTime,
+      activeDays: form.activeDays,
+      active: form.active,
+    };
 
-      if (editingId) {
-        const res = await updatePromotion(editingId, payload);
-        if (!res.success) throw new Error(res.error);
-        toast.success('Promoción actualizada');
-      } else {
-        const res = await addPromotion(payload as any);
-        if (!res.success) throw new Error(res.error);
-        toast.success('Promoción creada');
+    // Crear o modificar una promoción cambia lo que se cobra: solo con PIN de super administrador
+    requireSuperAdmin(
+      editingId ? 'Autorizar cambio de promoción' : 'Autorizar promoción nueva',
+      `${payload.name}. Ingresa el PIN de un super administrador.`,
+      async (u: User) => {
+        setSaving(true);
+        try {
+          const audited = { ...payload, authorizedBy: u.id, authorizedByName: u.displayName || u.email };
+          if (editingId) {
+            const res = await updatePromotion(editingId, audited);
+            if (!res.success) throw new Error(res.error);
+            toast.success('Promoción actualizada');
+          } else {
+            const res = await addPromotion(audited as any);
+            if (!res.success) throw new Error(res.error);
+            toast.success('Promoción creada');
+          }
+          closeModal();
+          await refresh();
+        } finally {
+          setSaving(false);
+        }
       }
-      closeModal();
-      await refresh();
-    } catch (err: any) {
-      console.error('Error saving promotion:', err);
-      toast.error(err?.message || 'Error al guardar promoción');
-    } finally {
-      setSaving(false);
-    }
+    );
   };
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id);
-    try {
-      const res = await deletePromotion(id);
-      if (!res.success) throw new Error(res.error);
-      toast.success('Promoción eliminada');
-      await refresh();
-    } catch (err: any) {
-      console.error('Error deleting promotion:', err);
-      toast.error(err?.message || 'Error al eliminar promoción');
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDelete = (id: string) => {
+    const promo = promotions.find((p) => p.id === id);
+    requireSuperAdmin('Autorizar eliminar promoción', `${promo?.name ?? 'Promoción'}. Ingresa el PIN de un super administrador.`, async () => {
+      setDeletingId(id);
+      try {
+        const res = await deletePromotion(id);
+        if (!res.success) throw new Error(res.error);
+        toast.success('Promoción eliminada');
+        await refresh();
+      } finally {
+        setDeletingId(null);
+      }
+    });
   };
 
-  const handleToggleActive = async (promo: Promotion) => {
-    try {
-      const res = await updatePromotion(promo.id, { active: !promo.active });
-      if (!res.success) throw new Error(res.error);
-      toast.success(promo.active ? 'Promoción desactivada' : 'Promoción activada');
-      await refresh();
-    } catch (err: any) {
-      toast.error(err?.message || 'Error al actualizar');
-    }
+  const handleToggleActive = (promo: Promotion) => {
+    requireSuperAdmin(
+      promo.active ? 'Autorizar desactivar promoción' : 'Autorizar activar promoción',
+      `${promo.name}. Ingresa el PIN de un super administrador.`,
+      async (u: User) => {
+        const res = await updatePromotion(promo.id, { active: !promo.active, authorizedBy: u.id, authorizedByName: u.displayName || u.email } as any);
+        if (!res.success) throw new Error(res.error);
+        toast.success(promo.active ? 'Promoción desactivada' : 'Promoción activada');
+        await refresh();
+      }
+    );
   };
 
   // ---- render ----
@@ -747,6 +756,7 @@ const Promotions: React.FC = () => {
           </div>
         </div>
       )}
+      {pinModal}
     </div>
   );
 };

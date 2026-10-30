@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useProducts } from '../../hooks/useProducts';
 import { addProduct, updateProduct, deleteProduct } from '../../services/firestoreService';
-import type { ProductFormData, Product } from '../../utils/types';
+import type { ProductFormData, Product, User } from '../../utils/types';
 import { FILTER_CATEGORIES, getCategoryLabels } from '../../utils/categories';
 import { WEEKDAY_LABELS, WEEKDAY_ORDER, isPromoProduct, formatPromoDays } from '../../utils/promoDays';
+import { useSuperAdminPin } from '../../hooks/useSuperAdminPin';
 
 const designCategories = FILTER_CATEGORIES;
 
@@ -15,6 +16,7 @@ const ManageProducts: React.FC = () => {
   const [modalTitle, setModalTitle] = useState('Agregar Nuevo Producto');
   const [form, setForm] = useState<ProductFormData>({ name: '', description: '', price: 0, category: 'Bebida', available: true });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { requireSuperAdmin, pinModal } = useSuperAdminPin();
 
   useEffect(() => {
     // Reset form when modal closes
@@ -65,14 +67,36 @@ const ManageProducts: React.FC = () => {
     const tipPerUnit = typeof form.tipPerUnit === 'number' && !isNaN(form.tipPerUnit) ? form.tipPerUnit : null;
     // Días de venta: solo para Promos (vacío = todos los días)
     const activeDays = isPromoProduct(form) ? [...(form.activeDays ?? [])].sort() : [];
-    if (editingId) {
-      const res = await updateProduct(editingId, { name: form.name, description: form.description, price: form.price, category: form.category, available: form.available, tipPerUnit, activeDays } as any);
-      if (!res.success) alert(res.error || 'Error al actualizar');
-    } else {
-      const res = await addProduct({ ...form, tipPerUnit, activeDays } as any);
-      if (!res.success) alert(res.error || 'Error al crear producto');
+    const original = editingId ? products.find((p) => p.id === editingId) : undefined;
+    const priceChanged = !editingId || original?.price !== form.price;
+
+    const save = async (authorizedBy?: User) => {
+      // Quién autorizó el precio (PIN de super admin)
+      const priceAudit = authorizedBy
+        ? { priceAuthorizedBy: authorizedBy.id, priceAuthorizedByName: authorizedBy.displayName || authorizedBy.email, priceAuthorizedAt: new Date() }
+        : {};
+      if (editingId) {
+        const res = await updateProduct(editingId, { name: form.name, description: form.description, price: form.price, category: form.category, available: form.available, tipPerUnit, activeDays, ...priceAudit } as any);
+        if (!res.success) throw new Error(res.error || 'Error al actualizar');
+      } else {
+        const res = await addProduct({ ...form, tipPerUnit, activeDays, ...priceAudit } as any);
+        if (!res.success) throw new Error(res.error || 'Error al crear producto');
+      }
+      setShowModal(false);
+    };
+
+    if (!priceChanged) {
+      try { await save(); } catch (err) { alert((err as Error).message); }
+      return;
     }
-    setShowModal(false);
+    // Precio nuevo o modificado: solo con PIN de super administrador
+    requireSuperAdmin(
+      editingId ? 'Autorizar cambio de precio' : 'Autorizar producto nuevo',
+      editingId
+        ? `${form.name}: $${original?.price?.toFixed(2) ?? '0.00'} → $${form.price.toFixed(2)}. Ingresa el PIN de un super administrador.`
+        : `${form.name} a $${form.price.toFixed(2)}. Ingresa el PIN de un super administrador.`,
+      save
+    );
   };
 
   const handleDelete = async (id: string) => {
@@ -279,6 +303,7 @@ const ManageProducts: React.FC = () => {
           </div>
         )}
       </main>
+      {pinModal}
     </div>
   );
 };

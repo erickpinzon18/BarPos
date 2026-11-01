@@ -23,6 +23,7 @@ import {
   FlaskConical,
   CircleDollarSign,
   Wine,
+  ArrowRightLeft,
 } from "lucide-react";
 
 // Estilos para los enlaces de navegación, cambia el color si está activo
@@ -124,6 +125,10 @@ export const AdminSidebar: React.FC = () => {
           <NavLink to="/admin/panel" className={navLinkClass}>
             <ClipboardCheck size={20} />
             <span>Panel de pedidos</span>
+          </NavLink>
+          <NavLink to="/admin/move-items" className={navLinkClass}>
+            <ArrowRightLeft size={20} />
+            <span>Mover productos</span>
           </NavLink>
           <NavLink to="/admin/tickets" className={navLinkClass}>
             <Receipt size={20} />

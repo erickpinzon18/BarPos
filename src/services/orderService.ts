@@ -1,5 +1,5 @@
 // src/services/orderService.ts
-import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc, writeBatch, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc, writeBatch, arrayUnion, runTransaction, limit } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { db } from './firebase';
 import type { Order, OrderItem, User, OrderItemStatus, CreateData, Table } from '../utils/types';
@@ -624,4 +624,157 @@ export const reassignOrderWaiter = async (
     console.error('❌ Error reasignando mesero:', error);
     throw error;
   }
+};
+
+export interface TransferItemReq {
+  itemId: string;
+  quantity: number;
+}
+
+/** Destino de un traspaso: la orden activa de una mesa ocupada, o una mesa libre (se abre una orden nueva) */
+export type TransferTarget =
+  | { kind: 'order'; orderId: string }
+  | { kind: 'table'; tableId: string };
+
+/**
+ * Mueve items (completos o parte de su cantidad) de una orden activa a otra mesa.
+ * Todo va en una transacción: si alguien agrega algo a cualquiera de las dos cuentas al mismo
+ * tiempo, Firestore reintenta con los datos frescos y nadie se pisa.
+ * Los items movidos conservan estado, impresión y quién los agregó, así que no se reimprimen
+ * en barra/cocina ni aparecen como cancelados; el origen simplemente deja de tenerlos.
+ * Cada traspaso se registra después en la colección `itemTransfers`.
+ */
+export const transferOrderItems = async (
+  sourceOrderId: string,
+  moves: TransferItemReq[],
+  target: TransferTarget,
+  movedBy: User
+): Promise<string> => {
+  const movedByName = movedBy.displayName || movedBy.email;
+  const wanted = new Map(moves.filter(m => m.quantity > 0).map(m => [m.itemId, m.quantity]));
+  if (wanted.size === 0) throw new Error('Selecciona al menos un producto para mover');
+
+  const { targetOrderId, log } = await runTransaction(db, async (tx) => {
+    const sourceRef = doc(db, 'orders', sourceOrderId);
+    const sourceSnap = await tx.get(sourceRef);
+    if (!sourceSnap.exists()) throw new Error('La cuenta de origen ya no existe');
+    const source = sourceSnap.data() as Order;
+    if (source.status !== 'activo') throw new Error('La cuenta de origen ya se cerró');
+
+    // Destino: orden existente o mesa libre
+    let targetRef;
+    let targetItems: OrderItem[] = [];
+    let targetTableNumber: number | string;
+    let targetTableId: string;
+    let newTableRef = null;
+
+    if (target.kind === 'order') {
+      if (target.orderId === sourceOrderId) throw new Error('El origen y el destino son la misma cuenta');
+      targetRef = doc(db, 'orders', target.orderId);
+      const targetSnap = await tx.get(targetRef);
+      if (!targetSnap.exists()) throw new Error('La cuenta destino ya no existe');
+      const targetOrder = targetSnap.data() as Order;
+      if (targetOrder.status !== 'activo') throw new Error('La cuenta destino ya se cerró');
+      targetItems = targetOrder.items || [];
+      targetTableNumber = targetOrder.tableNumber;
+      targetTableId = targetOrder.tableId;
+    } else {
+      if (target.tableId === source.tableId) throw new Error('El origen y el destino son la misma mesa');
+      newTableRef = doc(db, 'tables', target.tableId);
+      const tableSnap = await tx.get(newTableRef);
+      if (!tableSnap.exists()) throw new Error('La mesa destino no existe');
+      const table = tableSnap.data() as Table;
+      // Revisa que no tenga una cuenta activa (la mesa puede decir 'ocupada' por error sin orden)
+      const activeQ = query(
+        collection(db, 'orders'),
+        where('tableId', '==', target.tableId),
+        where('status', '==', 'activo'),
+        limit(1)
+      );
+      const activeSnap = await getDocs(activeQ);
+      if (!activeSnap.empty) throw new Error('La mesa destino ya tiene una cuenta abierta; elígela como mesa ocupada');
+      targetRef = doc(collection(db, 'orders'));
+      targetTableNumber = table.number;
+      targetTableId = target.tableId;
+    }
+
+    const sourceLabel = String(source.tableNumber);
+    const now = Timestamp.now();
+    const movedItems: OrderItem[] = [];
+    const summary: { productName: string; quantity: number; price: number }[] = [];
+
+    const remainingSource: OrderItem[] = [];
+    for (const item of source.items || []) {
+      const qty = wanted.get(item.id);
+      if (!qty || item.isDeleted) {
+        remainingSource.push(item);
+        continue;
+      }
+      const toMove = Math.min(qty, item.quantity);
+      const whole = toMove === item.quantity;
+      movedItems.push({
+        ...item,
+        // Si se mueve completo conserva su id; si se parte, la parte movida lleva id nuevo
+        id: whole ? item.id : `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        quantity: toMove,
+        movedFromTable: sourceLabel,
+        movedByName,
+        movedAt: now as unknown as Date,
+        updatedAt: now as unknown as Date,
+      });
+      summary.push({ productName: item.productName, quantity: toMove, price: item.productPrice });
+      if (!whole) {
+        remainingSource.push({ ...item, quantity: item.quantity - toMove, updatedAt: now as unknown as Date });
+      }
+    }
+
+    if (movedItems.length === 0) throw new Error('Los productos seleccionados ya no están en la cuenta');
+
+    tx.update(sourceRef, { items: remainingSource, updatedAt: now });
+
+    if (target.kind === 'order') {
+      tx.update(targetRef, { items: [...targetItems, ...movedItems], updatedAt: now });
+    } else {
+      tx.set(targetRef, {
+        tableId: targetTableId,
+        tableNumber: targetTableNumber,
+        waiterId: source.waiterId,
+        waiterName: source.waiterName,
+        items: movedItems,
+        status: 'activo',
+        createdAt: now,
+        updatedAt: now,
+      });
+      tx.update(newTableRef!, {
+        status: 'ocupada',
+        currentOrderId: targetRef.id,
+        waiterId: source.waiterId,
+        waiterName: source.waiterName,
+        updatedAt: now,
+      });
+    }
+
+    const log = {
+      sourceOrderId,
+      sourceTableId: source.tableId,
+      sourceTableNumber: source.tableNumber,
+      targetOrderId: targetRef.id,
+      targetTableId,
+      targetTableNumber,
+      newOrder: target.kind === 'table',
+      items: summary,
+      movedBy: movedBy.id,
+      movedByName,
+      createdAt: now,
+    };
+
+    return { targetOrderId: targetRef.id, log };
+  });
+
+  // Bitácora aparte: si falla no debe deshacer el traspaso
+  addDoc(collection(db, 'itemTransfers'), log).catch(err =>
+    console.warn('⚠️ No se pudo registrar el traspaso en itemTransfers:', err)
+  );
+
+  return targetOrderId;
 };

@@ -27,6 +27,7 @@ import Inventory from "./pages/admin/Inventory";
 import InventoryStats from "./pages/admin/InventoryStats";
 import AdminPrices from "./pages/admin/AdminPrices";
 import BottleSearch from "./pages/admin/BottleSearch";
+import MoveItems from "./pages/admin/MoveItems";
 
 // Waiter Pages
 import WaiterHome from "./pages/waiter/Home";
@@ -69,6 +70,7 @@ function App() {
           <Route path="checkout/:orderId" element={<AdminCheckout />} />
           <Route path="order/:tableId" element={<AdminOrderDetails />} />
           <Route path="panel" element={<AdminKitchenControl />} />
+          <Route path="move-items" element={<MoveItems />} />
           <Route path="cierre" element={<DailySummary />} />
           <Route path="ventas" element={<KitchenVentas />} />
           <Route path="analytics" element={<Analytics />} />

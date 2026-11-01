@@ -734,6 +734,11 @@ const KitchenOrderDetails: React.FC = () => {
                           >
                             {item.productName}
                           </h3>
+                          {item.movedFromTable && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/40 text-violet-300 text-[11px] font-semibold flex-shrink-0" title={`Movido por ${item.movedByName ?? "admin"}`}>
+                              De {tableLabel(item.movedFromTable)}
+                            </span>
+                          )}
                           {item.addedByName && item.addedBy !== order?.waiterId && (
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/40 text-sky-300 text-[11px] font-semibold flex-shrink-0" title="Producto agregado por otro mesero">
                               Agregó: {item.addedByName}

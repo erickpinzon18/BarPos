@@ -22,6 +22,7 @@ import {
   CalendarDays,
   Archive,
   CircleDollarSign,
+  ArrowRightLeft,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -138,6 +139,14 @@ const AdminLayout: React.FC = () => {
                 >
                   <ClipboardCheck size={20} />
                   <span>Panel de pedidos</span>
+                </NavLink>
+                <NavLink
+                  to="/admin/move-items"
+                  className={navLinkClassMobile}
+                  onClick={closeMobileMenu}
+                >
+                  <ArrowRightLeft size={20} />
+                  <span>Mover productos</span>
                 </NavLink>
                 <NavLink
                   to="/admin/tickets"

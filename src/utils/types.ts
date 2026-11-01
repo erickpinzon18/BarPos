@@ -114,6 +114,9 @@ export interface OrderItem {
   addedBy?: string; // ID de quien agregó el producto (puede no ser el mesero de la mesa)
   addedByName?: string; // Nombre de quien agregó el producto
   tipPerUnit?: number; // Propina para el mesero por unidad, copiada del producto al pedirlo
+  movedFromTable?: string; // Mesa de la que se movió el item (módulo Mover productos)
+  movedByName?: string; // Quién lo movió
+  movedAt?: Date; // Cuándo se movió
   swapFromName?: string; // Nombre del producto anterior cuando se cambió por swap (para reimprimir ticket de cambio)
   cancelReason?: string; // Motivo de cancelación del item
   pendingCancelPrint?: boolean; // Marca un item recién cancelado para que se imprima ticket de cancelación en barra/cocina

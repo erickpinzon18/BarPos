@@ -4,14 +4,14 @@ import { createStaffUser } from '../../services/userAdminService';
 import { useAuth } from '../../contexts/AuthContext';
 import type { UserRole } from '../../utils/types';
 import { auth } from '../../services/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { printStationTicket } from '../../utils/printStationTicket';
 import type { PaperSize } from '../../utils/printTicket';
 
 const Settings: React.FC = () => {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'info' | 'users' | 'roles'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'users' | 'roles' | 'account'>('info');
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [address, setAddress] = useState<string>('');
@@ -26,6 +26,10 @@ const Settings: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [newPin, setNewPin] = useState('');
   const [creatingUser, setCreatingUser] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [ownNewPassword, setOwnNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -87,6 +91,9 @@ const Settings: React.FC = () => {
           </button>
           <button onClick={() => setActiveTab('users')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'users' ? 'border-b-2 border-red-500 text-red-500' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
             Gestión de Usuarios
+          </button>
+          <button onClick={() => setActiveTab('account')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'account' ? 'border-b-2 border-red-500 text-red-500' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
+            Mi Cuenta
           </button>
           {/* <button onClick={() => setActiveTab('roles')} className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-t-lg ${activeTab === 'roles' ? 'border-b-2 border-red-500 text-red-500' : 'border-b-2 border-transparent text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}>
             Roles y Permisos
@@ -277,6 +284,60 @@ const Settings: React.FC = () => {
                 </div>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* Cambio de contraseña propia: Firebase exige reautenticar con la contraseña actual */}
+        {activeTab === 'account' && (
+          <div className="tab-content bg-gray-800 rounded-2xl border border-gray-800 p-8 max-w-xl">
+            <h2 className="text-2xl font-bold text-white mb-2">Cambiar Contraseña</h2>
+            <p className="text-gray-400 text-sm mb-6">{auth.currentUser?.email}</p>
+            <form className="space-y-4" onSubmit={async (e) => {
+              e.preventDefault();
+              const fbUser = auth.currentUser;
+              if (!fbUser?.email) { toast.error('No hay usuario autenticado'); return; }
+              if (ownNewPassword.length < 6) { toast.error('La nueva contraseña debe tener al menos 6 caracteres'); return; }
+              if (ownNewPassword !== confirmPassword) { toast.error('Las contraseñas no coinciden'); return; }
+              if (ownNewPassword === currentPassword) { toast.error('La nueva contraseña debe ser distinta a la actual'); return; }
+              setChangingPassword(true);
+              try {
+                const credential = EmailAuthProvider.credential(fbUser.email, currentPassword);
+                await reauthenticateWithCredential(fbUser, credential);
+                await updatePassword(fbUser, ownNewPassword);
+                toast.success('Contraseña actualizada');
+                setCurrentPassword(''); setOwnNewPassword(''); setConfirmPassword('');
+              } catch (err) {
+                console.error('Error cambiando contraseña', err);
+                const code = (err as { code?: string })?.code;
+                if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+                  toast.error('La contraseña actual es incorrecta');
+                } else if (code === 'auth/too-many-requests') {
+                  toast.error('Demasiados intentos, intenta más tarde');
+                } else if (code === 'auth/weak-password') {
+                  toast.error('La nueva contraseña es muy débil');
+                } else {
+                  toast.error((err as Error)?.message || 'Error al cambiar contraseña');
+                }
+              } finally {
+                setChangingPassword(false);
+              }
+            }}>
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">Contraseña actual</label>
+                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-red-500 focus:border-red-600" />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">Nueva contraseña (mínimo 6 caracteres)</label>
+                <input type="password" value={ownNewPassword} onChange={(e) => setOwnNewPassword(e.target.value)} autoComplete="new-password" className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-red-500 focus:border-red-600" />
+              </div>
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">Confirmar nueva contraseña</label>
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg w-full p-2.5 focus:ring-red-500 focus:border-red-600" />
+              </div>
+              <div className="pt-2 flex justify-end">
+                <button type="submit" disabled={changingPassword || !currentPassword || !ownNewPassword || !confirmPassword} className="text-gray-900 bg-red-600 hover:bg-red-700 font-bold rounded-lg text-sm px-6 py-2.5 transition transform hover:-translate-y-px disabled:opacity-60">{changingPassword ? 'Guardando...' : 'Cambiar Contraseña'}</button>
+              </div>
+            </form>
           </div>
         )}
 

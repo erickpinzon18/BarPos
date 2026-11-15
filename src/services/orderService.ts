@@ -1,5 +1,5 @@
 // src/services/orderService.ts
-import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc, writeBatch, arrayUnion, runTransaction, limit } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs, addDoc, writeBatch, arrayUnion, runTransaction, limit, orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { db } from './firebase';
 import type { Order, OrderItem, User, OrderItemStatus, CreateData, Table } from '../utils/types';
@@ -225,7 +225,11 @@ export const updateItemStatus = async (
 };
 
 /**
- * Crea una orden vacía para una mesa
+ * Crea una orden vacía para una mesa.
+ * Va en una transacción sobre la mesa: si dos dispositivos (o un doble toque) abren la misma
+ * mesa a la vez, el segundo ve la orden del primero y la reutiliza en vez de crear otra.
+ * Las órdenes duplicadas quedaban 'activo' para siempre al cerrar la mesa (solo se cierra una)
+ * y luego aparecían como cuentas fantasma en Mover productos.
  */
 export const createEmptyOrder = async (
   tableId: string,
@@ -236,7 +240,6 @@ export const createEmptyOrder = async (
   try {
     console.log('📝 Creando orden vacía para mesa', tableNumber, 'asignada a:', waiterName, `(ID: ${waiterId})`);
 
-    // Crear orden vacía
     const orderData: CreateData<Order> = {
       tableId: tableId,
       tableNumber: tableNumber,
@@ -246,27 +249,36 @@ export const createEmptyOrder = async (
       status: 'activo'
     };
 
-    // Guardar en Firestore
-    const orderRef = await addDoc(collection(db, 'orders'), {
-      ...orderData,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now()
+    const orderId = await runTransaction(db, async (tx) => {
+      const tableRef = doc(db, 'tables', tableId);
+      const tableSnap = await tx.get(tableRef);
+      const table = tableSnap.data() as Table | undefined;
+
+      // La mesa ya tiene una cuenta abierta: reutilizarla
+      if (table?.currentOrderId) {
+        const existingSnap = await tx.get(doc(db, 'orders', table.currentOrderId));
+        if (existingSnap.exists() && (existingSnap.data() as Order).status === 'activo') {
+          console.log('ℹ️ La mesa ya tenía orden activa, se reutiliza:', existingSnap.id);
+          return existingSnap.id;
+        }
+      }
+
+      const orderRef = doc(collection(db, 'orders'));
+      const now = Timestamp.now();
+      tx.set(orderRef, { ...orderData, createdAt: now, updatedAt: now });
+      tx.update(tableRef, {
+        status: 'ocupada',
+        currentOrderId: orderRef.id,
+        waiterId: waiterId,
+        waiterName: waiterName,
+        updatedAt: now
+      });
+      return orderRef.id;
     });
 
-    console.log('✅ Orden vacía creada con ID:', orderRef.id);
+    console.log('✅ Mesa ocupada con orden:', orderId);
 
-    // Actualizar la mesa para marcarla como ocupada
-    await updateDoc(doc(db, 'tables', tableId), {
-      status: 'ocupada',
-      currentOrderId: orderRef.id,
-      waiterId: waiterId,
-      waiterName: waiterName,
-      updatedAt: Timestamp.now()
-    });
-
-    console.log('✅ Mesa actualizada a ocupada');
-
-    return orderRef.id;
+    return orderId;
 
   } catch (error) {
     console.error('❌ Error creando orden vacía:', error);
@@ -675,6 +687,19 @@ export const transferOrderItems = async (
       if (!targetSnap.exists()) throw new Error('La cuenta destino ya no existe');
       const targetOrder = targetSnap.data() as Order;
       if (targetOrder.status !== 'activo') throw new Error('La cuenta destino ya se cerró');
+      // Debe ser la cuenta que la mesa muestra (la activa más reciente); si no, los productos
+      // caen en una cuenta vieja que nadie ve
+      const latestQ = query(
+        collection(db, 'orders'),
+        where('tableId', '==', targetOrder.tableId),
+        where('status', '==', 'activo'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      const latestSnap = await getDocs(latestQ);
+      if (!latestSnap.empty && latestSnap.docs[0].id !== target.orderId) {
+        throw new Error('Esa cuenta ya no es la actual de la mesa; recarga y vuelve a elegir el destino');
+      }
       targetItems = targetOrder.items || [];
       targetTableNumber = targetOrder.tableNumber;
       targetTableId = targetOrder.tableId;

@@ -6,7 +6,7 @@ import { useTables } from "../../hooks/useTables";
 import { useActiveOrders } from "../../hooks/useOrders";
 import { useAuth } from "../../contexts/AuthContext";
 import { transferOrderItems, type TransferTarget } from "../../services/orderService";
-import { withEffectiveStatus } from "../../utils/tableStatus";
+import { currentOrderPerTable, withEffectiveStatus } from "../../utils/tableStatus";
 import { tableLabel } from "../../utils/tableLabel";
 import type { Order } from "../../utils/types";
 
@@ -21,7 +21,8 @@ const byTableNumber = (a: { tableNumber?: number | string; number?: number | str
 const MoveItems: React.FC = () => {
   const { currentUser } = useAuth();
   const { tables: rawTables, loading: tablesLoading } = useTables();
-  const { orders, loading: ordersLoading } = useActiveOrders();
+  const { orders: allActiveOrders, loading: ordersLoading } = useActiveOrders();
+  const orders = useMemo(() => currentOrderPerTable(allActiveOrders), [allActiveOrders]);
   const tables = withEffectiveStatus(rawTables, orders);
 
   const [sourceId, setSourceId] = useState<string>("");

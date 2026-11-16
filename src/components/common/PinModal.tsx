@@ -1,5 +1,5 @@
 // src/components/common/PinModal.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Lock, AlertTriangle } from 'lucide-react';
 
 interface PinModalProps {
@@ -17,10 +17,13 @@ const PinModal: React.FC<PinModalProps> = ({
   onConfirm,
   title,
   message,
-  loading = false
+  loading: loadingProp = false
 }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const loading = loadingProp || submitting;
   const handleNumberClick = (num: string) => {
     setPin(prev => (prev.length < 4 ? prev + num : prev));
     setError('');
@@ -38,7 +41,9 @@ const PinModal: React.FC<PinModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    // Evita que Enter + clic (o varios Enter) disparen la acción varias veces mientras se procesa
+    if (submittingRef.current) return;
+
     if (!pin.trim()) {
       setError('Por favor ingresa el PIN');
       return;
@@ -49,6 +54,8 @@ const PinModal: React.FC<PinModalProps> = ({
       return;
     }
 
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
       setError('');
       await onConfirm(pin);
@@ -56,6 +63,9 @@ const PinModal: React.FC<PinModalProps> = ({
       onClose();
     } catch (error: any) {
       setError(error.message || 'PIN incorrecto');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 

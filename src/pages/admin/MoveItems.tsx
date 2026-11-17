@@ -22,7 +22,7 @@ const MoveItems: React.FC = () => {
   const { currentUser } = useAuth();
   const { tables: rawTables, loading: tablesLoading } = useTables();
   const { orders: allActiveOrders, loading: ordersLoading } = useActiveOrders();
-  const orders = useMemo(() => currentOrderPerTable(allActiveOrders), [allActiveOrders]);
+  const orders = useMemo(() => currentOrderPerTable(allActiveOrders, rawTables), [allActiveOrders, rawTables]);
   const tables = withEffectiveStatus(rawTables, orders);
 
   const [sourceId, setSourceId] = useState<string>("");
